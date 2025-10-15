@@ -26,7 +26,7 @@ public class DatabaseService {
 
     public String guardarHojaServicioCompleta(
             Long idClienteSeleccionado, String nombreCliente, String telefonoCliente, String direccionCliente,
-            Long idAssetSeleccionado, String serieEquipo, String marcaEquipo, String modeloEquipo, String tipoEquipo,
+            Long idAssetSeleccionado, String serieEquipo, String companiaEquipo, String modeloEquipo, String tipoEquipo,
             LocalDate fechaOrden, String fallaReportada, String informeCostos, String totalCostos,
             LocalDate fechaEntrega, String firmaAclaracion, String aclaraciones) throws SQLException {
 
@@ -36,8 +36,8 @@ public class DatabaseService {
             conn.setAutoCommit(false);
 
             long clienteId = gestionarCliente(conn, idClienteSeleccionado, nombreCliente, telefonoCliente, direccionCliente);
-            Long assetId = gestionarAsset(conn, idAssetSeleccionado, serieEquipo, marcaEquipo, modeloEquipo, tipoEquipo);
-            long realHojaId = insertarHojaServicio(conn, clienteId, assetId, serieEquipo, tipoEquipo, marcaEquipo, modeloEquipo,
+            Long assetId = gestionarAsset(conn, idAssetSeleccionado, serieEquipo, companiaEquipo, modeloEquipo, tipoEquipo);
+            long realHojaId = insertarHojaServicio(conn, clienteId, assetId, serieEquipo, tipoEquipo, companiaEquipo, modeloEquipo,
                     fechaOrden, fallaReportada, informeCostos, totalCostos, fechaEntrega, firmaAclaracion, aclaraciones);
             String realOrdenNumero = "TM-" + LocalDate.now().getYear() + "-" + realHojaId;
             actualizarNumeroDeOrden(conn, realHojaId, realOrdenNumero);
@@ -98,7 +98,7 @@ public class DatabaseService {
         throw new SQLException("No se pudo crear ni encontrar el cliente.");
     }
 
-    private Long gestionarAsset(Connection conn, Long idAssetSeleccionado, String serieEquipo, String marcaEquipo, String modeloEquipo, String tipoEquipo) throws SQLException {
+    private Long gestionarAsset(Connection conn, Long idAssetSeleccionado, String serieEquipo, String companiaEquipo, String modeloEquipo, String tipoEquipo) throws SQLException {
         if (idAssetSeleccionado != null) {
             return idAssetSeleccionado;
         }
@@ -118,16 +118,16 @@ public class DatabaseService {
         }
 
         // Si el activo no existe, lo creamos de forma segura.
-        long modelId = gestionarModelo(conn, modeloEquipo, marcaEquipo, tipoEquipo);
+        long modelId = gestionarModelo(conn, modeloEquipo, companiaEquipo, tipoEquipo);
         long statusId = obtenerIdStatusPendiente(conn);
-        long companyId = gestionarEntidad(conn, "companies", marcaEquipo, "La marca (compañía) no puede estar vacía.");
+        long companyId = gestionarEntidad(conn, "companies", companiaEquipo, "La Compañía no puede estar vacía.");
 
         String sqlInsert = "INSERT INTO assets (asset_tag, serial, model_id, status_id, name, company_id, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, NOW(), NOW())";
         try (PreparedStatement pstmtInsert = conn.prepareStatement(sqlInsert, Statement.RETURN_GENERATED_KEYS)) {
             String assetTag = "TEC-" + System.currentTimeMillis(); // Genera un asset tag único.
-            String assetName = (marcaEquipo.trim() + " " + modeloEquipo.trim()).trim();
+            String assetName = (companiaEquipo.trim() + " " + modeloEquipo.trim()).trim();
             if (assetName.isEmpty()) {
-                assetName = tipoEquipo.trim(); // Si no hay marca/modelo, usar el tipo.
+                assetName = tipoEquipo.trim(); // Si no hay compañía/modelo, usar el tipo.
             }
             if (assetName.isEmpty()){
                 assetName = "Equipo (registrado desde app)"; // Último recurso.
@@ -149,9 +149,10 @@ public class DatabaseService {
         throw new SQLException("La creación del activo (asset) falló para el número de serie: " + serieEquipoTrimmed);
     }
 
-    private long insertarHojaServicio(Connection conn, long clienteId, Long assetId, String equipoSerie, String equipoTipo, String equipoMarca, String equipoModelo,
+    private long insertarHojaServicio(Connection conn, long clienteId, Long assetId, String equipoSerie, String equipoTipo, String equipoCompania, String equipoModelo,
                                       LocalDate fechaOrden, String fallaReportada, String informeCostos, String totalCostos,
                                       LocalDate fechaEntrega, String firmaAclaracion, String aclaraciones) throws SQLException {
+        // La columna en la tabla de hojas de servicio se mantiene como equipo_marca por retrocompatibilidad.
         String sql = "INSERT INTO x_hojas_servicio (fecha_orden, cliente_id, asset_id, equipo_serie, equipo_tipo, equipo_marca, equipo_modelo, falla_reportada, informe_costos, total_costos, fecha_entrega, firma_aclaracion, aclaraciones) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
         try (PreparedStatement pstmt = conn.prepareStatement(sql, Statement.RETURN_GENERATED_KEYS)) {
             pstmt.setDate(1, fechaOrden != null ? Date.valueOf(fechaOrden) : null);
@@ -163,7 +164,7 @@ public class DatabaseService {
             }
             pstmt.setString(4, equipoSerie);
             pstmt.setString(5, equipoTipo);
-            pstmt.setString(6, equipoMarca);
+            pstmt.setString(6, equipoCompania); // Se inserta la compañía en la columna equipo_marca.
             pstmt.setString(7, equipoModelo);
             pstmt.setString(8, fallaReportada);
             pstmt.setString(9, informeCostos);
@@ -204,8 +205,9 @@ public class DatabaseService {
             throw new SQLException("El nombre del modelo no puede estar vacío.");
         }
 
-        long manufacturerId = gestionarEntidad(conn, "manufacturers", nombreMarca, "La marca no puede estar vacía.");
-        long categoryId = gestionarEntidad(conn, "categories", nombreCategoria, "El tipo de equipo no puede estar vacío.");
+        // La "Marca" del modelo en Snipe-IT se gestiona con la tabla `manufacturers`.
+        long manufacturerId = gestionarEntidad(conn, "manufacturers", nombreMarca, "La Marca (fabricante) no puede estar vacía para crear un modelo.");
+        long categoryId = gestionarEntidad(conn, "categories", nombreCategoria, "El Tipo (categoría) no puede estar vacío para crear un modelo.");
 
         String sqlSelect = "SELECT id FROM models WHERE name = ? AND manufacturer_id = ? AND category_id = ?";
         try (PreparedStatement pstmtSelect = conn.prepareStatement(sqlSelect)) {
