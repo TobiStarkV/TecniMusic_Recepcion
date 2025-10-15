@@ -36,7 +36,6 @@ import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Statement;
-import java.sql.Types;
 import java.text.NumberFormat;
 import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
@@ -785,126 +784,6 @@ public class tecniMusicController {
             return Optional.of("Los siguientes campos son obligatorios y no pueden estar vacíos:\n\n" + String.join("\n", camposFaltantes));
         }
         return Optional.empty();
-    }
-
-    /**
-     * @deprecated Este método ha sido refactorizado y su lógica movida a {@link DatabaseService#gestionarCliente}.
-     *             Se mantiene aquí por referencia histórica pero no debería ser utilizado.
-     */
-    @Deprecated
-    private long gestionarCliente(Connection conn) throws SQLException {
-        if (this.idClienteSeleccionado != null) {
-            return this.idClienteSeleccionado;
-        }
-
-        String nombreCliente = clienteNombreField.getText().trim().split("\\s*\\|\\s*")[0];
-        String telefonoCliente = clienteTelefonoField.getText().trim();
-        String direccionCliente = clienteDireccionField.getText().trim();
-
-        String sqlSelect = "SELECT id FROM x_clientes WHERE nombre = ? AND telefono = ?";
-        try (PreparedStatement pstmtSelect = conn.prepareStatement(sqlSelect)) {
-            pstmtSelect.setString(1, nombreCliente);
-            pstmtSelect.setString(2, telefonoCliente);
-            ResultSet rs = pstmtSelect.executeQuery();
-            if (rs.next()) return rs.getLong("id");
-        }
-
-        String sqlInsert = "INSERT INTO x_clientes (nombre, direccion, telefono) VALUES (?, ?, ?)";
-        try (PreparedStatement pstmtInsert = conn.prepareStatement(sqlInsert, Statement.RETURN_GENERATED_KEYS)) {
-            pstmtInsert.setString(1, nombreCliente);
-            pstmtInsert.setString(2, direccionCliente);
-            pstmtInsert.setString(3, telefonoCliente);
-            pstmtInsert.executeUpdate();
-            ResultSet rs = pstmtInsert.getGeneratedKeys();
-            if (rs.next()) return rs.getLong(1);
-        }
-        throw new SQLException("No se pudo crear ni encontrar el cliente.");
-    }
-
-    /**
-     * @deprecated Este método ha sido refactorizado y su lógica movida a {@link DatabaseService#gestionarAsset}.
-     *             Se mantiene aquí por referencia histórica pero no debería ser utilizado.
-     */
-    @Deprecated
-    private Long gestionarAsset(Connection conn) throws SQLException {
-        if (this.idAssetSeleccionado != null) {
-            return this.idAssetSeleccionado;
-        }
-
-        String serieEquipo = equipoSerieField.getText().trim();
-        String sqlSelect = "SELECT id FROM assets WHERE serial = ?";
-        try (PreparedStatement pstmtSelect = conn.prepareStatement(sqlSelect)) {
-            pstmtSelect.setString(1, serieEquipo);
-            ResultSet rs = pstmtSelect.executeQuery();
-            if (rs.next()) return rs.getLong("id");
-        }
-
-        String sqlInsert = "INSERT INTO assets (asset_tag, serial, model_id, status_id, name, created_at, updated_at) VALUES (?, ?, ?, ?, ?, NOW(), NOW())";
-        try (PreparedStatement pstmtInsert = conn.prepareStatement(sqlInsert, Statement.RETURN_GENERATED_KEYS)) {
-            String assetTag = "TEC-" + System.currentTimeMillis();
-            String assetName = equipoMarcaField.getText().trim() + " " + equipoModeloField.getText().trim();
-            if (assetName.trim().isEmpty()) assetName = "Equipo (registrado desde app)";
-
-            long modelId = 1; // Placeholder
-            long statusId = 1; // Placeholder
-
-            pstmtInsert.setString(1, assetTag);
-            pstmtInsert.setString(2, serieEquipo);
-            pstmtInsert.setLong(3, modelId);
-            pstmtInsert.setLong(4, statusId);
-            pstmtInsert.setString(5, assetName);
-
-            if (pstmtInsert.executeUpdate() > 0) {
-                ResultSet rs = pstmtInsert.getGeneratedKeys();
-                if (rs.next()) return rs.getLong(1);
-            }
-        }
-        throw new SQLException("La creación del activo falló.");
-    }
-
-    /**
-     * @deprecated Este método ha sido refactorizado y su lógica movida a {@link DatabaseService#insertarHojaServicio}.
-     *             Se mantiene aquí por referencia histórica pero no debería ser utilizado.
-     */
-    @Deprecated
-    private long insertarHojaServicio(Connection conn, long clienteId, Long assetId) throws SQLException {
-        String sql = "INSERT INTO x_hojas_servicio (fecha_orden, cliente_id, asset_id, equipo_serie, equipo_tipo, equipo_marca, equipo_modelo, falla_reportada, informe_costos, total_costos, fecha_entrega, firma_aclaracion, aclaraciones) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
-        try (PreparedStatement pstmt = conn.prepareStatement(sql, Statement.RETURN_GENERATED_KEYS)) {
-            pstmt.setDate(1, ordenFechaPicker.getValue() != null ? Date.valueOf(ordenFechaPicker.getValue()) : null);
-            pstmt.setLong(2, clienteId);
-            if (assetId != null) pstmt.setLong(3, assetId); else pstmt.setNull(3, Types.INTEGER);
-            pstmt.setString(4, equipoSerieField.getText());
-            pstmt.setString(5, equipoTipoField.getText());
-            pstmt.setString(6, equipoMarcaField.getText());
-            pstmt.setString(7, equipoModeloField.getText());
-            pstmt.setString(8, equipoFallaArea.getText());
-            pstmt.setString(9, costosInformeArea.getText());
-            try {
-                String totalText = costosTotalField.getText().trim().replaceAll("[^\\d.]", "");
-                if (totalText.isEmpty()) pstmt.setNull(10, Types.DECIMAL); else pstmt.setBigDecimal(10, new BigDecimal(totalText));
-            } catch (NumberFormatException e) { pstmt.setNull(10, Types.DECIMAL); }
-            pstmt.setDate(11, entregaFechaPicker.getValue() != null ? Date.valueOf(entregaFechaPicker.getValue()) : null);
-            pstmt.setString(12, entregaFirmaField.getText());
-            pstmt.setString(13, aclaracionesArea.getText());
-            pstmt.executeUpdate();
-            ResultSet rs = pstmt.getGeneratedKeys();
-            if (rs.next()) return rs.getLong(1);
-        }
-        throw new SQLException("No se pudo crear la hoja de servicio.");
-    }
-
-    /**
-     * @deprecated Este método ha sido refactorizado y su lógica movida a {@link DatabaseService#actualizarNumeroDeOrden}.
-     *             Se mantiene aquí por referencia histórica pero no debería ser utilizado.
-     */
-    @Deprecated
-    private void actualizarNumeroDeOrden(Connection conn, long hojaId, String numeroOrden) throws SQLException {
-        String sql = "UPDATE x_hojas_servicio SET numero_orden = ? WHERE id = ?";
-        try (PreparedStatement pstmt = conn.prepareStatement(sql)) {
-            pstmt.setString(1, numeroOrden);
-            pstmt.setLong(2, hojaId);
-            pstmt.executeUpdate();
-        }
     }
 
     /**

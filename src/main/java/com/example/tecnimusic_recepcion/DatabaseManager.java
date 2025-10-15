@@ -54,9 +54,4 @@ public class DatabaseManager {
 
         return DriverManager.getConnection(url, properties.getProperty("db.user"), properties.getProperty("db.password"));
     }
-
-    @Deprecated
-    public void closeConnection() {
-        System.out.println("ADVERTENCIA: El método closeConnection() está obsoleto y no tiene efecto.");
-    }
 }

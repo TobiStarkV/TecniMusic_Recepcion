@@ -36,7 +36,7 @@ public class DatabaseService {
             conn.setAutoCommit(false);
 
             long clienteId = gestionarCliente(conn, idClienteSeleccionado, nombreCliente, telefonoCliente, direccionCliente);
-            Long assetId = gestionarAsset(conn, idAssetSeleccionado, serieEquipo, marcaEquipo, modeloEquipo);
+            Long assetId = gestionarAsset(conn, idAssetSeleccionado, serieEquipo, marcaEquipo, modeloEquipo, tipoEquipo);
             long realHojaId = insertarHojaServicio(conn, clienteId, assetId, serieEquipo, tipoEquipo, marcaEquipo, modeloEquipo,
                     fechaOrden, fallaReportada, informeCostos, totalCostos, fechaEntrega, firmaAclaracion, aclaraciones);
             String realOrdenNumero = "TM-" + LocalDate.now().getYear() + "-" + realHojaId;
@@ -50,7 +50,6 @@ public class DatabaseService {
                 try {
                     conn.rollback();
                 } catch (SQLException ex) {
-                    // Log rollback error
                     System.err.println("Error during rollback: " + ex.getMessage());
                 }
             }
@@ -60,7 +59,6 @@ public class DatabaseService {
                 try {
                     conn.close();
                 } catch (SQLException e) {
-                    // Log closing error
                      System.err.println("Error al cerrar la conexión: " + e.getMessage());
                 }
             }
@@ -100,14 +98,14 @@ public class DatabaseService {
         throw new SQLException("No se pudo crear ni encontrar el cliente.");
     }
 
-    private Long gestionarAsset(Connection conn, Long idAssetSeleccionado, String serieEquipo, String marcaEquipo, String modeloEquipo) throws SQLException {
+    private Long gestionarAsset(Connection conn, Long idAssetSeleccionado, String serieEquipo, String marcaEquipo, String modeloEquipo, String tipoEquipo) throws SQLException {
         if (idAssetSeleccionado != null) {
             return idAssetSeleccionado;
         }
 
         String serieEquipoTrimmed = serieEquipo.trim();
         if (serieEquipoTrimmed.isEmpty()) {
-            return null; // No asset to manage if there is no serial
+            return null; // No hay activo que gestionar si no hay número de serie.
         }
 
         String sqlSelect = "SELECT id FROM assets WHERE serial = ?";
@@ -119,31 +117,36 @@ public class DatabaseService {
             }
         }
 
-        String sqlInsert = "INSERT INTO assets (asset_tag, serial, model_id, status_id, name, created_at, updated_at) VALUES (?, ?, ?, ?, ?, NOW(), NOW())";
-        try (PreparedStatement pstmtInsert = conn.prepareStatement(sqlInsert, Statement.RETURN_GENERATED_KEYS)) {
-            String assetTag = "TEC-" + System.currentTimeMillis();
-            String assetName = (marcaEquipo + " " + modeloEquipo).trim();
-            if (assetName.isEmpty()) {
-                assetName = "Equipo (registrado desde app)";
-            }
+        // Si el activo no existe, lo creamos de forma segura.
+        long modelId = gestionarModelo(conn, modeloEquipo, marcaEquipo, tipoEquipo);
+        long statusId = obtenerIdStatusPendiente(conn);
+        long companyId = gestionarEntidad(conn, "companies", marcaEquipo, "La marca (compañía) no puede estar vacía.");
 
-            long modelId = 1; // Placeholder
-            long statusId = 1; // Placeholder
+        String sqlInsert = "INSERT INTO assets (asset_tag, serial, model_id, status_id, name, company_id, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, NOW(), NOW())";
+        try (PreparedStatement pstmtInsert = conn.prepareStatement(sqlInsert, Statement.RETURN_GENERATED_KEYS)) {
+            String assetTag = "TEC-" + System.currentTimeMillis(); // Genera un asset tag único.
+            String assetName = (marcaEquipo.trim() + " " + modeloEquipo.trim()).trim();
+            if (assetName.isEmpty()) {
+                assetName = tipoEquipo.trim(); // Si no hay marca/modelo, usar el tipo.
+            }
+            if (assetName.isEmpty()){
+                assetName = "Equipo (registrado desde app)"; // Último recurso.
+            }
 
             pstmtInsert.setString(1, assetTag);
             pstmtInsert.setString(2, serieEquipoTrimmed);
             pstmtInsert.setLong(3, modelId);
             pstmtInsert.setLong(4, statusId);
             pstmtInsert.setString(5, assetName);
+            pstmtInsert.setLong(6, companyId);
 
-            if (pstmtInsert.executeUpdate() > 0) {
-                ResultSet rs = pstmtInsert.getGeneratedKeys();
-                if (rs.next()) {
-                    return rs.getLong(1);
-                }
+            pstmtInsert.executeUpdate();
+            ResultSet rs = pstmtInsert.getGeneratedKeys();
+            if (rs.next()) {
+                return rs.getLong(1);
             }
         }
-        throw new SQLException("La creación del activo falló.");
+        throw new SQLException("La creación del activo (asset) falló para el número de serie: " + serieEquipoTrimmed);
     }
 
     private long insertarHojaServicio(Connection conn, long clienteId, Long assetId, String equipoSerie, String equipoTipo, String equipoMarca, String equipoModelo,
@@ -194,5 +197,82 @@ public class DatabaseService {
             pstmt.setLong(2, hojaId);
             pstmt.executeUpdate();
         }
+    }
+
+    private long gestionarModelo(Connection conn, String nombreModelo, String nombreMarca, String nombreCategoria) throws SQLException {
+        if (nombreModelo == null || nombreModelo.trim().isEmpty()) {
+            throw new SQLException("El nombre del modelo no puede estar vacío.");
+        }
+
+        long manufacturerId = gestionarEntidad(conn, "manufacturers", nombreMarca, "La marca no puede estar vacía.");
+        long categoryId = gestionarEntidad(conn, "categories", nombreCategoria, "El tipo de equipo no puede estar vacío.");
+
+        String sqlSelect = "SELECT id FROM models WHERE name = ? AND manufacturer_id = ? AND category_id = ?";
+        try (PreparedStatement pstmtSelect = conn.prepareStatement(sqlSelect)) {
+            pstmtSelect.setString(1, nombreModelo.trim());
+            pstmtSelect.setLong(2, manufacturerId);
+            pstmtSelect.setLong(3, categoryId);
+            ResultSet rs = pstmtSelect.executeQuery();
+            if (rs.next()) {
+                return rs.getLong("id");
+            }
+        }
+
+        String sqlInsert = "INSERT INTO models (name, manufacturer_id, category_id, created_at, updated_at) VALUES (?, ?, ?, NOW(), NOW())";
+        try (PreparedStatement pstmtInsert = conn.prepareStatement(sqlInsert, Statement.RETURN_GENERATED_KEYS)) {
+            pstmtInsert.setString(1, nombreModelo.trim());
+            pstmtInsert.setLong(2, manufacturerId);
+            pstmtInsert.setLong(3, categoryId);
+            pstmtInsert.executeUpdate();
+            ResultSet rs = pstmtInsert.getGeneratedKeys();
+            if (rs.next()) {
+                return rs.getLong(1);
+            }
+        }
+        throw new SQLException("No se pudo crear ni encontrar el modelo '" + nombreModelo.trim() + "'.");
+    }
+
+    private long gestionarEntidad(Connection conn, String tabla, String nombre, String mensajeError) throws SQLException {
+        if (nombre == null || nombre.trim().isEmpty()) {
+            throw new SQLException(mensajeError);
+        }
+        String nombreTrimmed = nombre.trim();
+        String sqlSelect = "SELECT id FROM " + tabla + " WHERE name = ?";
+        try (PreparedStatement pstmtSelect = conn.prepareStatement(sqlSelect)) {
+            pstmtSelect.setString(1, nombreTrimmed);
+            ResultSet rs = pstmtSelect.executeQuery();
+            if (rs.next()) {
+                return rs.getLong("id");
+            }
+        }
+
+        String sqlInsert = "INSERT INTO " + tabla + " (name, created_at, updated_at) VALUES (?, NOW(), NOW())";
+        try (PreparedStatement pstmtInsert = conn.prepareStatement(sqlInsert, Statement.RETURN_GENERATED_KEYS)) {
+            pstmtInsert.setString(1, nombreTrimmed);
+            pstmtInsert.executeUpdate();
+            ResultSet rs = pstmtInsert.getGeneratedKeys();
+            if (rs.next()) {
+                return rs.getLong(1);
+            }
+        }
+        throw new SQLException("No se pudo crear ni encontrar la entidad en la tabla '" + tabla + "' con nombre '" + nombreTrimmed + "'.");
+    }
+
+    private long obtenerIdStatusPendiente(Connection conn) throws SQLException {
+        String sql = "SELECT id FROM status_labels WHERE pending = 1 ORDER BY id LIMIT 1";
+        try (Statement stmt = conn.createStatement(); ResultSet rs = stmt.executeQuery(sql)) {
+            if (rs.next()) {
+                return rs.getLong("id");
+            }
+        }
+
+        sql = "SELECT id FROM status_labels WHERE name = 'Pendiente' LIMIT 1";
+        try (Statement stmt = conn.createStatement(); ResultSet rs = stmt.executeQuery(sql)) {
+            if (rs.next()) {
+                return rs.getLong("id");
+            }
+        }
+
+        throw new SQLException("No se encontró un StatusLabel apropiado (con la marca 'pending' activada o con el nombre 'Pendiente').\nPor favor, configure uno en Snipe-IT para registrar nuevos equipos desde la aplicación.");
     }
 }
