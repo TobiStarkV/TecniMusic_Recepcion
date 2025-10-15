@@ -45,9 +45,30 @@ import java.util.Locale;
 import java.util.Optional;
 import java.util.Properties;
 
+/**
+ * Controlador principal para la interfaz de usuario de la hoja de servicio (tecniMusic-view.fxml).
+ * <p>
+ * Esta clase es el núcleo de la lógica de la aplicación de recepción. Se encarga de gestionar
+ * todos los eventos de la interfaz de usuario, validar los datos de entrada, interactuar con el
+ * {@link DatabaseService} para las operaciones de base de datos y generar los recibos en PDF.
+ *
+ * <ul>
+ *     <li><b>Inicialización:</b> Carga configuraciones, establece listeners y prepara los campos de autocompletado.</li>
+ *     <li><b>Gestión de Datos:</b> Maneja la entrada de datos del cliente y del equipo, utilizando autocompletado para agilizar el proceso.</li>
+ *     <li><b>Validación:</b> Asegura que todos los campos requeridos estén completos antes de guardar.</li>
+ *     <li><b>Lógica de Negocio:</b> Orquesta el guardado de la hoja de servicio, delegando las transacciones de base de datos al {@link DatabaseService}.</li>
+ *     <li><b>Generación de PDF:</b> Crea un recibo detallado en formato PDF de la hoja de servicio utilizando la librería iText.</li>
+ *     <li><b>Interacción con el Usuario:</b> Muestra alertas, confirmaciones y notificaciones para guiar al usuario.</li>
+ * </ul>
+ */
 public class tecniMusicController {
 
     //region FXML Fields
+    /**
+     * Componentes de la interfaz de usuario (UI) inyectados desde el archivo FXML.
+     * La anotación @FXML es utilizada por el FXMLLoader para vincular estos campos
+     * con los elementos definidos en el archivo 'tecniMusic-view.fxml'.
+     */
     @FXML private Label localNombreLabel, localDireccionLabel, localTelefonoLabel;
     @FXML private TextField ordenNumeroField, clienteNombreField, clienteDireccionField, clienteTelefonoField;
     @FXML private TextField equipoSerieField, equipoTipoField, equipoCompaniaField, equipoModeloField, costosTotalField, entregaFirmaField;
@@ -56,6 +77,11 @@ public class tecniMusicController {
     //endregion
 
     //region State Variables
+    /**
+     * Variables para mantener el estado interno del formulario y la lógica de la aplicación.
+     * Estas variables rastrean información que no está directamente visible en un campo de la UI,
+     * como los IDs de los registros seleccionados o el estado de las operaciones de autocompletado.
+     */
     private long predictedHojaId;
     private Long idClienteSeleccionado = null;
     private String nombreClienteSeleccionado = null;
@@ -66,6 +92,11 @@ public class tecniMusicController {
     //endregion
 
     //region Suggestion Lists
+    /**
+     * Listas observables para las sugerencias de autocompletado.
+     * Estas listas se cargan desde la base de datos y se vinculan a los campos de texto
+     * para proporcionar sugerencias al usuario mientras escribe.
+     */
     private final ObservableList<String> clienteSuggestions = FXCollections.observableArrayList();
     private final ObservableList<String> serieGlobalSuggestions = FXCollections.observableArrayList();
     private final ObservableList<String> companiaGlobalSuggestions = FXCollections.observableArrayList();
@@ -73,6 +104,17 @@ public class tecniMusicController {
     private final ObservableList<String> tipoGlobalSuggestions = FXCollections.observableArrayList();
     //endregion
 
+    /**
+     * Método de inicialización principal, llamado automáticamente por JavaFX después de que se carga el FXML.
+     * <p>
+     * Este método es el punto de partida para la configuración de la vista. Realiza las siguientes acciones:
+     * 1. Carga la información del local (nombre, dirección, etc.) desde `config.properties`.
+     * 2. Configura los listeners para los campos de texto de cliente y serie para gestionar el estado de autocompletado.
+     * 3. Configura el campo de costo total para que se formatee como moneda mexicana (MXN).
+     * 4. Carga todas las listas de sugerencias (clientes, series, compañías, etc.) desde la base de datos.
+     * 5. Vincula las listas de sugerencias a los campos de texto correspondientes para habilitar el autocompletado.
+     * 6. Limpia el formulario y predice el próximo número de orden para un nuevo registro.
+     */
     @FXML
     public void initialize() {
         ordenNumeroField.setEditable(false);
@@ -84,6 +126,14 @@ public class tecniMusicController {
         onLimpiarClicked();
     }
 
+    /**
+     * Configura los 'listeners' de cambio de texto para los campos de cliente y número de serie.
+     * <p>
+     * Estos listeners ayudan a gestionar el estado cuando un usuario interactúa con un campo
+     * después de haber seleccionado un valor de autocompletado. Su función principal es limpiar
+     * los datos asociados si el usuario modifica un campo que ya había sido autocompletado, forzando
+     * una nueva selección o una nueva entrada de datos.
+     */
     private void setupListeners() {
         clienteNombreField.textProperty().addListener((observable, oldValue, newV) -> {
             if (isAutoCompleting) return;
@@ -106,6 +156,13 @@ public class tecniMusicController {
         });
     }
 
+    /**
+     * Vincula los campos de texto de la UI con las listas de sugerencias para habilitar el autocompletado.
+     * Utiliza la librería ControlsFX ({@code TextFields.bindAutoCompletion}).
+     * <p>
+     * - Para cliente y serie, define una acción a ejecutar cuando se selecciona una sugerencia para cargar datos adicionales.
+     * - Para tipo, compañía y modelo, solo proporciona las sugerencias sin acciones adicionales.
+     */
     private void setupAutocompleteFields() {
         TextFields.bindAutoCompletion(clienteNombreField, clienteSuggestions)
                 .setOnAutoCompleted(e -> cargarDatosDeClienteSeleccionado(e.getCompletion()));
@@ -118,6 +175,14 @@ public class tecniMusicController {
         TextFields.bindAutoCompletion(equipoModeloField, modeloGlobalSuggestions);
     }
 
+    /**
+     * Configura el campo de texto 'costosTotalField' para que se comporte como un campo de moneda.
+     * <p>
+     * - A medida que el usuario escribe, el listener elimina cualquier carácter que no sea un dígito.
+     * - Convierte la cadena de dígitos a un valor {@link BigDecimal} (ej. "12345" -> 123.45).
+     * - Formatea el valor como moneda mexicana (ej. "$1,234.50") y actualiza el campo.
+     * - Mueve el cursor al final del texto formateado.
+     */
     private void setupCurrencyField() {
         costosTotalField.textProperty().addListener((observable, oldValue, newValue) -> {
             if (newValue == null || newValue.equals(oldValue)) {
@@ -160,6 +225,18 @@ public class tecniMusicController {
         });
     }
 
+    /**
+     * Carga las listas de sugerencias para autocompletado desde la base de datos de Snipe-IT.
+     * <p>
+     * Realiza consultas SQL para obtener:
+     * - Nombres y teléfonos de clientes (de la tabla personalizada `x_clientes`).
+     * - Números de serie de activos (de `assets`).
+     * - Nombres de compañías (de `companies`).
+     * - Nombres de modelos (de `models`).
+     * - Nombres de categorías (de `categories`).
+     * <p>
+     * Los resultados se cargan en las {@link ObservableList} correspondientes para su uso en el autocompletado.
+     */
     private void cargarSugerenciasGlobales() {
         try (Connection conn = DatabaseManager.getInstance().getConnection()) {
             conn.setTransactionIsolation(Connection.TRANSACTION_READ_COMMITTED);
@@ -189,6 +266,14 @@ public class tecniMusicController {
         }
     }
 
+    /**
+     * Se ejecuta cuando el usuario selecciona un cliente de la lista de autocompletado.
+     * <p>
+     * Busca el cliente en la base de datos y rellena los campos de nombre, teléfono y dirección.
+     * También guarda el ID del cliente y bloquea los campos para evitar la edición accidental de un cliente existente.
+     *
+     * @param suggestion La cadena de texto seleccionada, con el formato "Nombre | Teléfono".
+     */
     private void cargarDatosDeClienteSeleccionado(String suggestion) {
         String[] parts = suggestion.split("\\s*\\|\\s*");
         if (parts.length < 2) return;
@@ -214,6 +299,14 @@ public class tecniMusicController {
         }
     }
 
+    /**
+     * Se ejecuta cuando el usuario selecciona un número de serie de la lista de autocompletado.
+     * <p>
+     * Busca el activo (equipo) en la base de datos y rellena automáticamente los campos de tipo, compañía y modelo.
+     * También guarda el ID del activo y bloquea los campos para evitar la edición accidental de un activo existente.
+     *
+     * @param serial El número de serie seleccionado por el usuario.
+     */
     private void cargarDatosDeAssetSeleccionado(String serial) {
         String sql = "SELECT a.id, cat.name as tipo, cmp.name as compania, mdl.name as modelo " +
                      "FROM assets a " +
@@ -243,6 +336,16 @@ public class tecniMusicController {
         }
     }
 
+    /**
+     * Manejador del evento de clic en el botón "Guardar".
+     * <p>
+     * Orquesta el proceso completo de guardado:
+     * 1. Valida que los campos obligatorios no estén vacíos.
+     * 2. Muestra un diálogo de confirmación con un resumen de los datos.
+     * 3. Si el usuario confirma, invoca al {@link DatabaseService} para guardar la información en la base de datos.
+     * 4. Si el guardado es exitoso, genera el PDF correspondiente.
+     * 5. Muestra una notificación de éxito y cierra la aplicación.
+     */
     @FXML
     protected void onGuardarClicked() {
         Optional<String> camposInvalidos = validarCamposObligatorios();
@@ -300,6 +403,12 @@ public class tecniMusicController {
         }
     }
 
+    /**
+     * Manejador del evento de clic en el botón "Generar Último PDF".
+     * <p>
+     * Busca la última hoja de servicio guardada, carga sus datos en el formulario y genera el PDF correspondiente.
+     * Es útil para reimprimir un recibo sin tener que buscarlo manualmente.
+     */
     @FXML
     protected void onGenerarUltimoPdfClicked() {
         String sql = "SELECT hs.*, c.nombre as cliente_nombre, c.direccion as cliente_direccion, c.telefono as cliente_telefono " +
@@ -324,7 +433,7 @@ public class tecniMusicController {
 
                 equipoSerieField.setText(rs.getString("equipo_serie"));
                 equipoTipoField.setText(rs.getString("equipo_tipo"));
-                equipoCompaniaField.setText(rs.getString("equipo_marca")); // La columna sigue siendo equipo_marca
+                equipoCompaniaField.setText(rs.getString("equipo_marca")); // La columna en x_hojas_servicio sigue siendo equipo_marca
                 equipoModeloField.setText(rs.getString("equipo_modelo"));
                 equipoFallaArea.setText(rs.getString("falla_reportada"));
 
@@ -355,6 +464,15 @@ public class tecniMusicController {
         }
     }
 
+    /**
+     * Genera un archivo PDF para una hoja de servicio específica utilizando la librería iText.
+     * <p>
+     * Construye el PDF sección por sección, incluyendo encabezado, datos de la orden, cliente, equipo,
+     * costos, y una sección para la firma. También agrega una marca de agua con el logo de la empresa.
+     *
+     * @param numeroOrden El número de orden, que se usará para nombrar el archivo PDF.
+     * @throws IOException Si ocurre un error de E/S durante la creación del archivo o la lectura del logo.
+     */
     private void generarPdfHojaServicio(String numeroOrden) throws IOException {
         String dest = crearRutaDestinoPdf(numeroOrden);
         if (dest == null) return;
@@ -377,6 +495,14 @@ public class tecniMusicController {
         mostrarAlerta(Alert.AlertType.INFORMATION, "PDF Generado", "El archivo PDF ha sido guardado en:\n" + dest);
     }
 
+    /**
+     * Crea la ruta de destino para el archivo PDF en la carpeta de usuario.
+     * La ruta es: {@code [Carpeta de Usuario]/TecniMusic_Recepcion/HojasDeServicio/}.
+     * Si los directorios no existen, intenta crearlos.
+     *
+     * @param numeroOrden El número de orden que se usará como nombre del archivo.
+     * @return La ruta completa del archivo PDF, o null si no se pudo crear el directorio.
+     */
     private String crearRutaDestinoPdf(String numeroOrden) {
         String destFolder = System.getProperty("user.home") + File.separator + "TecniMusic_Recepcion" + File.separator + "HojasDeServicio";
         File dir = new File(destFolder);
@@ -387,6 +513,11 @@ public class tecniMusicController {
         return destFolder + File.separator + numeroOrden + ".pdf";
     }
 
+    /**
+     * Agrega el encabezado al documento PDF, incluyendo el logo y la información del local.
+     * @param document El documento iText al que se agregará el encabezado.
+     * @throws IOException Si no se puede encontrar o leer el archivo 'logo.png'.
+     */
     private void agregarEncabezado(Document document) throws IOException {
         URL logoUrl = getClass().getClassLoader().getResource("logo.png");
         if (logoUrl == null) {
@@ -409,6 +540,11 @@ public class tecniMusicController {
         document.add(headerTable);
     }
 
+    /**
+     * Agrega la información de la orden (número y fecha) al documento PDF.
+     * @param document El documento iText.
+     * @param numeroOrden El número de orden a mostrar.
+     */
     private void agregarInformacionOrden(Document document, String numeroOrden) {
         document.add(new Paragraph("Hoja de Servicio de Recepción").setTextAlignment(TextAlignment.CENTER).setFontSize(16).setBold().setMarginTop(10));
         Table orderInfoTable = new Table(UnitValue.createPercentArray(new float[]{1, 1})).useAllAvailableWidth().setMarginTop(5);
@@ -418,6 +554,11 @@ public class tecniMusicController {
         document.add(orderInfoTable);
     }
 
+    /**
+     * Agrega todas las secciones principales de datos (cliente, equipo, falla, etc.) al PDF.
+     * @param document El documento iText.
+     * @param headerColor El color de fondo para los títulos de sección.
+     */
     private void agregarSeccionesDeDatos(Document document, com.itextpdf.kernel.colors.Color headerColor) {
         document.add(createSectionHeader("Datos del Cliente", headerColor));
         Table clienteTable = new Table(UnitValue.createPercentArray(new float[]{1, 4})).useAllAvailableWidth().setMarginTop(5);
@@ -452,6 +593,10 @@ public class tecniMusicController {
         document.add(new Paragraph(aclaracionesArea.getText()).setFontSize(9));
     }
 
+    /**
+     * Agrega la línea y el texto para la firma de conformidad del cliente al final del PDF.
+     * @param document El documento iText.
+     */
     private void agregarSeccionFirma(Document document) {
         document.add(new Paragraph("\n\n"));
         document.add(new LineSeparator(new SolidLine(1f)));
@@ -464,6 +609,11 @@ public class tecniMusicController {
                 .setFontSize(8).setItalic());
     }
 
+    /**
+     * Agrega una imagen del logo como marca de agua semitransparente en el centro de cada página del PDF.
+     * @param pdf El documento PDF de iText.
+     * @throws IOException Si no se puede leer el archivo del logo.
+     */
     private void agregarMarcaDeAgua(PdfDocument pdf) throws IOException {
         URL logoUrl = getClass().getClassLoader().getResource("logo.png");
         if (logoUrl == null) {
@@ -504,6 +654,12 @@ public class tecniMusicController {
         }
     }
 
+    /**
+     * Método de utilidad para crear un párrafo con estilo de encabezado de sección para el PDF.
+     * @param title El texto del encabezado.
+     * @param bgColor El color de fondo del encabezado.
+     * @return Un objeto {@link Paragraph} con el estilo aplicado.
+     */
     private Paragraph createSectionHeader(String title, com.itextpdf.kernel.colors.Color bgColor) {
         Paragraph p = new Paragraph(title);
         p.setBackgroundColor(bgColor);
@@ -516,6 +672,13 @@ public class tecniMusicController {
         return p;
     }
 
+    /**
+     * Método de utilidad para agregar una fila de "Etiqueta: Valor" a una tabla iText en el PDF.
+     * @param table La tabla a la que se agregará la fila.
+     * @param label El texto de la etiqueta (se mostrará en negrita).
+     * @param value El texto del valor.
+     * @param isValueBold Si el valor también debe estar en negrita.
+     */
     private void addInfoRow(Table table, String label, String value, boolean isValueBold) {
         com.itextpdf.layout.element.Cell labelCell = new com.itextpdf.layout.element.Cell().add(new Paragraph(label).setBold().setFontSize(9));
         labelCell.setBorder(Border.NO_BORDER).setPadding(1);
@@ -530,6 +693,11 @@ public class tecniMusicController {
     }
 
 
+    /**
+     * Valida que los campos de formulario considerados obligatorios no estén vacíos.
+     * @return Un {@code Optional<String>} que contiene un mensaje de error listando los campos
+     * faltantes, o un {@code Optional.empty()} si todos los campos obligatorios están llenos.
+     */
     private Optional<String> validarCamposObligatorios() {
         List<String> camposFaltantes = new ArrayList<>();
         if (clienteNombreField.getText().trim().isEmpty()) camposFaltantes.add("• Nombre del Cliente");
@@ -545,6 +713,12 @@ public class tecniMusicController {
         return Optional.empty();
     }
 
+    /**
+     * Manejador del evento de clic en el botón "Limpiar".
+     * <p>
+     * Restablece el formulario a su estado inicial, limpiando todos los campos de entrada y
+     * restableciendo las variables de estado. Finalmente, predice y asigna un nuevo número de orden provisional.
+     */
     @FXML
     protected void onLimpiarClicked() {
         isAutoCompleting = true;
@@ -562,6 +736,9 @@ public class tecniMusicController {
         predecirYAsignarNumeroDeOrden();
     }
 
+    /**
+     * Restablece los campos y el estado relacionados con el cliente.
+     */
     private void resetCamposCliente() {
         idClienteSeleccionado = null;
         nombreClienteSeleccionado = null;
@@ -572,6 +749,9 @@ public class tecniMusicController {
         resetCamposEquipo();
     }
 
+    /**
+     * Restablece los campos y el estado relacionados con el equipo.
+     */
     private void resetCamposEquipo() {
         idAssetSeleccionado = null;
         serieEquipoSeleccionado = null;
@@ -585,6 +765,12 @@ public class tecniMusicController {
         equipoSerieField.setEditable(true);
     }
 
+    /**
+     * Predice y asigna un número de orden provisional para la nueva hoja de servicio.
+     * <p>
+     * Obtiene el ID máximo actual de la tabla {@code x_hojas_servicio}, le suma 1 y construye
+     * un número de orden con el formato "TM-[AÑO]-[ID_PREDICHO]".
+     */
     private void predecirYAsignarNumeroDeOrden() {
         long maxId = 0;
         try (Connection conn = DatabaseManager.getInstance().getConnection(); Statement stmt = conn.createStatement()) {
@@ -600,6 +786,10 @@ public class tecniMusicController {
         ordenNumeroField.setText(provisionalOrden);
     }
 
+    /**
+     * Carga los datos del local (nombre, dirección, teléfono) desde el archivo {@code config.properties}.
+     * Estos datos se muestran en la parte superior de la interfaz y en el encabezado del PDF.
+     */
     private void cargarDatosDelLocal() {
         Properties props = new Properties();
         try (InputStream input = getClass().getClassLoader().getResourceAsStream("config.properties")) {
@@ -616,6 +806,13 @@ public class tecniMusicController {
         }
     }
 
+    /**
+     * Muestra un cuadro de diálogo de alerta estándar de JavaFX.
+     *
+     * @param tipo      El tipo de alerta (p. ej., {@code Alert.AlertType.ERROR}, {@code Alert.AlertType.INFORMATION}).
+     * @param titulo    El texto que se mostrará en la barra de título de la ventana de alerta.
+     * @param contenido El mensaje principal que se mostrará dentro de la alerta.
+     */
     private void mostrarAlerta(Alert.AlertType tipo, String titulo, String contenido) {
         Alert alert = new Alert(tipo);
         alert.setTitle(titulo);
