@@ -121,7 +121,7 @@
                      <content>
                         <VBox spacing="10.0">
                            <children>
-                              <Label text="Informe de Diagnóstico:" />
+                              <Label text="Desglose de Costos" />
                               <TextArea fx:id="costosInformeArea" prefHeight="100.0" wrapText="true" />
                               <HBox alignment="CENTER_RIGHT" spacing="10.0">
                                  <children>
