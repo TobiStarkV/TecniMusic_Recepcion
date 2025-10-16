@@ -5,9 +5,11 @@ import com.itextpdf.kernel.colors.ColorConstants;
 import com.itextpdf.kernel.colors.DeviceRgb;
 import com.itextpdf.kernel.geom.Rectangle;
 import com.itextpdf.kernel.pdf.PdfDocument;
+import com.itextpdf.kernel.pdf.PdfPage;
 import com.itextpdf.kernel.pdf.PdfWriter;
 import com.itextpdf.kernel.pdf.canvas.PdfCanvas;
 import com.itextpdf.kernel.pdf.canvas.draw.SolidLine;
+import com.itextpdf.layout.Canvas;
 import com.itextpdf.layout.Document;
 import com.itextpdf.layout.borders.Border;
 import com.itextpdf.layout.element.Image;
@@ -617,40 +619,31 @@ public class tecniMusicController {
     private void agregarMarcaDeAgua(PdfDocument pdf) throws IOException {
         URL logoUrl = getClass().getClassLoader().getResource("logo.png");
         if (logoUrl == null) {
-            return;
+            return; // La advertencia ya se muestra en agregarEncabezado.
         }
 
         com.itextpdf.io.image.ImageData imageData = ImageDataFactory.create(logoUrl);
-        float originalImageWidth = imageData.getWidth();
-        float originalImageHeight = imageData.getHeight();
 
+        // Itera sobre cada página del documento para agregar la marca de agua.
         for (int i = 1; i <= pdf.getNumberOfPages(); i++) {
-            PdfCanvas pdfCanvas = new PdfCanvas(pdf.getPage(i).newContentStreamBefore(), pdf.getPage(i).getResources(), pdf);
-            Rectangle pageSize = pdf.getPage(i).getPageSize();
+            Image watermarkImg = new Image(imageData).setOpacity(0.2f);
+            PdfPage page = pdf.getPage(i);
+            Rectangle pageSize = page.getPageSize();
 
-            float pageWidth = pageSize.getWidth();
-            float pageHeight = pageSize.getHeight();
+            // Este canvas dibujará en el fondo de la página.
+            PdfCanvas pdfCanvas = new PdfCanvas(page.newContentStreamBefore(), page.getResources(), pdf);
 
-            float maxWatermarkWidth = pageWidth * 0.4f;
-            float maxWatermarkHeight = pageHeight * 0.4f;
+            // Escala la imagen para que se ajuste al 40% de la página, manteniendo la proporción.
+            watermarkImg.scaleToFit(pageSize.getWidth() * 0.4f, pageSize.getHeight() * 0.4f);
 
-            float widthRatio = maxWatermarkWidth / originalImageWidth;
-            float heightRatio = maxWatermarkHeight / originalImageHeight;
-            float scaleFactor = Math.min(widthRatio, heightRatio);
+            // Calcula las coordenadas para centrar la imagen.
+            float x = (pageSize.getWidth() - watermarkImg.getImageScaledWidth()) / 2;
+            float y = (pageSize.getHeight() - watermarkImg.getImageScaledHeight()) / 2;
 
-            float scaledWatermarkWidth = originalImageWidth * scaleFactor;
-            float scaledWatermarkHeight = originalImageHeight * scaleFactor;
-
-            Image watermarkImg = new Image(imageData);
-            watermarkImg.setOpacity(0.2f);
-            watermarkImg.scaleAbsolute(scaledWatermarkWidth, scaledWatermarkHeight);
-
-            float x = (pageWidth - scaledWatermarkWidth) / 2;
-            float y = (pageHeight - scaledWatermarkHeight) / 2;
-
-            pdfCanvas.saveState()
-                     .addXObjectAt(watermarkImg.getXObject(), x, y)
-                     .restoreState();
+            // Crea un Canvas de layout para posicionar la imagen de forma más fiable.
+            try (Canvas canvas = new Canvas(pdfCanvas, pageSize)) {
+                canvas.add(watermarkImg.setFixedPosition(x, y));
+            }
         }
     }
 
