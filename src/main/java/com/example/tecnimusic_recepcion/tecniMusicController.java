@@ -7,7 +7,6 @@ import javafx.fxml.FXML;
 import javafx.scene.Node;
 import javafx.scene.control.*;
 import javafx.scene.layout.HBox;
-import javafx.scene.layout.VBox;
 import javafx.stage.Stage;
 import org.controlsfx.control.textfield.TextFields;
 
@@ -33,7 +32,7 @@ public class tecniMusicController {
     @FXML private DatePicker ordenFechaPicker, entregaFechaPicker;
     @FXML private TextArea equipoFallaArea, costosInformeArea, aclaracionesArea;
     @FXML private HBox actionButtonsBox;
-    @FXML private Button guardarButton, limpiarButton, generarUltimoPdfButton;
+    @FXML private Button guardarButton, limpiarButton, salirButton;
 
     private long predictedHojaId;
     private Long idClienteSeleccionado = null;
@@ -57,7 +56,8 @@ public class tecniMusicController {
         setupCurrencyField();
         cargarSugerenciasGlobales();
         setupAutocompleteFields();
-        onLimpiarClicked();
+        // Se llama a reset en lugar de onLimpiarClicked para evitar el ciclo de confirmación inicial
+        resetFormulario();
     }
 
     public void loadForViewing(HojaServicioData data) {
@@ -65,19 +65,20 @@ public class tecniMusicController {
 
         // Deshabilitar todos los campos de entrada
         for (Node node : List.of(clienteNombreField, clienteDireccionField, clienteTelefonoField, equipoSerieField, equipoTipoField, equipoCompaniaField, equipoModeloField, costosTotalField, entregaFirmaField, ordenFechaPicker, entregaFechaPicker, equipoFallaArea, costosInformeArea, aclaracionesArea)) {
-            if (node instanceof TextField) {
-                ((TextField) node).setEditable(false);
-            } else if (node instanceof TextArea) {
-                ((TextArea) node).setEditable(false);
+            if (node instanceof TextInputControl) {
+                ((TextInputControl) node).setEditable(false);
             } else if (node instanceof DatePicker) {
                 ((DatePicker) node).setEditable(false);
                 ((DatePicker) node).setDisable(true);
             }
         }
 
-        // Ocultar los botones de acción
-        actionButtonsBox.setVisible(false);
-        actionButtonsBox.setManaged(false);
+        // Ocultar los botones de acción principales y mostrar solo el de salir
+        guardarButton.setVisible(false);
+        limpiarButton.setVisible(false);
+        guardarButton.setManaged(false);
+        limpiarButton.setManaged(false);
+        salirButton.setText("Cerrar Vista");
     }
 
     private void setupListeners() {
@@ -235,7 +236,7 @@ public class tecniMusicController {
             return;
         }
 
-        if (!mostrarConfirmacion()) return;
+        if (!showConfirmationDialog("Confirmar Guardado", "¿Está seguro de que desea guardar la hoja con los siguientes datos?")) return;
 
         String predictedOrdenNumero = ordenNumeroField.getText();
         try {
@@ -259,21 +260,55 @@ public class tecniMusicController {
     }
 
     @FXML
-    protected void onGenerarUltimoPdfClicked() {
-        String sql = "SELECT hs.*, c.nombre as cliente_nombre, c.direccion as cliente_direccion, c.telefono as cliente_telefono " +
-                     "FROM x_hojas_servicio hs JOIN x_clientes c ON hs.cliente_id = c.id ORDER BY hs.id DESC LIMIT 1";
-
-        try (Connection conn = DatabaseManager.getInstance().getConnection(); Statement stmt = conn.createStatement(); ResultSet rs = stmt.executeQuery(sql)) {
-            if (rs.next()) {
-                HojaServicioData data = createHojaServicioDataFromResultSet(rs);
-                new PdfGenerator().generatePdf(data);
-                Platform.runLater(() -> populateFormWithData(data)); // Opcional: Rellenar el formulario con los datos del PDF generado
-            } else {
-                mostrarAlerta(Alert.AlertType.INFORMATION, "Información", "No se encontró ninguna hoja de servicio para generar el PDF.");
+    protected void onSalirClicked() {
+        if (isFormDirty()) {
+            if (!showConfirmationDialog("Confirmar Salida", "Hay cambios sin guardar. ¿Está seguro de que desea salir?")) {
+                return;
             }
-        } catch (SQLException | IOException e) {
-            mostrarAlerta(Alert.AlertType.ERROR, "Error General", "Ocurrió un error al generar el último PDF: " + e.getMessage());
         }
+        Stage stage = (Stage) salirButton.getScene().getWindow();
+        stage.close();
+    }
+
+    @FXML
+    protected void onLimpiarClicked() {
+        if (isFormDirty()) {
+            if (!showConfirmationDialog("Confirmar Limpieza", "¿Está seguro de que desea limpiar el formulario? Se borrarán todos los datos introducidos.")) {
+                return;
+            }
+        }
+        resetFormulario();
+    }
+
+    private void resetFormulario() {
+        isAutoCompleting = true;
+        resetCamposCliente();
+        clienteNombreField.clear();
+        equipoFallaArea.clear();
+        costosInformeArea.clear();
+        costosTotalField.clear();
+        entregaFechaPicker.setValue(null);
+        entregaFirmaField.clear();
+        aclaracionesArea.clear();
+        ordenFechaPicker.setValue(LocalDate.now());
+        isAutoCompleting = false;
+        predecirYAsignarNumeroDeOrden();
+    }
+
+    private boolean isFormDirty() {
+        return !clienteNombreField.getText().trim().isEmpty() ||
+               !clienteDireccionField.getText().trim().isEmpty() ||
+               !clienteTelefonoField.getText().trim().isEmpty() ||
+               !equipoSerieField.getText().trim().isEmpty() ||
+               !equipoTipoField.getText().trim().isEmpty() ||
+               !equipoCompaniaField.getText().trim().isEmpty() ||
+               !equipoModeloField.getText().trim().isEmpty() ||
+               !equipoFallaArea.getText().trim().isEmpty() ||
+               !costosInformeArea.getText().trim().isEmpty() ||
+               !costosTotalField.getText().trim().isEmpty() ||
+               entregaFechaPicker.getValue() != null ||
+               !entregaFirmaField.getText().trim().isEmpty() ||
+               !aclaracionesArea.getText().trim().isEmpty();
     }
 
     private HojaServicioData createHojaServicioDataFromForm(String numeroOrden) throws ParseException {
@@ -301,28 +336,6 @@ public class tecniMusicController {
         return data;
     }
 
-    private HojaServicioData createHojaServicioDataFromResultSet(ResultSet rs) throws SQLException {
-        HojaServicioData data = new HojaServicioData();
-        data.setNumeroOrden(rs.getString("numero_orden"));
-        Date fechaOrden = rs.getDate("fecha_orden");
-        if (fechaOrden != null) data.setFechaOrden(fechaOrden.toLocalDate());
-        data.setClienteNombre(rs.getString("cliente_nombre"));
-        data.setClienteDireccion(rs.getString("cliente_direccion"));
-        data.setClienteTelefono(rs.getString("cliente_telefono"));
-        data.setEquipoSerie(rs.getString("equipo_serie"));
-        data.setEquipoTipo(rs.getString("equipo_tipo"));
-        data.setEquipoMarca(rs.getString("equipo_marca"));
-        data.setEquipoModelo(rs.getString("equipo_modelo"));
-        data.setFallaReportada(rs.getString("falla_reportada"));
-        data.setInformeCostos(rs.getString("informe_costos"));
-        data.setTotalCostos(rs.getBigDecimal("total_costos"));
-        Date fechaEntrega = rs.getDate("fecha_entrega");
-        if (fechaEntrega != null) data.setFechaEntrega(fechaEntrega.toLocalDate());
-        data.setFirmaAclaracion(rs.getString("firma_aclaracion"));
-        data.setAclaraciones(rs.getString("aclaraciones"));
-        return data;
-    }
-
     private void populateFormWithData(HojaServicioData data) {
         ordenNumeroField.setText(data.getNumeroOrden());
         ordenFechaPicker.setValue(data.getFechaOrden());
@@ -345,21 +358,11 @@ public class tecniMusicController {
         aclaracionesArea.setText(data.getAclaraciones());
     }
 
-    private boolean mostrarConfirmacion() {
-        StringBuilder summary = new StringBuilder();
-        summary.append("CLIENTE:\n");
-        summary.append("  Nombre: ").append(clienteNombreField.getText().trim().split("\\s*\\|\\s*")[0]).append("\n");
-        summary.append("  Teléfono: ").append(clienteTelefonoField.getText().trim()).append("\n\n");
-        summary.append("EQUIPO:\n");
-        summary.append("  Tipo: ").append(equipoTipoField.getText().trim()).append("\n");
-        summary.append("  Marca: ").append(equipoCompaniaField.getText().trim()).append("\n");
-        summary.append("  Modelo: ").append(equipoModeloField.getText().trim()).append("\n");
-        summary.append("  Serie: ").append(equipoSerieField.getText().trim()).append("\n");
-
+    private boolean showConfirmationDialog(String title, String header) {
         Alert confirmationAlert = new Alert(Alert.AlertType.CONFIRMATION);
-        confirmationAlert.setTitle("Confirmar Guardado");
-        confirmationAlert.setHeaderText("¿Está seguro de que desea guardar la hoja con los siguientes datos?");
-        confirmationAlert.setContentText(summary.toString());
+        confirmationAlert.setTitle(title);
+        confirmationAlert.setHeaderText(header);
+        confirmationAlert.setContentText("Esta acción no se puede deshacer.");
 
         Optional<ButtonType> result = confirmationAlert.showAndWait();
         return result.isPresent() && result.get() == ButtonType.OK;
@@ -389,22 +392,6 @@ public class tecniMusicController {
             return Optional.of("Los siguientes campos son obligatorios y no pueden estar vacíos:\n\n" + String.join("\n", camposFaltantes));
         }
         return Optional.empty();
-    }
-
-    @FXML
-    protected void onLimpiarClicked() {
-        isAutoCompleting = true;
-        resetCamposCliente();
-        clienteNombreField.clear();
-        equipoFallaArea.clear();
-        costosInformeArea.clear();
-        costosTotalField.clear();
-        entregaFechaPicker.setValue(null);
-        entregaFirmaField.clear();
-        aclaracionesArea.clear();
-        ordenFechaPicker.setValue(LocalDate.now());
-        isAutoCompleting = false;
-        predecirYAsignarNumeroDeOrden();
     }
 
     private void resetCamposCliente() {

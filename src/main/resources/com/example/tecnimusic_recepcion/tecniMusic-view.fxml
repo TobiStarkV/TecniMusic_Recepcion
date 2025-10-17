@@ -150,7 +150,7 @@
                            <children>
                               <Label text="Fecha de Entrega:" />
                               <DatePicker fx:id="entregaFechaPicker" GridPane.columnIndex="1" />
-                              <Label text="Firma/Aclaración de Entrega:" GridPane.rowIndex="1" />
+                              <Label text="Aclaración de Entrega:" GridPane.rowIndex="1" />
                               <TextField fx:id="entregaFirmaField" GridPane.columnIndex="1" GridPane.rowIndex="1" />
                               <Label text="Aclaraciones Adicionales:" GridPane.rowIndex="2" />
                               <TextArea fx:id="aclaracionesArea" prefHeight="80.0" wrapText="true" GridPane.columnIndex="1" GridPane.rowIndex="2" />
@@ -178,7 +178,7 @@
                      </font>
                   </Button>
                   <Button fx:id="limpiarButton" mnemonicParsing="false" onAction="#onLimpiarClicked" text="Limpiar Formulario" />
-                  <Button fx:id="generarUltimoPdfButton" onAction="#onGenerarUltimoPdfClicked" text="Generar Último PDF" />
+                  <Button fx:id="salirButton" mnemonicParsing="false" onAction="#onSalirClicked" text="Salir" />
                </children>
                <padding>
                   <Insets top="10.0" />
