@@ -126,13 +126,13 @@ public class LoadingController {
 
     private void switchToMainView() {
         try {
-            Parent mainView = FXMLLoader.load(getClass().getResource("tecniMusic-view.fxml"));
+            Parent mainView = FXMLLoader.load(getClass().getResource("main-menu-view.fxml"));
             Scene mainScene = new Scene(mainView);
 
             Stage currentStage = (Stage) loadingImageView.getScene().getWindow();
 
             Stage mainStage = new Stage();
-            mainStage.setTitle("TecniMusic - Recepción");
+            mainStage.setTitle("TecniMusic - Menú Principal");
             mainStage.setScene(mainScene);
             mainStage.centerOnScreen();
             mainStage.show();

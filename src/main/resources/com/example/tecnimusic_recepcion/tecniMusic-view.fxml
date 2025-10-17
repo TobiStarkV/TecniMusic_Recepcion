@@ -170,15 +170,15 @@
    <bottom>
       <VBox alignment="CENTER" spacing="10.0">
          <children>
-            <HBox alignment="CENTER" spacing="20.0">
+            <HBox fx:id="actionButtonsBox" alignment="CENTER" spacing="20.0">
                <children>
-                  <Button mnemonicParsing="false" onAction="#onGuardarClicked" text="Guardar Hoja de Servicio">
+                  <Button fx:id="guardarButton" mnemonicParsing="false" onAction="#onGuardarClicked" text="Guardar Hoja de Servicio">
                      <font>
                         <Font name="System Bold" size="14.0" />
                      </font>
                   </Button>
-                  <Button mnemonicParsing="false" onAction="#onLimpiarClicked" text="Limpiar Formulario" />
-                  <Button onAction="#onGenerarUltimoPdfClicked" text="Generar Último PDF" />
+                  <Button fx:id="limpiarButton" mnemonicParsing="false" onAction="#onLimpiarClicked" text="Limpiar Formulario" />
+                  <Button fx:id="generarUltimoPdfButton" onAction="#onGenerarUltimoPdfClicked" text="Generar Último PDF" />
                </children>
                <padding>
                   <Insets top="10.0" />
