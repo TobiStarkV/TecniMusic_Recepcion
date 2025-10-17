@@ -48,6 +48,7 @@
             </padding>
             <Button onAction="#onViewDetailsClicked" text="Ver Detalles" />
             <Button onAction="#onPrintSelectedClicked" text="Imprimir Seleccionada" />
+            <Button fx:id="salirButton" onAction="#onSalirClicked" text="Salir" />
         </HBox>
     </bottom>
 </BorderPane>

@@ -40,6 +40,7 @@ public class tecniMusicController {
     private Long idAssetSeleccionado = null;
     private String serieEquipoSeleccionado = null;
     private boolean isAutoCompleting = false;
+    private boolean isViewOnlyMode = false; // Flag para el modo de solo lectura
     private static final Locale SPANISH_MEXICO_LOCALE = new Locale("es", "MX");
 
     private final ObservableList<String> clienteSuggestions = FXCollections.observableArrayList();
@@ -56,14 +57,13 @@ public class tecniMusicController {
         setupCurrencyField();
         cargarSugerenciasGlobales();
         setupAutocompleteFields();
-        // Se llama a reset en lugar de onLimpiarClicked para evitar el ciclo de confirmación inicial
         resetFormulario();
     }
 
     public void loadForViewing(HojaServicioData data) {
+        this.isViewOnlyMode = true;
         populateFormWithData(data);
 
-        // Deshabilitar todos los campos de entrada
         for (Node node : List.of(clienteNombreField, clienteDireccionField, clienteTelefonoField, equipoSerieField, equipoTipoField, equipoCompaniaField, equipoModeloField, costosTotalField, entregaFirmaField, ordenFechaPicker, entregaFechaPicker, equipoFallaArea, costosInformeArea, aclaracionesArea)) {
             if (node instanceof TextInputControl) {
                 ((TextInputControl) node).setEditable(false);
@@ -73,7 +73,6 @@ public class tecniMusicController {
             }
         }
 
-        // Ocultar los botones de acción principales y mostrar solo el de salir
         guardarButton.setVisible(false);
         limpiarButton.setVisible(false);
         guardarButton.setManaged(false);
@@ -261,7 +260,7 @@ public class tecniMusicController {
 
     @FXML
     protected void onSalirClicked() {
-        if (isFormDirty()) {
+        if (!isViewOnlyMode && isFormDirty()) {
             if (!showConfirmationDialog("Confirmar Salida", "Hay cambios sin guardar. ¿Está seguro de que desea salir?")) {
                 return;
             }
@@ -296,6 +295,9 @@ public class tecniMusicController {
     }
 
     private boolean isFormDirty() {
+        // No considerar el formulario "sucio" si está en modo de solo lectura
+        if (isViewOnlyMode) return false;
+
         return !clienteNombreField.getText().trim().isEmpty() ||
                !clienteDireccionField.getText().trim().isEmpty() ||
                !clienteTelefonoField.getText().trim().isEmpty() ||

@@ -5,11 +5,9 @@ import javafx.collections.ObservableList;
 import javafx.fxml.FXML;
 import javafx.fxml.FXMLLoader;
 import javafx.scene.Scene;
-import javafx.scene.control.Alert;
-import javafx.scene.control.TableColumn;
-import javafx.scene.control.TableView;
-import javafx.scene.control.TextField;
+import javafx.scene.control.*;
 import javafx.scene.control.cell.PropertyValueFactory;
+import javafx.scene.input.MouseButton;
 import javafx.stage.Modality;
 import javafx.stage.Stage;
 
@@ -31,6 +29,8 @@ public class ManageServiceSheetsController {
     private TableColumn<ServiceSheetSummary, String> clientNameCol;
     @FXML
     private TableColumn<ServiceSheetSummary, String> equipmentCol;
+    @FXML
+    private Button salirButton;
 
     private final ObservableList<ServiceSheetSummary> serviceSheets = FXCollections.observableArrayList();
 
@@ -42,6 +42,17 @@ public class ManageServiceSheetsController {
         equipmentCol.setCellValueFactory(new PropertyValueFactory<>("equipment"));
 
         serviceSheetsTable.setItems(serviceSheets);
+
+        // Añadir listener para el doble clic en las filas de la tabla
+        serviceSheetsTable.setRowFactory(tv -> {
+            TableRow<ServiceSheetSummary> row = new TableRow<>();
+            row.setOnMouseClicked(event -> {
+                if (!row.isEmpty() && event.getButton() == MouseButton.PRIMARY && event.getClickCount() == 2) {
+                    onViewDetailsClicked();
+                }
+            });
+            return row;
+        });
 
         searchAndLoadServiceSheets(null);
     }
@@ -129,7 +140,7 @@ public class ManageServiceSheetsController {
     protected void onViewDetailsClicked() {
         ServiceSheetSummary selected = serviceSheetsTable.getSelectionModel().getSelectedItem();
         if (selected == null) {
-            showAlert(Alert.AlertType.WARNING, "Selección Requerida", "Por favor, seleccione una hoja de servicio de la tabla para ver los detalles.");
+            // No mostrar alerta si la selección es nula, ya que el doble clic puede ser en un área vacía.
             return;
         }
 
@@ -151,6 +162,12 @@ public class ManageServiceSheetsController {
                 e.printStackTrace();
             }
         });
+    }
+
+    @FXML
+    protected void onSalirClicked() {
+        Stage stage = (Stage) salirButton.getScene().getWindow();
+        stage.close();
     }
 
     private void fetchAndProcessServiceSheet(String orderNumber, java.util.function.Consumer<HojaServicioData> dataConsumer) {
