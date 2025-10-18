@@ -39,7 +39,7 @@ public class tecniMusicController {
     @FXML private DatePicker ordenFechaPicker, entregaFechaPicker;
     @FXML private TextArea equipoFallaArea, costosInformeArea, aclaracionesArea;
     @FXML private HBox actionButtonsBox;
-    @FXML private Button guardarButton, limpiarButton, salirButton, printButton; // Añadido printButton
+    @FXML private Button guardarButton, limpiarButton, salirButton, printButton;
 
     private long predictedHojaId;
     private Long idClienteSeleccionado = null;
@@ -47,7 +47,7 @@ public class tecniMusicController {
     private Long idAssetSeleccionado = null;
     private String serieEquipoSeleccionado = null;
     private boolean isAutoCompleting = false;
-    private boolean isViewOnlyMode = false; // Flag para el modo de solo lectura
+    private boolean isViewOnlyMode = false;
     private static final Locale SPANISH_MEXICO_LOCALE = new Locale("es", "MX");
 
     private final ObservableList<String> clienteSuggestions = FXCollections.observableArrayList();
@@ -66,10 +66,10 @@ public class tecniMusicController {
         setupAutocompleteFields();
         resetFormulario();
 
-        // Asegurarse de que el botón de imprimir esté visible por defecto
+        // Al crear una nueva hoja, el botón de imprimir no es necesario
         if (printButton != null) {
-            printButton.setVisible(true);
-            printButton.setManaged(true);
+            printButton.setVisible(false);
+            printButton.setManaged(false);
         }
     }
 
@@ -92,13 +92,127 @@ public class tecniMusicController {
         limpiarButton.setManaged(false);
         salirButton.setText("Cerrar Vista");
 
-        // Asegurarse de que el botón de imprimir esté visible en modo de solo lectura
+        // En modo de solo lectura, el botón de imprimir sí debe estar visible
         if (printButton != null) {
             printButton.setVisible(true);
             printButton.setManaged(true);
         }
     }
 
+    @FXML
+    protected void onGuardarClicked() {
+        Optional<String> camposInvalidos = validarCamposObligatorios();
+        if (camposInvalidos.isPresent()) {
+            showAlert(Alert.AlertType.WARNING, "Campos Requeridos", camposInvalidos.get());
+            return;
+        }
+
+        if (!showConfirmationDialog("Confirmar Guardado", "¿Está seguro de que desea guardar la hoja con los siguientes datos?")) return;
+
+        String predictedOrdenNumero = ordenNumeroField.getText();
+        try {
+            String realOrdenNumero = DatabaseService.getInstance().guardarHojaServicioCompleta(
+                    idClienteSeleccionado, clienteNombreField.getText(), clienteTelefonoField.getText(), clienteDireccionField.getText(),
+                    idAssetSeleccionado, equipoSerieField.getText(), equipoCompaniaField.getText(), equipoModeloField.getText(), equipoTipoField.getText(),
+                    ordenFechaPicker.getValue(), equipoFallaArea.getText(), costosInformeArea.getText(), costosTotalField.getText(),
+                    entregaFechaPicker.getValue(), entregaFirmaField.getText(), aclaracionesArea.getText()
+            );
+
+            HojaServicioData data = createHojaServicioDataFromForm(realOrdenNumero);
+            String pdfPath = new PdfGenerator().generatePdf(data);
+
+            // Preguntar si se desea imprimir
+            Alert printConfirmAlert = new Alert(Alert.AlertType.CONFIRMATION);
+            printConfirmAlert.setTitle("Confirmar Impresión");
+            printConfirmAlert.setHeaderText("Hoja de servicio guardada. ¿Desea imprimirla ahora?");
+            printConfirmAlert.setContentText("Se enviará el documento a la impresora predeterminada.");
+
+            Optional<ButtonType> printResult = printConfirmAlert.showAndWait();
+            if (printResult.isPresent() && printResult.get() == ButtonType.OK) {
+                performPrint(pdfPath);
+            }
+
+            mostrarExitoYSalir(predictedOrdenNumero, realOrdenNumero);
+
+        } catch (SQLException e) {
+            showAlert(Alert.AlertType.ERROR, "Error de Base de Datos", "No se pudo guardar la hoja de servicio. Error: " + e.getMessage());
+        } catch (IOException | ParseException e) {
+            showAlert(Alert.AlertType.ERROR, "Error de PDF", "No se pudo generar el PDF. Error: " + e.getMessage());
+        }
+    }
+
+    @FXML
+    protected void onPrintClicked() {
+        try {
+            HojaServicioData data = createHojaServicioDataFromForm(ordenNumeroField.getText());
+            String pdfPath = new PdfGenerator().generatePdf(data);
+
+            if (pdfPath != null) {
+                Alert confirmationAlert = new Alert(Alert.AlertType.CONFIRMATION);
+                confirmationAlert.setTitle("Confirmar Impresión");
+                confirmationAlert.setHeaderText("¿Desea imprimir la hoja de servicio actual?");
+                confirmationAlert.setContentText("Se enviará el documento a la impresora predeterminada.");
+
+                Optional<ButtonType> result = confirmationAlert.showAndWait();
+                if (result.isPresent() && result.get() == ButtonType.OK) {
+                    performPrint(pdfPath);
+                }
+            } else {
+                showAlert(Alert.AlertType.ERROR, "Error de PDF", "No se pudo generar la ruta del PDF.");
+            }
+        } catch (IOException | ParseException e) {
+            showAlert(Alert.AlertType.ERROR, "Error de PDF", "No se pudo generar el PDF. Error: " + e.getMessage());
+            e.printStackTrace();
+        }
+    }
+
+    private void performPrint(String pdfPath) {
+        if (pdfPath == null) {
+            showAlert(Alert.AlertType.ERROR, "Error de PDF", "No se pudo encontrar la ruta del PDF para imprimir.");
+            return;
+        }
+        try (PDDocument document = PDDocument.load(new File(pdfPath))) {
+            PrinterJob job = PrinterJob.getPrinterJob();
+            job.setPageable(new PDFPageable(document));
+
+            if (job.printDialog()) {
+                job.print();
+                showAlert(Alert.AlertType.INFORMATION, "Impresión", "La hoja de servicio ha sido enviada a la impresora.");
+            } else {
+                showAlert(Alert.AlertType.INFORMATION, "Impresión Cancelada", "La impresión fue cancelada por el usuario.");
+            }
+        } catch (PrinterException e) {
+            showAlert(Alert.AlertType.ERROR, "Error de Impresión", "No se pudo imprimir el documento: " + e.getMessage());
+            e.printStackTrace();
+        } catch (IOException e) {
+            showAlert(Alert.AlertType.ERROR, "Error de Archivo", "No se pudo cargar el PDF para imprimir: " + e.getMessage());
+            e.printStackTrace();
+        }
+    }
+
+    // --- El resto de los métodos (sin cambios) ---
+
+    @FXML
+    protected void onSalirClicked() {
+        if (!isViewOnlyMode && isFormDirty()) {
+            if (!showConfirmationDialog("Confirmar Salida", "Hay cambios sin guardar. ¿Está seguro de que desea salir?")) {
+                return;
+            }
+        }
+        Stage stage = (Stage) salirButton.getScene().getWindow();
+        stage.close();
+    }
+
+    @FXML
+    protected void onLimpiarClicked() {
+        if (isFormDirty()) {
+            if (!showConfirmationDialog("Confirmar Limpieza", "¿Está seguro de que desea limpiar el formulario? Se borrarán todos los datos introducidos.")) {
+                return;
+            }
+        }
+        resetFormulario();
+    }
+    
     private void setupListeners() {
         clienteNombreField.textProperty().addListener((observable, oldValue, newV) -> {
             if (isAutoCompleting) return;
@@ -213,8 +327,7 @@ public class tecniMusicController {
                 clienteTelefonoField.setEditable(false);
                 isAutoCompleting = false;
             }
-        }
-        catch (SQLException e) {
+        } catch (SQLException e) {
             showAlert(Alert.AlertType.ERROR, "Error de Base de Datos", "No se pudieron cargar los datos del cliente.");
         }
     }
@@ -242,111 +355,9 @@ public class tecniMusicController {
                 equipoModeloField.setEditable(false);
                 isAutoCompleting = false;
             }
-        }
-        catch (SQLException e) {
+        } catch (SQLException e) {
             showAlert(Alert.AlertType.ERROR, "Error de Base de Datos", "No se pudieron cargar los datos del equipo.");
         }
-    }
-
-    @FXML
-    protected void onGuardarClicked() {
-        Optional<String> camposInvalidos = validarCamposObligatorios();
-        if (camposInvalidos.isPresent()) {
-            showAlert(Alert.AlertType.WARNING, "Campos Requeridos", camposInvalidos.get());
-            return;
-        }
-
-        if (!showConfirmationDialog("Confirmar Guardado", "¿Está seguro de que desea guardar la hoja con los siguientes datos?")) return;
-
-        String predictedOrdenNumero = ordenNumeroField.getText();
-        try {
-            String realOrdenNumero = DatabaseService.getInstance().guardarHojaServicioCompleta(
-                    idClienteSeleccionado, clienteNombreField.getText(), clienteTelefonoField.getText(), clienteDireccionField.getText(),
-                    idAssetSeleccionado, equipoSerieField.getText(), equipoCompaniaField.getText(), equipoModeloField.getText(), equipoTipoField.getText(),
-                    ordenFechaPicker.getValue(), equipoFallaArea.getText(), costosInformeArea.getText(), costosTotalField.getText(),
-                    entregaFechaPicker.getValue(), entregaFirmaField.getText(), aclaracionesArea.getText()
-            );
-
-            HojaServicioData data = createHojaServicioDataFromForm(realOrdenNumero);
-            new PdfGenerator().generatePdf(data);
-
-            mostrarExitoYSalir(predictedOrdenNumero, realOrdenNumero);
-
-        } catch (SQLException e) {
-            showAlert(Alert.AlertType.ERROR, "Error de Base de Datos", "No se pudo guardar la hoja de servicio. Error: " + e.getMessage());
-        } catch (IOException | ParseException e) {
-            showAlert(Alert.AlertType.ERROR, "Error de PDF", "No se pudo generar el PDF. Error: " + e.getMessage());
-        }
-    }
-
-    @FXML
-    protected void onPrintClicked() {
-        try {
-            // 1. Obtener los datos actuales del formulario
-            HojaServicioData data = createHojaServicioDataFromForm(ordenNumeroField.getText());
-
-            // 2. Generar el PDF y obtener su ruta
-            String pdfPath = new PdfGenerator().generatePdf(data);
-            if (pdfPath != null) {
-                File pdfFile = new File(pdfPath);
-
-                // 3. Pedir confirmación antes de imprimir
-                Alert confirmationAlert = new Alert(Alert.AlertType.CONFIRMATION);
-                confirmationAlert.setTitle("Confirmar Impresión");
-                confirmationAlert.setHeaderText("¿Desea imprimir la hoja de servicio actual?");
-                confirmationAlert.setContentText("Se enviará el documento a la impresora predeterminada.");
-
-                Optional<ButtonType> result = confirmationAlert.showAndWait();
-                if (result.isPresent() && result.get() == ButtonType.OK) {
-                    // 4. Imprimir el PDF usando PDFBox
-                    try (PDDocument document = PDDocument.load(pdfFile)) {
-                        PrinterJob job = PrinterJob.getPrinterJob();
-                        job.setPageable(new PDFPageable(document));
-
-                        if (job.printDialog()) {
-                            job.print();
-                            showAlert(Alert.AlertType.INFORMATION, "Impresión", "La hoja de servicio ha sido enviada a la impresora.");
-                        } else {
-                            showAlert(Alert.AlertType.INFORMATION, "Impresión Cancelada", "La impresión de la hoja de servicio fue cancelada por el usuario.");
-                        }
-                    } catch (PrinterException e) {
-                        showAlert(Alert.AlertType.ERROR, "Error de Impresión", "No se pudo imprimir el documento: " + e.getMessage());
-                        e.printStackTrace();
-                    } catch (IOException e) {
-                        showAlert(Alert.AlertType.ERROR, "Error de Archivo", "No se pudo cargar el PDF para imprimir: " + e.getMessage());
-                        e.printStackTrace();
-                    }
-                } else {
-                    showAlert(Alert.AlertType.INFORMATION, "Impresión Cancelada", "La impresión de la hoja de servicio fue cancelada.");
-                }
-            } else {
-                showAlert(Alert.AlertType.ERROR, "Error de PDF", "No se pudo generar la ruta del PDF.");
-            }
-        } catch (IOException | ParseException e) {
-            showAlert(Alert.AlertType.ERROR, "Error de PDF", "No se pudo generar el PDF. Error: " + e.getMessage());
-            e.printStackTrace();
-        }
-    }
-
-    @FXML
-    protected void onSalirClicked() {
-        if (!isViewOnlyMode && isFormDirty()) {
-            if (!showConfirmationDialog("Confirmar Salida", "Hay cambios sin guardar. ¿Está seguro de que desea salir?")) {
-                return;
-            }
-        }
-        Stage stage = (Stage) salirButton.getScene().getWindow();
-        stage.close();
-    }
-
-    @FXML
-    protected void onLimpiarClicked() {
-        if (isFormDirty()) {
-            if (!showConfirmationDialog("Confirmar Limpieza", "¿Está seguro de que desea limpiar el formulario? Se borrarán todos los datos introducidos.")) {
-                return;
-            }
-        }
-        resetFormulario();
     }
 
     private void resetFormulario() {
@@ -365,9 +376,7 @@ public class tecniMusicController {
     }
 
     private boolean isFormDirty() {
-        // No considerar el formulario "sucio" si está en modo de solo lectura
         if (isViewOnlyMode) return false;
-
         return !clienteNombreField.getText().trim().isEmpty() ||
                !clienteDireccionField.getText().trim().isEmpty() ||
                !clienteTelefonoField.getText().trim().isEmpty() ||
