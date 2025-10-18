@@ -11,9 +11,18 @@ import javafx.scene.input.MouseButton;
 import javafx.stage.Modality;
 import javafx.stage.Stage;
 
+import java.io.File;
 import java.io.IOException;
 import java.sql.*;
 import java.time.LocalDate;
+// import java.awt.Desktop; // Eliminada la importación para abrir archivos
+import java.util.Optional; // Importación para el diálogo de confirmación
+
+// Importaciones para la impresión de PDF
+import org.apache.pdfbox.pdmodel.PDDocument;
+import org.apache.pdfbox.printing.PDFPageable;
+import java.awt.print.PrinterJob;
+import java.awt.print.PrinterException;
 
 public class ManageServiceSheetsController {
 
@@ -128,7 +137,43 @@ public class ManageServiceSheetsController {
 
         fetchAndProcessServiceSheet(selected.getOrderNumber(), (data) -> {
             try {
-                new PdfGenerator().generatePdf(data);
+                // Generar el PDF y obtener su ruta
+                String pdfPath = new PdfGenerator().generatePdf(data);
+                if (pdfPath != null) {
+                    File pdfFile = new File(pdfPath);
+
+                    // Pedir confirmación antes de imprimir
+                    Alert confirmationAlert = new Alert(Alert.AlertType.CONFIRMATION);
+                    confirmationAlert.setTitle("Confirmar Impresión");
+                    confirmationAlert.setHeaderText("¿Desea imprimir la hoja de servicio seleccionada?");
+                    confirmationAlert.setContentText("Se enviará el documento a la impresora predeterminada.");
+
+                    Optional<ButtonType> result = confirmationAlert.showAndWait();
+                    if (result.isPresent() && result.get() == ButtonType.OK) {
+                        // Ahora, imprimir el PDF usando PDFBox
+                        try (PDDocument document = PDDocument.load(pdfFile)) {
+                            PrinterJob job = PrinterJob.getPrinterJob();
+                            job.setPageable(new PDFPageable(document));
+
+                            if (job.printDialog()) {
+                                job.print();
+                                showAlert(Alert.AlertType.INFORMATION, "Impresión", "La hoja de servicio ha sido enviada a la impresora.");
+                            } else {
+                                showAlert(Alert.AlertType.INFORMATION, "Impresión Cancelada", "La impresión de la hoja de servicio fue cancelada por el usuario.");
+                            }
+                        } catch (PrinterException e) {
+                            showAlert(Alert.AlertType.ERROR, "Error de Impresión", "No se pudo imprimir el documento: " + e.getMessage());
+                            e.printStackTrace();
+                        } catch (IOException e) {
+                            showAlert(Alert.AlertType.ERROR, "Error de Archivo", "No se pudo cargar el PDF para imprimir: " + e.getMessage());
+                            e.printStackTrace();
+                        }
+                    } else {
+                        showAlert(Alert.AlertType.INFORMATION, "Impresión Cancelada", "La impresión de la hoja de servicio fue cancelada.");
+                    }
+                } else {
+                    showAlert(Alert.AlertType.ERROR, "Error de PDF", "No se pudo generar la ruta del PDF.");
+                }
             } catch (IOException e) {
                 showAlert(Alert.AlertType.ERROR, "Error de PDF", "No se pudo generar el PDF. Error: " + e.getMessage());
                 e.printStackTrace();

@@ -52,9 +52,9 @@ public class PdfGenerator {
         }
     }
 
-    public void generatePdf(HojaServicioData data) throws IOException {
+    public String generatePdf(HojaServicioData data) throws IOException {
         String dest = crearRutaDestinoPdf(data.getNumeroOrden());
-        if (dest == null) return;
+        if (dest == null) return null;
 
         PdfWriter writer = new PdfWriter(dest);
         PdfDocument pdf = new PdfDocument(writer);
@@ -71,7 +71,8 @@ public class PdfGenerator {
         agregarMarcaDeAgua(pdf);
 
         document.close();
-        mostrarAlerta(Alert.AlertType.INFORMATION, "PDF Generado", "El archivo PDF ha sido guardado en:\n" + dest);
+        // Se elimina la alerta de aquí, el controlador la manejará.
+        return dest; // Devuelve la ruta del PDF generado
     }
 
     private String crearRutaDestinoPdf(String numeroOrden) {

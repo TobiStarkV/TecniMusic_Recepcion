@@ -177,6 +177,11 @@
                         <Font name="System Bold" size="14.0" />
                      </font>
                   </Button>
+                  <Button fx:id="printButton" mnemonicParsing="false" onAction="#onPrintClicked" text="Imprimir Hoja de Servicio">
+                     <font>
+                        <Font name="System Bold" size="14.0" />
+                     </font>
+                  </Button>
                   <Button fx:id="limpiarButton" mnemonicParsing="false" onAction="#onLimpiarClicked" text="Limpiar Formulario" />
                   <Button fx:id="salirButton" mnemonicParsing="false" onAction="#onSalirClicked" text="Salir" />
                </children>

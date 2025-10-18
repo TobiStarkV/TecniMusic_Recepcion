@@ -10,6 +10,7 @@ import javafx.scene.layout.HBox;
 import javafx.stage.Stage;
 import org.controlsfx.control.textfield.TextFields;
 
+import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
 import java.math.BigDecimal;
@@ -24,6 +25,12 @@ import java.util.Locale;
 import java.util.Optional;
 import java.util.Properties;
 
+// Importaciones para la impresión de PDF
+import org.apache.pdfbox.pdmodel.PDDocument;
+import org.apache.pdfbox.printing.PDFPageable;
+import java.awt.print.PrinterJob;
+import java.awt.print.PrinterException;
+
 public class tecniMusicController {
 
     @FXML private Label localNombreLabel, localDireccionLabel, localTelefonoLabel;
@@ -32,7 +39,7 @@ public class tecniMusicController {
     @FXML private DatePicker ordenFechaPicker, entregaFechaPicker;
     @FXML private TextArea equipoFallaArea, costosInformeArea, aclaracionesArea;
     @FXML private HBox actionButtonsBox;
-    @FXML private Button guardarButton, limpiarButton, salirButton;
+    @FXML private Button guardarButton, limpiarButton, salirButton, printButton; // Añadido printButton
 
     private long predictedHojaId;
     private Long idClienteSeleccionado = null;
@@ -58,6 +65,12 @@ public class tecniMusicController {
         cargarSugerenciasGlobales();
         setupAutocompleteFields();
         resetFormulario();
+
+        // Asegurarse de que el botón de imprimir esté visible por defecto
+        if (printButton != null) {
+            printButton.setVisible(true);
+            printButton.setManaged(true);
+        }
     }
 
     public void loadForViewing(HojaServicioData data) {
@@ -78,6 +91,12 @@ public class tecniMusicController {
         guardarButton.setManaged(false);
         limpiarButton.setManaged(false);
         salirButton.setText("Cerrar Vista");
+
+        // Asegurarse de que el botón de imprimir esté visible en modo de solo lectura
+        if (printButton != null) {
+            printButton.setVisible(true);
+            printButton.setManaged(true);
+        }
     }
 
     private void setupListeners() {
@@ -155,7 +174,7 @@ public class tecniMusicController {
             modeloGlobalSuggestions.setAll(fetchSuggestions(conn, "SELECT name FROM models WHERE name IS NOT NULL AND name != '' ORDER BY name ASC", null));
             tipoGlobalSuggestions.setAll(fetchSuggestions(conn, "SELECT name FROM categories WHERE name IS NOT NULL AND name != '' ORDER BY name ASC", null));
         } catch (SQLException e) {
-            mostrarAlerta(Alert.AlertType.ERROR, "Error de Carga", "No se pudieron cargar las listas de sugerencias desde la base de datos.");
+            showAlert(Alert.AlertType.ERROR, "Error de Carga", "No se pudieron cargar las listas de sugerencias desde la base de datos.");
         }
     }
 
@@ -194,8 +213,9 @@ public class tecniMusicController {
                 clienteTelefonoField.setEditable(false);
                 isAutoCompleting = false;
             }
-        } catch (SQLException e) {
-            mostrarAlerta(Alert.AlertType.ERROR, "Error de Base de Datos", "No se pudieron cargar los datos del cliente.");
+        }
+        catch (SQLException e) {
+            showAlert(Alert.AlertType.ERROR, "Error de Base de Datos", "No se pudieron cargar los datos del cliente.");
         }
     }
 
@@ -222,8 +242,9 @@ public class tecniMusicController {
                 equipoModeloField.setEditable(false);
                 isAutoCompleting = false;
             }
-        } catch (SQLException e) {
-            mostrarAlerta(Alert.AlertType.ERROR, "Error de Base de Datos", "No se pudieron cargar los datos del equipo.");
+        }
+        catch (SQLException e) {
+            showAlert(Alert.AlertType.ERROR, "Error de Base de Datos", "No se pudieron cargar los datos del equipo.");
         }
     }
 
@@ -231,7 +252,7 @@ public class tecniMusicController {
     protected void onGuardarClicked() {
         Optional<String> camposInvalidos = validarCamposObligatorios();
         if (camposInvalidos.isPresent()) {
-            mostrarAlerta(Alert.AlertType.WARNING, "Campos Requeridos", camposInvalidos.get());
+            showAlert(Alert.AlertType.WARNING, "Campos Requeridos", camposInvalidos.get());
             return;
         }
 
@@ -252,9 +273,58 @@ public class tecniMusicController {
             mostrarExitoYSalir(predictedOrdenNumero, realOrdenNumero);
 
         } catch (SQLException e) {
-            mostrarAlerta(Alert.AlertType.ERROR, "Error de Base de Datos", "No se pudo guardar la hoja de servicio. Error: " + e.getMessage());
+            showAlert(Alert.AlertType.ERROR, "Error de Base de Datos", "No se pudo guardar la hoja de servicio. Error: " + e.getMessage());
         } catch (IOException | ParseException e) {
-            mostrarAlerta(Alert.AlertType.ERROR, "Error de PDF", "No se pudo generar el PDF. Error: " + e.getMessage());
+            showAlert(Alert.AlertType.ERROR, "Error de PDF", "No se pudo generar el PDF. Error: " + e.getMessage());
+        }
+    }
+
+    @FXML
+    protected void onPrintClicked() {
+        try {
+            // 1. Obtener los datos actuales del formulario
+            HojaServicioData data = createHojaServicioDataFromForm(ordenNumeroField.getText());
+
+            // 2. Generar el PDF y obtener su ruta
+            String pdfPath = new PdfGenerator().generatePdf(data);
+            if (pdfPath != null) {
+                File pdfFile = new File(pdfPath);
+
+                // 3. Pedir confirmación antes de imprimir
+                Alert confirmationAlert = new Alert(Alert.AlertType.CONFIRMATION);
+                confirmationAlert.setTitle("Confirmar Impresión");
+                confirmationAlert.setHeaderText("¿Desea imprimir la hoja de servicio actual?");
+                confirmationAlert.setContentText("Se enviará el documento a la impresora predeterminada.");
+
+                Optional<ButtonType> result = confirmationAlert.showAndWait();
+                if (result.isPresent() && result.get() == ButtonType.OK) {
+                    // 4. Imprimir el PDF usando PDFBox
+                    try (PDDocument document = PDDocument.load(pdfFile)) {
+                        PrinterJob job = PrinterJob.getPrinterJob();
+                        job.setPageable(new PDFPageable(document));
+
+                        if (job.printDialog()) {
+                            job.print();
+                            showAlert(Alert.AlertType.INFORMATION, "Impresión", "La hoja de servicio ha sido enviada a la impresora.");
+                        } else {
+                            showAlert(Alert.AlertType.INFORMATION, "Impresión Cancelada", "La impresión de la hoja de servicio fue cancelada por el usuario.");
+                        }
+                    } catch (PrinterException e) {
+                        showAlert(Alert.AlertType.ERROR, "Error de Impresión", "No se pudo imprimir el documento: " + e.getMessage());
+                        e.printStackTrace();
+                    } catch (IOException e) {
+                        showAlert(Alert.AlertType.ERROR, "Error de Archivo", "No se pudo cargar el PDF para imprimir: " + e.getMessage());
+                        e.printStackTrace();
+                    }
+                } else {
+                    showAlert(Alert.AlertType.INFORMATION, "Impresión Cancelada", "La impresión de la hoja de servicio fue cancelada.");
+                }
+            } else {
+                showAlert(Alert.AlertType.ERROR, "Error de PDF", "No se pudo generar la ruta del PDF.");
+            }
+        } catch (IOException | ParseException e) {
+            showAlert(Alert.AlertType.ERROR, "Error de PDF", "No se pudo generar el PDF. Error: " + e.getMessage());
+            e.printStackTrace();
         }
     }
 
@@ -372,9 +442,9 @@ public class tecniMusicController {
 
     private void mostrarExitoYSalir(String predictedOrdenNumero, String realOrdenNumero) {
         if (predictedOrdenNumero.equals("TM-" + LocalDate.now().getYear() + "-" + predictedHojaId)) {
-            mostrarAlerta(Alert.AlertType.INFORMATION, "Éxito", "Hoja de servicio " + realOrdenNumero + " guardada correctamente.");
+            showAlert(Alert.AlertType.INFORMATION, "Éxito", "Hoja de servicio " + realOrdenNumero + " guardada correctamente.");
         } else {
-            mostrarAlerta(Alert.AlertType.WARNING, "Éxito con Reasignación",
+            showAlert(Alert.AlertType.WARNING, "Éxito con Reasignación",
                     "La hoja de servicio se guardó correctamente, pero el número de orden predicho (" + predictedOrdenNumero + ") ya estaba en uso.\nSe ha asignado el siguiente número disponible: " + realOrdenNumero);
         }
         Stage stage = (Stage) clienteNombreField.getScene().getWindow();
@@ -425,7 +495,7 @@ public class tecniMusicController {
             ResultSet rs = stmt.executeQuery("SELECT MAX(id) FROM x_hojas_servicio");
             if (rs.next()) maxId = rs.getLong(1);
         } catch (SQLException e) {
-            mostrarAlerta(Alert.AlertType.WARNING, "Error de Predicción", "No se pudo predecir el número de orden.");
+            showAlert(Alert.AlertType.WARNING, "Error de Predicción", "No se pudo predecir el número de orden.");
         }
         this.predictedHojaId = maxId + 1;
         String provisionalOrden = "TM-" + LocalDate.now().getYear() + "-" + this.predictedHojaId;
@@ -436,7 +506,7 @@ public class tecniMusicController {
         Properties props = new Properties();
         try (InputStream input = getClass().getClassLoader().getResourceAsStream("config.properties")) {
             if (input == null) {
-                mostrarAlerta(Alert.AlertType.ERROR, "Error de Configuración", "No se encuentra el archivo 'config.properties'");
+                showAlert(Alert.AlertType.ERROR, "Error de Configuración", "No se encuentra el archivo 'config.properties'");
                 return;
             }
             props.load(input);
@@ -444,11 +514,11 @@ public class tecniMusicController {
             localDireccionLabel.setText(props.getProperty("local.direccion", "(No configurado)"));
             localTelefonoLabel.setText(props.getProperty("local.telefono", "(No configurado)"));
         } catch (IOException ex) {
-            mostrarAlerta(Alert.AlertType.ERROR, "Error de Configuración", "No se pudo leer el archivo de propiedades.");
+            showAlert(Alert.AlertType.ERROR, "Error de Configuración", "No se pudo leer el archivo de propiedades.");
         }
     }
 
-    private void mostrarAlerta(Alert.AlertType tipo, String titulo, String contenido) {
+    private void showAlert(Alert.AlertType tipo, String titulo, String contenido) {
         Alert alert = new Alert(tipo);
         alert.setTitle(titulo);
         alert.setHeaderText(null);
