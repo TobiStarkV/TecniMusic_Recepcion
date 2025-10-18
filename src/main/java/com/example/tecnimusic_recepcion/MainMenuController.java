@@ -28,7 +28,7 @@ public class MainMenuController {
     @FXML
     protected void onCreateServiceSheetClicked() {
         try {
-            FXMLLoader fxmlLoader = new FXMLLoader(getClass().getResource("tecniMusic-view.fxml"));
+            FXMLLoader fxmlLoader = new FXMLLoader(getClass().getResource("/com/example/tecnimusic_recepcion/tecniMusic-view.fxml"));
             Scene scene = new Scene(fxmlLoader.load());
             Stage stage = new Stage();
             stage.setTitle("TecniMusic - Nueva Hoja de Servicio");
@@ -45,7 +45,7 @@ public class MainMenuController {
     protected void onManageServiceSheetsClicked() {
         try {
             // TODO: Crear el FXML y el Controller para la gestión de hojas de servicio
-            FXMLLoader fxmlLoader = new FXMLLoader(getClass().getResource("manage-service-sheets-view.fxml"));
+            FXMLLoader fxmlLoader = new FXMLLoader(getClass().getResource("/com/example/tecnimusic_recepcion/manage-service-sheets-view.fxml"));
             Scene scene = new Scene(fxmlLoader.load());
             Stage stage = new Stage();
             stage.setTitle("TecniMusic - Consultar/Gestionar Hojas de Servicio");
@@ -62,7 +62,7 @@ public class MainMenuController {
     protected void onManageClientsClicked() {
         try {
             // TODO: Crear el FXML y el Controller para la gestión de clientes
-            FXMLLoader fxmlLoader = new FXMLLoader(getClass().getResource("manage-clients-view.fxml"));
+            FXMLLoader fxmlLoader = new FXMLLoader(getClass().getResource("/com/example/tecnimusic_recepcion/manage-clients-view.fxml"));
             Scene scene = new Scene(fxmlLoader.load());
             Stage stage = new Stage();
             stage.setTitle("TecniMusic - Gestión de Clientes");
