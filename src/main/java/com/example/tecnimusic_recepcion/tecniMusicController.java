@@ -66,7 +66,6 @@ public class tecniMusicController {
         setupAutocompleteFields();
         resetFormulario();
 
-        // Al crear una nueva hoja, el botón de imprimir no es necesario
         if (printButton != null) {
             printButton.setVisible(false);
             printButton.setManaged(false);
@@ -92,7 +91,6 @@ public class tecniMusicController {
         limpiarButton.setManaged(false);
         salirButton.setText("Cerrar Vista");
 
-        // En modo de solo lectura, el botón de imprimir sí debe estar visible
         if (printButton != null) {
             printButton.setVisible(true);
             printButton.setManaged(true);
@@ -107,7 +105,20 @@ public class tecniMusicController {
             return;
         }
 
-        if (!showConfirmationDialog("Confirmar Guardado", "¿Está seguro de que desea guardar la hoja con los siguientes datos?")) return;
+        String summary = "Cliente: " + clienteNombreField.getText().split("\\s*\\|\\s*")[0].trim() + "\n" +
+                         "Equipo: " + equipoTipoField.getText() + " " + equipoCompaniaField.getText() + " " + equipoModeloField.getText() + "\n" +
+                         "Serie: " + equipoSerieField.getText() + "\n\n" +
+                         "Falla Reportada:\n" + equipoFallaArea.getText();
+
+        Alert confirmationAlert = new Alert(Alert.AlertType.CONFIRMATION);
+        confirmationAlert.setTitle("Confirmar Guardado");
+        confirmationAlert.setHeaderText("¿Está seguro de que desea guardar la hoja con los siguientes datos?");
+        confirmationAlert.setContentText(summary);
+
+        Optional<ButtonType> result = confirmationAlert.showAndWait();
+        if (result.isEmpty() || result.get() != ButtonType.OK) {
+            return;
+        }
 
         String predictedOrdenNumero = ordenNumeroField.getText();
         try {
@@ -121,7 +132,6 @@ public class tecniMusicController {
             HojaServicioData data = createHojaServicioDataFromForm(realOrdenNumero);
             String pdfPath = new PdfGenerator().generatePdf(data);
 
-            // Preguntar si se desea imprimir
             Alert printConfirmAlert = new Alert(Alert.AlertType.CONFIRMATION);
             printConfirmAlert.setTitle("Confirmar Impresión");
             printConfirmAlert.setHeaderText("Hoja de servicio guardada. ¿Desea imprimirla ahora?");
@@ -189,8 +199,6 @@ public class tecniMusicController {
             e.printStackTrace();
         }
     }
-
-    // --- El resto de los métodos (sin cambios) ---
 
     @FXML
     protected void onSalirClicked() {
