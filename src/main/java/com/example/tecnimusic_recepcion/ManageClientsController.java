@@ -7,11 +7,16 @@ import javafx.collections.ObservableList;
 import javafx.collections.transformation.FilteredList;
 import javafx.collections.transformation.SortedList;
 import javafx.fxml.FXML;
+import javafx.fxml.FXMLLoader;
+import javafx.scene.Parent;
+import javafx.scene.Scene;
 import javafx.scene.control.*;
 import javafx.scene.control.cell.PropertyValueFactory;
 import javafx.scene.layout.VBox;
+import javafx.stage.Modality;
 import javafx.stage.Stage;
 
+import java.io.IOException;
 import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
@@ -72,20 +77,12 @@ public class ManageClientsController {
 
         searchField.textProperty().addListener((observable, oldValue, newValue) -> {
             filteredData.setPredicate(client -> {
-                if (newValue == null || newValue.isEmpty()) {
-                    return true;
-                }
-
+                if (newValue == null || newValue.isEmpty()) return true;
                 String lowerCaseFilter = newValue.toLowerCase();
-
-                if (client.getName() != null && client.getName().toLowerCase().contains(lowerCaseFilter)) {
-                    return true; // Filter matches name.
-                } else if (client.getPhone() != null && client.getPhone().toLowerCase().contains(lowerCaseFilter)) {
-                    return true; // Filter matches phone.
-                } else if (client.getAddress() != null && client.getAddress().toLowerCase().contains(lowerCaseFilter)) {
-                    return true; // Filter matches address.
-                }
-                return false; // Does not match.
+                if (client.getName() != null && client.getName().toLowerCase().contains(lowerCaseFilter)) return true;
+                if (client.getPhone() != null && client.getPhone().toLowerCase().contains(lowerCaseFilter)) return true;
+                if (client.getAddress() != null && client.getAddress().toLowerCase().contains(lowerCaseFilter)) return true;
+                return false;
             });
         });
 
@@ -93,8 +90,39 @@ public class ManageClientsController {
         sortedData.comparatorProperty().bind(clientsTable.comparatorProperty());
         clientsTable.setItems(sortedData);
 
+        clientsTable.setRowFactory(tv -> {
+            TableRow<Client> row = new TableRow<>();
+            row.setOnMouseClicked(event -> {
+                if (event.getClickCount() == 2 && (!row.isEmpty())) {
+                    Client rowData = row.getItem();
+                    openServiceSheetsWindow(rowData);
+                }
+            });
+            return row;
+        });
+
         formVBox.setVisible(false);
         formVBox.setManaged(false);
+    }
+
+    private void openServiceSheetsWindow(Client client) {
+        try {
+            FXMLLoader loader = new FXMLLoader(getClass().getResource("client-service-sheets-view.fxml"));
+            Parent root = loader.load();
+
+            ClientServiceSheetsController controller = loader.getController();
+            controller.setClient(client);
+
+            Stage stage = new Stage();
+            stage.setTitle("Hojas de Servicio de " + client.getName());
+            stage.setScene(new Scene(root));
+            stage.initModality(Modality.APPLICATION_MODAL);
+            stage.show();
+
+        } catch (IOException e) {
+            e.printStackTrace();
+            showAlert(Alert.AlertType.ERROR, "Error al Abrir Ventana", "No se pudo cargar la vista de hojas de servicio.");
+        }
     }
 
     private void loadClientsFromDatabase() {
@@ -256,52 +284,5 @@ public class ManageClientsController {
         confirmationAlert.setHeaderText(header);
         confirmationAlert.setContentText("Esta acción no se puede deshacer.");
         return confirmationAlert.showAndWait();
-    }
-
-    // Inner class for the client data model
-    public static class Client {
-        private final SimpleIntegerProperty id;
-        private final SimpleStringProperty name;
-        private final SimpleStringProperty phone;
-        private final SimpleStringProperty address;
-
-        public Client(int id, String name, String phone, String address) {
-            this.id = new SimpleIntegerProperty(id);
-            this.name = new SimpleStringProperty(name);
-            this.phone = new SimpleStringProperty(phone);
-            this.address = new SimpleStringProperty(address);
-        }
-
-        public int getId() {
-            return id.get();
-        }
-
-        public SimpleIntegerProperty idProperty() {
-            return id;
-        }
-
-        public String getName() {
-            return name.get();
-        }
-
-        public SimpleStringProperty nameProperty() {
-            return name;
-        }
-
-        public String getPhone() {
-            return phone.get();
-        }
-
-        public SimpleStringProperty phoneProperty() {
-            return phone;
-        }
-
-        public String getAddress() {
-            return address.get();
-        }
-
-        public SimpleStringProperty addressProperty() {
-            return address;
-        }
     }
 }
