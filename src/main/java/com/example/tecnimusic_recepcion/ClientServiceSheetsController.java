@@ -190,6 +190,8 @@ public class ClientServiceSheetsController {
         alert.setTitle(title);
         alert.setHeaderText(null);
         alert.setContentText(message);
+        alert.getDialogPane().getStylesheets().add(getClass().getResource("styles.css").toExternalForm());
+        ((Stage) alert.getDialogPane().getScene().getWindow()).getIcons().add(new Image(getClass().getResourceAsStream("/logo.png")));
         alert.showAndWait();
     }
 

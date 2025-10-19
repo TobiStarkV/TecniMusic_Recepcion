@@ -6,7 +6,7 @@
 
 /* Layout Panes */
 .vbox, .hbox, .grid-pane, .border-pane {
-    -fx-background-color: transparent;
+    -fx-background-color: #0A192F;
 }
 
 /* Labels */
@@ -136,11 +136,11 @@
 
 /* ScrollPane */
 .scroll-pane {
-    -fx-background-color: transparent;
+    -fx-background-color: #0A192F;
 }
 
 .scroll-pane > .viewport {
-   -fx-background-color: transparent;
+   -fx-background-color: #0A192F;
 }
 
 /* TitledPane */
@@ -207,4 +207,60 @@
 
 .date-picker-popup .spinner .label {
     -fx-text-fill: #E0E0E0;
+}
+
+/* Dialog Pane for Alerts */
+.dialog-pane {
+    -fx-background-color: #0A192F;
+    -fx-border-color: #303E4D;
+    -fx-border-width: 1px;
+}
+
+.dialog-pane .label {
+    -fx-text-fill: #E0E0E0;
+}
+
+.dialog-pane .header-panel {
+    -fx-background-color: #1E2A3A;
+}
+
+.dialog-pane .header-panel .label {
+    -fx-text-fill: white;
+    -fx-font-size: 16px;
+    -fx-font-weight: bold;
+}
+
+.dialog-pane .button-bar .button{
+    -fx-background-color: #D32F2F;
+    -fx-text-fill: white;
+    -fx-font-weight: bold;
+}
+
+.dialog-pane .button-bar .button:hover{
+    -fx-background-color: #E57373;
+}
+
+/* --- Styles for Disabled/Non-Editable Controls --- */
+.text-field:disabled,
+.text-area:disabled {
+    -fx-opacity: 1.0; /* Evita que se vuelva semitransparente */
+    -fx-background-color: #152232; /* Un tono ligeramente distinto para indicar que está deshabilitado */
+    -fx-text-fill: #8A9AAB; /* Un color de texto más tenue */
+}
+
+.text-area:disabled .content {
+     -fx-background-color: #152232;
+}
+
+.date-picker:disabled {
+    -fx-opacity: 1.0;
+}
+
+.date-picker:disabled .text-field {
+    -fx-background-color: #152232;
+    -fx-text-fill: #8A9AAB;
+}
+
+.date-picker:disabled .arrow-button {
+    -fx-background-color: #152232;
 }

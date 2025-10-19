@@ -94,6 +94,8 @@ public class LoadingController {
                     alert.setTitle("Error de Base de Datos");
                     alert.setHeaderText("No se pudo conectar a la base de datos de Snipe-IT.");
                     alert.setContentText("La aplicación no puede continuar.\nError: " + databaseTask.getMessage());
+                    alert.getDialogPane().getStylesheets().add(getClass().getResource("styles.css").toExternalForm());
+                    ((Stage) alert.getDialogPane().getScene().getWindow()).getIcons().add(new Image(getClass().getResourceAsStream("/logo.png")));
                     alert.showAndWait();
                     Platform.exit();
                 });
@@ -147,6 +149,8 @@ public class LoadingController {
             alert.setTitle("Error Crítico");
             alert.setHeaderText("No se pudo cargar la interfaz principal de la aplicación.");
             alert.setContentText("Error: " + e.getMessage());
+            alert.getDialogPane().getStylesheets().add(getClass().getResource("styles.css").toExternalForm());
+            ((Stage) alert.getDialogPane().getScene().getWindow()).getIcons().add(new Image(getClass().getResourceAsStream("/logo.png")));
             alert.showAndWait();
             Platform.exit();
         }

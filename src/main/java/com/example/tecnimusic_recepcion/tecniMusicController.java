@@ -6,6 +6,7 @@ import javafx.collections.ObservableList;
 import javafx.fxml.FXML;
 import javafx.scene.Node;
 import javafx.scene.control.*;
+import javafx.scene.image.Image;
 import javafx.scene.layout.HBox;
 import javafx.stage.Stage;
 import org.controlsfx.control.textfield.TextFields;
@@ -114,6 +115,8 @@ public class tecniMusicController {
         confirmationAlert.setTitle("Confirmar Guardado");
         confirmationAlert.setHeaderText("¿Está seguro de que desea guardar la hoja con los siguientes datos?");
         confirmationAlert.setContentText(summary);
+        confirmationAlert.getDialogPane().getStylesheets().add(getClass().getResource("styles.css").toExternalForm());
+        ((Stage) confirmationAlert.getDialogPane().getScene().getWindow()).getIcons().add(new Image(getClass().getResourceAsStream("/logo.png")));
 
         Optional<ButtonType> result = confirmationAlert.showAndWait();
         if (result.isEmpty() || result.get() != ButtonType.OK) {
@@ -136,6 +139,8 @@ public class tecniMusicController {
             printConfirmAlert.setTitle("Confirmar Impresión");
             printConfirmAlert.setHeaderText("Hoja de servicio guardada. ¿Desea imprimirla ahora?");
             printConfirmAlert.setContentText("Se enviará el documento a la impresora predeterminada.");
+            printConfirmAlert.getDialogPane().getStylesheets().add(getClass().getResource("styles.css").toExternalForm());
+            ((Stage) printConfirmAlert.getDialogPane().getScene().getWindow()).getIcons().add(new Image(getClass().getResourceAsStream("/logo.png")));
 
             Optional<ButtonType> printResult = printConfirmAlert.showAndWait();
             if (printResult.isPresent() && printResult.get() == ButtonType.OK) {
@@ -162,6 +167,8 @@ public class tecniMusicController {
                 confirmationAlert.setTitle("Confirmar Impresión");
                 confirmationAlert.setHeaderText("¿Desea imprimir la hoja de servicio actual?");
                 confirmationAlert.setContentText("Se enviará el documento a la impresora predeterminada.");
+                confirmationAlert.getDialogPane().getStylesheets().add(getClass().getResource("styles.css").toExternalForm());
+                ((Stage) confirmationAlert.getDialogPane().getScene().getWindow()).getIcons().add(new Image(getClass().getResourceAsStream("/logo.png")));
 
                 Optional<ButtonType> result = confirmationAlert.showAndWait();
                 if (result.isPresent() && result.get() == ButtonType.OK) {
@@ -452,6 +459,8 @@ public class tecniMusicController {
         confirmationAlert.setTitle(title);
         confirmationAlert.setHeaderText(header);
         confirmationAlert.setContentText("Esta acción no se puede deshacer.");
+        confirmationAlert.getDialogPane().getStylesheets().add(getClass().getResource("styles.css").toExternalForm());
+        ((Stage) confirmationAlert.getDialogPane().getScene().getWindow()).getIcons().add(new Image(getClass().getResourceAsStream("/logo.png")));
 
         Optional<ButtonType> result = confirmationAlert.showAndWait();
         return result.isPresent() && result.get() == ButtonType.OK;
@@ -540,6 +549,8 @@ public class tecniMusicController {
         alert.setTitle(titulo);
         alert.setHeaderText(null);
         alert.setContentText(contenido);
+        alert.getDialogPane().getStylesheets().add(getClass().getResource("styles.css").toExternalForm());
+        ((Stage) alert.getDialogPane().getScene().getWindow()).getIcons().add(new Image(getClass().getResourceAsStream("/logo.png")));
         alert.showAndWait();
     }
 }
