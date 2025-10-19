@@ -133,6 +133,7 @@ public class LoadingController {
 
             Stage mainStage = new Stage();
             mainStage.setTitle("TecniMusic - Menú Principal");
+            mainStage.getIcons().add(new Image(getClass().getResourceAsStream("/logo.png")));
             mainStage.setScene(mainScene);
             mainStage.centerOnScreen();
             mainStage.show();

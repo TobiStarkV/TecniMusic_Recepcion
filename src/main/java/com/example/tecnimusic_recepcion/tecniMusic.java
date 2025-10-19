@@ -4,6 +4,7 @@ import javafx.application.Application;
 import javafx.fxml.FXMLLoader;
 import javafx.scene.Parent;
 import javafx.scene.Scene;
+import javafx.scene.image.Image;
 import javafx.scene.paint.Color;
 import javafx.stage.Stage;
 import javafx.stage.StageStyle;
@@ -24,6 +25,7 @@ public class tecniMusic extends Application {
         // Configura el Stage (la ventana) para que no tenga decoración (bordes, botones de cerrar, etc.)
         // y le asigna la escena transparente.
         stage.initStyle(StageStyle.TRANSPARENT);
+        stage.getIcons().add(new Image(tecniMusic.class.getResourceAsStream("/logo.png")));
         stage.setScene(scene);
         stage.centerOnScreen();
         stage.show();

@@ -12,6 +12,7 @@ import javafx.scene.Parent;
 import javafx.scene.Scene;
 import javafx.scene.control.*;
 import javafx.scene.control.cell.PropertyValueFactory;
+import javafx.scene.image.Image;
 import javafx.scene.layout.VBox;
 import javafx.stage.Modality;
 import javafx.stage.Stage;
@@ -115,6 +116,7 @@ public class ManageClientsController {
 
             Stage stage = new Stage();
             stage.setTitle("Hojas de Servicio de " + client.getName());
+            stage.getIcons().add(new Image(getClass().getResourceAsStream("/logo.png")));
             stage.setScene(new Scene(root));
             stage.initModality(Modality.APPLICATION_MODAL);
             stage.show();

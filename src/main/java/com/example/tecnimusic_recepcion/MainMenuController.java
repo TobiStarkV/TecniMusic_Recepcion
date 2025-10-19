@@ -6,6 +6,7 @@ import javafx.fxml.FXMLLoader;
 import javafx.scene.Scene;
 import javafx.scene.control.Alert;
 import javafx.scene.control.Button;
+import javafx.scene.image.Image;
 import javafx.stage.Modality;
 import javafx.stage.Stage;
 
@@ -32,6 +33,7 @@ public class MainMenuController {
             Scene scene = new Scene(fxmlLoader.load());
             Stage stage = new Stage();
             stage.setTitle("TecniMusic - Nueva Hoja de Servicio");
+            stage.getIcons().add(new Image(getClass().getResourceAsStream("/logo.png")));
             stage.setScene(scene);
             stage.initModality(Modality.APPLICATION_MODAL); // Bloquea la ventana principal hasta que esta se cierre
             stage.showAndWait();
@@ -49,6 +51,7 @@ public class MainMenuController {
             Scene scene = new Scene(fxmlLoader.load());
             Stage stage = new Stage();
             stage.setTitle("TecniMusic - Consultar/Gestionar Hojas de Servicio");
+            stage.getIcons().add(new Image(getClass().getResourceAsStream("/logo.png")));
             stage.setScene(scene);
             stage.initModality(Modality.APPLICATION_MODAL);
             stage.showAndWait();
@@ -66,6 +69,7 @@ public class MainMenuController {
             Scene scene = new Scene(fxmlLoader.load());
             Stage stage = new Stage();
             stage.setTitle("TecniMusic - Gestión de Clientes");
+            stage.getIcons().add(new Image(getClass().getResourceAsStream("/logo.png")));
             stage.setScene(scene);
             stage.initModality(Modality.APPLICATION_MODAL);
             stage.showAndWait();

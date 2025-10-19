@@ -7,6 +7,7 @@ import javafx.fxml.FXMLLoader;
 import javafx.scene.Scene;
 import javafx.scene.control.*;
 import javafx.scene.control.cell.PropertyValueFactory;
+import javafx.scene.image.Image;
 import javafx.scene.input.MouseButton;
 import javafx.stage.Modality;
 import javafx.stage.Stage;
@@ -189,6 +190,7 @@ public class ManageServiceSheetsController {
 
                 Stage stage = new Stage();
                 stage.setTitle("Detalles de Hoja de Servicio: " + data.getNumeroOrden());
+                stage.getIcons().add(new Image(getClass().getResourceAsStream("/logo.png")));
                 stage.setScene(scene);
                 stage.initModality(Modality.APPLICATION_MODAL);
                 stage.showAndWait();

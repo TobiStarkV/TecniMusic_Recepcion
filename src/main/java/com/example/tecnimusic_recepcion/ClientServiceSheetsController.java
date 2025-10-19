@@ -13,6 +13,7 @@ import javafx.scene.control.TableView;
 import javafx.scene.control.cell.PropertyValueFactory;
 import javafx.scene.control.Alert;
 import javafx.scene.control.TableRow;
+import javafx.scene.image.Image;
 import javafx.scene.input.MouseButton;
 import javafx.stage.Modality;
 import javafx.stage.Stage;
@@ -127,6 +128,7 @@ public class ClientServiceSheetsController {
 
                 Stage stage = new Stage();
                 stage.setTitle("Detalles de Hoja de Servicio: " + data.getNumeroOrden());
+                stage.getIcons().add(new Image(getClass().getResourceAsStream("/logo.png")));
                 stage.setScene(scene);
                 stage.initModality(Modality.APPLICATION_MODAL);
                 stage.showAndWait();
