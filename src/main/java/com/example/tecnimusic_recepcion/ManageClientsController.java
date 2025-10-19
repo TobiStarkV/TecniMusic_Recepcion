@@ -117,7 +117,9 @@ public class ManageClientsController {
             Stage stage = new Stage();
             stage.setTitle("Hojas de Servicio de " + client.getName());
             stage.getIcons().add(new Image(getClass().getResourceAsStream("/logo.png")));
-            stage.setScene(new Scene(root));
+            Scene scene = new Scene(root);
+            scene.getStylesheets().add(getClass().getResource("styles.css").toExternalForm());
+            stage.setScene(scene);
             stage.initModality(Modality.APPLICATION_MODAL);
             stage.show();
 

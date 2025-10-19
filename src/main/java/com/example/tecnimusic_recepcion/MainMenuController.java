@@ -31,6 +31,7 @@ public class MainMenuController {
         try {
             FXMLLoader fxmlLoader = new FXMLLoader(getClass().getResource("/com/example/tecnimusic_recepcion/tecniMusic-view.fxml"));
             Scene scene = new Scene(fxmlLoader.load());
+            scene.getStylesheets().add(getClass().getResource("/com/example/tecnimusic_recepcion/styles.css").toExternalForm());
             Stage stage = new Stage();
             stage.setTitle("TecniMusic - Nueva Hoja de Servicio");
             stage.getIcons().add(new Image(getClass().getResourceAsStream("/logo.png")));
@@ -49,6 +50,7 @@ public class MainMenuController {
             // TODO: Crear el FXML y el Controller para la gestión de hojas de servicio
             FXMLLoader fxmlLoader = new FXMLLoader(getClass().getResource("/com/example/tecnimusic_recepcion/manage-service-sheets-view.fxml"));
             Scene scene = new Scene(fxmlLoader.load());
+            scene.getStylesheets().add(getClass().getResource("/com/example/tecnimusic_recepcion/styles.css").toExternalForm());
             Stage stage = new Stage();
             stage.setTitle("TecniMusic - Consultar/Gestionar Hojas de Servicio");
             stage.getIcons().add(new Image(getClass().getResourceAsStream("/logo.png")));
@@ -67,6 +69,7 @@ public class MainMenuController {
             // TODO: Crear el FXML y el Controller para la gestión de clientes
             FXMLLoader fxmlLoader = new FXMLLoader(getClass().getResource("/com/example/tecnimusic_recepcion/manage-clients-view.fxml"));
             Scene scene = new Scene(fxmlLoader.load());
+            scene.getStylesheets().add(getClass().getResource("/com/example/tecnimusic_recepcion/styles.css").toExternalForm());
             Stage stage = new Stage();
             stage.setTitle("TecniMusic - Gestión de Clientes");
             stage.getIcons().add(new Image(getClass().getResourceAsStream("/logo.png")));

@@ -128,6 +128,7 @@ public class LoadingController {
         try {
             Parent mainView = FXMLLoader.load(getClass().getResource("main-menu-view.fxml"));
             Scene mainScene = new Scene(mainView);
+            mainScene.getStylesheets().add(getClass().getResource("styles.css").toExternalForm());
 
             Stage currentStage = (Stage) loadingImageView.getScene().getWindow();
 

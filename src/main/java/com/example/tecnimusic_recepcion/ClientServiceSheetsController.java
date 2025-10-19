@@ -122,6 +122,7 @@ public class ClientServiceSheetsController {
             try {
                 FXMLLoader fxmlLoader = new FXMLLoader(getClass().getResource("tecniMusic-view.fxml"));
                 Scene scene = new Scene(fxmlLoader.load());
+                scene.getStylesheets().add(getClass().getResource("styles.css").toExternalForm());
 
                 tecniMusicController controller = fxmlLoader.getController();
                 controller.loadForViewing(data);
