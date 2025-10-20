@@ -168,18 +168,30 @@
 }
 
 /* Date Picker */
+.date-picker {
+    -fx-background-color: #1E2A3A;
+    -fx-border-color: #303E4D;
+    -fx-border-width: 1;
+    -fx-border-radius: 5;
+    -fx-background-radius: 5;
+}
+
+.date-picker:focused {
+    -fx-border-color: #D32F2F;
+}
+
 .date-picker .text-field {
-    -fx-background-color: #1E2A3A;
+    -fx-background-color: transparent;
+    -fx-border-width: 0;
     -fx-text-fill: #E0E0E0;
-    -fx-border-color: #303E4D;
 }
 
-.date-picker > .arrow-button {
-    -fx-background-color: #1E2A3A;
-    -fx-border-color: #303E4D;
+.date-picker .arrow-button {
+    -fx-background-color: transparent;
+    -fx-border-width: 0;
 }
 
-.date-picker > .arrow-button > .arrow {
+.date-picker .arrow-button .arrow {
     -fx-background-color: #E0E0E0;
 }
 
@@ -243,9 +255,9 @@
 /* --- Styles for Disabled/Non-Editable Controls --- */
 .text-field:disabled,
 .text-area:disabled {
-    -fx-opacity: 1.0; /* Evita que se vuelva semitransparente */
-    -fx-background-color: #152232; /* Un tono ligeramente distinto para indicar que está deshabilitado */
-    -fx-text-fill: #8A9AAB; /* Un color de texto más tenue */
+    -fx-opacity: 1.0;
+    -fx-background-color: #152232;
+    -fx-text-fill: #8A9AAB;
 }
 
 .text-area:disabled .content {
@@ -254,13 +266,14 @@
 
 .date-picker:disabled {
     -fx-opacity: 1.0;
+    -fx-border-color: #253443; /* Slightly different border for disabled state */
 }
 
 .date-picker:disabled .text-field {
-    -fx-background-color: #152232;
+    -fx-background-color: transparent;
     -fx-text-fill: #8A9AAB;
 }
 
 .date-picker:disabled .arrow-button {
-    -fx-background-color: #152232;
+    -fx-background-color: transparent;
 }
