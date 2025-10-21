@@ -6,6 +6,7 @@
   se inicializan los recursos en segundo plano (como la conexión a la base de datos).
 -->
 
+<?import java.lang.String?>
 <?import javafx.scene.image.ImageView?>
 <?import javafx.scene.layout.StackPane?>
 
@@ -15,6 +16,9 @@
   Se han eliminado prefHeight y prefWidth para que la ventana se ajuste automáticamente al tamaño de su contenido (la imagen).
 -->
 <StackPane fx:controller="com.example.tecnimusic_recepcion.LoadingController" xmlns="http://javafx.com/javafx/22" xmlns:fx="http://javafx.com/fxml/1">
+   <stylesheets>
+      <String fx:value="@styles.css" />
+   </stylesheets>
    <children>
       <!--
         ImageView es el único elemento en esta vista.

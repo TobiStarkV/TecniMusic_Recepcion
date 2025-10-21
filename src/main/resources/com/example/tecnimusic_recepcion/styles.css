@@ -1,4 +1,10 @@
-/* General Styles */
+/* Paleta (valores explícitos compatibles con JavaFX CSS) */
+/* Azul marino y grises */
+/* navy: #0A192F, panel-dark: #1E2A3A, border-gray: #303E4D, text-light: #E0E0E0 */
+
+/* Rojo principal - opción 1 (valores directos) */
+/* primary-red: #330202, primary-red-hover: #4A0505, primary-red-pressed: #120000, primary-red-soft: #4A0505 */
+
 .root {
     -fx-background-color: #0A192F; /* Azul marino oscuro */
     -fx-font-family: 'Segoe UI', Arial, sans-serif;
@@ -15,22 +21,35 @@
     -fx-font-size: 14px;
 }
 
-/* Buttons */
+/* Buttons: ajuste muy sutil, un poco menos oscuro */
 .button {
-    -fx-background-color: #D32F2F; /* Rojo */
+    -fx-background-color: linear-gradient(#A11A1A, #8A0E0E); /* base apenas más clara */
     -fx-text-fill: white;
     -fx-font-weight: bold;
-    -fx-background-radius: 5;
+    -fx-background-radius: 6;
     -fx-padding: 10 20;
     -fx-font-size: 14px;
+    -fx-effect: dropshadow(gaussian, rgba(0,0,0,0.45), 6,0,0,3);
 }
 
 .button:hover {
-    -fx-background-color: #E57373; /* Rojo más claro al pasar el ratón */
+    -fx-background-color: linear-gradient(#BC2323, #A11A1A);
 }
 
 .button:pressed {
-    -fx-background-color: #B71C1C; /* Rojo más oscuro al presionar */
+    -fx-background-color: linear-gradient(#7F0B0B, #520505);
+    -fx-translate-y: 1;
+}
+
+/* Dialog buttons and selected rows use la misma paleta (ajuste sutil) */
+.dialog-pane .button-bar .button{
+    -fx-background-color: linear-gradient(#A11A1A, #8A0E0E);
+    -fx-text-fill: white;
+    -fx-font-weight: bold;
+}
+
+.dialog-pane .button-bar .button:hover{
+    -fx-background-color: linear-gradient(#BC2323, #A11A1A);
 }
 
 /* Text Fields */
@@ -108,7 +127,7 @@
 }
 
 .table-row-cell:selected {
-    -fx-background-color: #D32F2F;
+    -fx-background-color: #A11A1A; /* selección un poco más clara */
     -fx-text-fill: white;
 }
 
@@ -243,13 +262,13 @@
 }
 
 .dialog-pane .button-bar .button{
-    -fx-background-color: #D32F2F;
+    -fx-background-color: linear-gradient(#A11A1A, #8A0E0E);
     -fx-text-fill: white;
     -fx-font-weight: bold;
 }
 
 .dialog-pane .button-bar .button:hover{
-    -fx-background-color: #E57373;
+    -fx-background-color: linear-gradient(#BC2323, #A11A1A);
 }
 
 /* --- Styles for Disabled/Non-Editable Controls --- */
@@ -277,3 +296,5 @@
 .date-picker:disabled .arrow-button {
     -fx-background-color: transparent;
 }
+
+/* End of stylesheet */

@@ -1,15 +1,20 @@
 <?xml version="1.0" encoding="UTF-8"?>
 
+<?import java.lang.String?>
 <?import javafx.geometry.Insets?>
 <?import javafx.scene.control.Button?>
 <?import javafx.scene.control.Label?>
 <?import javafx.scene.control.TableColumn?>
 <?import javafx.scene.control.TableView?>
 <?import javafx.scene.layout.BorderPane?>
+<!-- Archivo: `src/main/resources/com/example/tecnimusic_recepcion/...` (tu FXML actual) -->
 <?import javafx.scene.layout.HBox?>
 <?import javafx.scene.text.Font?>
 
 <BorderPane prefHeight="400.0" prefWidth="700.0" xmlns="http://javafx.com/javafx/11.0.1" xmlns:fx="http://javafx.com/fxml/1" fx:controller="com.example.tecnimusic_recepcion.ClientServiceSheetsController">
+    <stylesheets>
+        <String fx:value="@styles.css" />
+    </stylesheets>
     <top>
         <Label fx:id="clientNameLabel" text="Hojas de Servicio para: [Nombre del Cliente]" BorderPane.alignment="CENTER">
             <font>
