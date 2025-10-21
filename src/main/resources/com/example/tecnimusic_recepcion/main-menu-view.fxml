@@ -21,25 +21,25 @@
         </font>
     </Label>
 
-    <Button fx:id="createServiceSheetButton" onAction="#onCreateServiceSheetClicked" prefHeight="40.0" prefWidth="250.0" text="Crear Nueva Hoja de Servicio">
+    <Button fx:id="createServiceSheetButton" onAction="#onCreateServiceSheetClicked" prefHeight="40.0" prefWidth="320.0" minWidth="320.0" text="Crear Nueva Hoja de Servicio">
         <font>
             <Font size="14.0" />
         </font>
     </Button>
 
-    <Button fx:id="manageServiceSheetsButton" onAction="#onManageServiceSheetsClicked" prefHeight="40.0" prefWidth="250.0" text="Consultar/Gestionar Hojas de Servicio">
+    <Button fx:id="manageServiceSheetsButton" onAction="#onManageServiceSheetsClicked" prefHeight="40.0" prefWidth="320.0" minWidth="320.0" text="Consultar/Gestionar Hojas de Servicio">
         <font>
             <Font size="14.0" />
         </font>
     </Button>
 
-    <Button fx:id="manageClientsButton" onAction="#onManageClientsClicked" prefHeight="40.0" prefWidth="250.0" text="Gestión de Clientes">
+    <Button fx:id="manageClientsButton" onAction="#onManageClientsClicked" prefHeight="40.0" prefWidth="320.0" minWidth="320.0" text="Gestión de Clientes">
         <font>
             <Font size="14.0" />
         </font>
     </Button>
 
-    <Button onAction="#onExitClicked" prefHeight="40.0" prefWidth="250.0" text="Salir">
+    <Button onAction="#onExitClicked" prefHeight="40.0" prefWidth="320.0" minWidth="320.0" text="Salir">
         <font>
             <Font size="14.0" />
         </font>
