@@ -42,6 +42,13 @@ public class tecniMusicController {
     @FXML private HBox actionButtonsBox;
     @FXML private Button guardarButton, limpiarButton, salirButton, printButton;
 
+    // Nuevos campos para múltiples equipos
+    @FXML private TableView<Equipo> equiposTable;
+    @FXML private TableColumn<Equipo, String> colTipo, colMarca, colModelo, colSerie, colFalla;
+    @FXML private Button addEquipoButton, removeEquipoButton;
+
+    private final ObservableList<Equipo> equiposObservable = FXCollections.observableArrayList();
+
     private long predictedHojaId;
     private Long idClienteSeleccionado = null;
     private String nombreClienteSeleccionado = null;
@@ -67,10 +74,56 @@ public class tecniMusicController {
         setupAutocompleteFields();
         resetFormulario();
 
+        // Inicializar tabla de equipos
+        if (equiposTable != null) {
+            equiposTable.setItems(equiposObservable);
+            // Configurar las columnas para mostrar propiedades de Equipo usando lambdas simples
+            if (colTipo != null) colTipo.setCellValueFactory(cell -> javafx.beans.property.SimpleStringProperty.stringExpression(cell.getValue().getTipo() == null ? new javafx.beans.property.SimpleStringProperty("") : new javafx.beans.property.SimpleStringProperty(cell.getValue().getTipo())));
+            if (colMarca != null) colMarca.setCellValueFactory(cell -> javafx.beans.property.SimpleStringProperty.stringExpression(cell.getValue().getMarca() == null ? new javafx.beans.property.SimpleStringProperty("") : new javafx.beans.property.SimpleStringProperty(cell.getValue().getMarca())));
+            if (colModelo != null) colModelo.setCellValueFactory(cell -> javafx.beans.property.SimpleStringProperty.stringExpression(cell.getValue().getModelo() == null ? new javafx.beans.property.SimpleStringProperty("") : new javafx.beans.property.SimpleStringProperty(cell.getValue().getModelo())));
+            if (colSerie != null) colSerie.setCellValueFactory(cell -> javafx.beans.property.SimpleStringProperty.stringExpression(cell.getValue().getSerie() == null ? new javafx.beans.property.SimpleStringProperty("") : new javafx.beans.property.SimpleStringProperty(cell.getValue().getSerie())));
+            if (colFalla != null) colFalla.setCellValueFactory(cell -> javafx.beans.property.SimpleStringProperty.stringExpression(cell.getValue().getFalla() == null ? new javafx.beans.property.SimpleStringProperty("") : new javafx.beans.property.SimpleStringProperty(cell.getValue().getFalla())));
+        }
+
+        if (addEquipoButton != null) addEquipoButton.setOnAction(e -> onAddEquipo());
+        if (removeEquipoButton != null) removeEquipoButton.setOnAction(e -> onRemoveEquipo());
+
         if (printButton != null) {
             printButton.setVisible(false);
             printButton.setManaged(false);
         }
+    }
+
+    private void onAddEquipo() {
+        String tipo = equipoTipoField.getText() == null ? "" : equipoTipoField.getText().trim();
+        String marca = equipoCompaniaField.getText() == null ? "" : equipoCompaniaField.getText().trim();
+        String modelo = equipoModeloField.getText() == null ? "" : equipoModeloField.getText().trim();
+        String serie = equipoSerieField.getText() == null ? "" : equipoSerieField.getText().trim();
+        String falla = equipoFallaArea.getText() == null ? "" : equipoFallaArea.getText().trim();
+
+        if (tipo.isEmpty() && marca.isEmpty() && modelo.isEmpty() && serie.isEmpty()) {
+            showAlert(Alert.AlertType.WARNING, "Equipo vacío", "Complete al menos un campo del equipo antes de añadir.");
+            return;
+        }
+
+        Equipo equipo = new Equipo(tipo, marca, serie, modelo, falla);
+        equiposObservable.add(equipo);
+
+        // Limpiar campos para añadir siguiente equipo
+        equipoTipoField.clear();
+        equipoCompaniaField.clear();
+        equipoModeloField.clear();
+        equipoSerieField.clear();
+        equipoFallaArea.clear();
+    }
+
+    private void onRemoveEquipo() {
+        Equipo seleccionado = equiposTable.getSelectionModel().getSelectedItem();
+        if (seleccionado == null) {
+            showAlert(Alert.AlertType.WARNING, "Seleccionar equipo", "Seleccione un equipo en la tabla para quitarlo.");
+            return;
+        }
+        equiposObservable.remove(seleccionado);
     }
 
     public void loadForViewing(HojaServicioData data) {
@@ -85,6 +138,11 @@ public class tecniMusicController {
                 ((DatePicker) node).setDisable(true);
             }
         }
+
+        // Deshabilitar gestión de equipos en vista sólo lectura
+        if (addEquipoButton != null) addEquipoButton.setDisable(true);
+        if (removeEquipoButton != null) removeEquipoButton.setDisable(true);
+        if (equiposTable != null) equiposTable.setDisable(true);
 
         guardarButton.setVisible(false);
         limpiarButton.setVisible(false);
@@ -107,9 +165,8 @@ public class tecniMusicController {
         }
 
         String summary = "Cliente: " + clienteNombreField.getText().split("\\s*\\|\\s*")[0].trim() + "\n" +
-                         "Equipo: " + equipoTipoField.getText() + " " + equipoCompaniaField.getText() + " " + equipoModeloField.getText() + "\n" +
-                         "Serie: " + equipoSerieField.getText() + "\n\n" +
-                         "Falla Reportada:\n" + equipoFallaArea.getText();
+                         "Equipos: " + (equiposObservable.isEmpty() ? "(sin equipos)" : equiposObservable.size() + " equipo(s)") + "\n\n" +
+                         "Fallas resumidas:\n" + (equiposObservable.stream().map(Equipo::getFalla).reduce((a,b)->a+"; "+b).orElse("(sin fallas)"));
 
         Alert confirmationAlert = new Alert(Alert.AlertType.CONFIRMATION);
         confirmationAlert.setTitle("Confirmar Guardado");
@@ -125,11 +182,11 @@ public class tecniMusicController {
 
         String predictedOrdenNumero = ordenNumeroField.getText();
         try {
+            // Llamar al servicio con la lista completa de equipos
             String realOrdenNumero = DatabaseService.getInstance().guardarHojaServicioCompleta(
                     idClienteSeleccionado, clienteNombreField.getText(), clienteTelefonoField.getText(), clienteDireccionField.getText(),
-                    idAssetSeleccionado, equipoSerieField.getText(), equipoCompaniaField.getText(), equipoModeloField.getText(), equipoTipoField.getText(),
-                    ordenFechaPicker.getValue(), equipoFallaArea.getText(), costosInformeArea.getText(), costosTotalField.getText(),
-                    entregaFechaPicker.getValue(), entregaFirmaField.getText(), aclaracionesArea.getText()
+                    new ArrayList<>(equiposObservable),
+                    ordenFechaPicker.getValue(), costosInformeArea.getText(), costosTotalField.getText(), entregaFechaPicker.getValue(), entregaFirmaField.getText(), aclaracionesArea.getText()
             );
 
             HojaServicioData data = createHojaServicioDataFromForm(realOrdenNumero);
@@ -386,6 +443,7 @@ public class tecniMusicController {
         entregaFirmaField.clear();
         aclaracionesArea.clear();
         ordenFechaPicker.setValue(LocalDate.now());
+        equiposObservable.clear();
         isAutoCompleting = false;
         predecirYAsignarNumeroDeOrden();
     }
@@ -399,6 +457,7 @@ public class tecniMusicController {
                !equipoTipoField.getText().trim().isEmpty() ||
                !equipoCompaniaField.getText().trim().isEmpty() ||
                !equipoModeloField.getText().trim().isEmpty() ||
+               !equiposObservable.isEmpty() ||
                !equipoFallaArea.getText().trim().isEmpty() ||
                !costosInformeArea.getText().trim().isEmpty() ||
                !costosTotalField.getText().trim().isEmpty() ||
@@ -424,11 +483,22 @@ public class tecniMusicController {
         data.setFirmaAclaracion(entregaFirmaField.getText());
         data.setAclaraciones(aclaracionesArea.getText());
 
+        // Total de costos
         String totalCostosStr = costosTotalField.getText();
         if (totalCostosStr != null && !totalCostosStr.isEmpty()) {
             Number number = NumberFormat.getCurrencyInstance(SPANISH_MEXICO_LOCALE).parse(totalCostosStr);
             data.setTotalCostos(BigDecimal.valueOf(number.doubleValue()));
         }
+
+        // Añadir lista de equipos (si existen), mantener compatibilidad con campos individuales usando el primero
+        if (!equiposObservable.isEmpty()) {
+            data.setEquipos(new ArrayList<>(equiposObservable));
+        } else {
+            // Si no hay equipos en la lista, crear uno con los campos individuales (retrocompat)
+            Equipo single = new Equipo(equipoTipoField.getText(), equipoCompaniaField.getText(), equipoSerieField.getText(), equipoModeloField.getText(), equipoFallaArea.getText());
+            data.getEquipos().add(single);
+        }
+
         return data;
     }
 
@@ -452,6 +522,16 @@ public class tecniMusicController {
         entregaFechaPicker.setValue(data.getFechaEntrega());
         entregaFirmaField.setText(data.getFirmaAclaracion());
         aclaracionesArea.setText(data.getAclaraciones());
+
+        // Rellenar tabla de equipos si la data contiene varios
+        equiposObservable.clear();
+        if (data.getEquipos() != null && !data.getEquipos().isEmpty()) {
+            equiposObservable.addAll(data.getEquipos());
+        } else {
+            // Si no hay lista, pero hay campos individuales, crear un equipo con esos campos
+            Equipo single = new Equipo(data.getEquipoTipo(), data.getEquipoMarca(), data.getEquipoSerie(), data.getEquipoModelo(), data.getFallaReportada());
+            equiposObservable.add(single);
+        }
     }
 
     private boolean showConfirmationDialog(String title, String header) {
@@ -481,10 +561,13 @@ public class tecniMusicController {
         List<String> camposFaltantes = new ArrayList<>();
         if (clienteNombreField.getText().trim().isEmpty()) camposFaltantes.add("• Nombre del Cliente");
         if (clienteTelefonoField.getText().trim().isEmpty()) camposFaltantes.add("• Teléfono del Cliente");
-        if (equipoTipoField.getText().trim().isEmpty()) camposFaltantes.add("• Tipo de Equipo");
-        if (equipoCompaniaField.getText().trim().isEmpty()) camposFaltantes.add("• Marca");
-        if (equipoModeloField.getText().trim().isEmpty()) camposFaltantes.add("• Modelo");
-        if (equipoSerieField.getText().trim().isEmpty()) camposFaltantes.add("• Número de Serie (Activo)");
+        if (equiposObservable.isEmpty()) camposFaltantes.add("• Al menos un Equipo");
+        // Opcional: validar campos del primer equipo
+        if (!equiposObservable.isEmpty()) {
+            Equipo primero = equiposObservable.get(0);
+            if (primero.getTipo() == null || primero.getTipo().trim().isEmpty()) camposFaltantes.add("• Tipo de Equipo (primer equipo)");
+            if (primero.getMarca() == null || primero.getMarca().trim().isEmpty()) camposFaltantes.add("• Marca (primer equipo)");
+        }
 
         if (!camposFaltantes.isEmpty()) {
             return Optional.of("Los siguientes campos son obligatorios y no pueden estar vacíos:\n\n" + String.join("\n", camposFaltantes));
@@ -512,7 +595,6 @@ public class tecniMusicController {
         equipoTipoField.setEditable(true);
         equipoCompaniaField.setEditable(true);
         equipoModeloField.setEditable(true);
-        equipoSerieField.setEditable(true);
     }
 
     private void predecirYAsignarNumeroDeOrden() {

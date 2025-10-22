@@ -2,6 +2,8 @@ package com.example.tecnimusic_recepcion;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
+import java.util.ArrayList;
+import java.util.List;
 
 /**
  * Clase modelo para transportar los datos de una hoja de servicio.
@@ -14,6 +16,7 @@ public class HojaServicioData {
     private String clienteNombre;
     private String clienteTelefono;
     private String clienteDireccion;
+    // Campos individuales (retrocompatibilidad)
     private String equipoTipo;
     private String equipoMarca;
     private String equipoSerie;
@@ -24,6 +27,9 @@ public class HojaServicioData {
     private LocalDate fechaEntrega;
     private String firmaAclaracion;
     private String aclaraciones;
+
+    // Nueva lista de equipos para soportar múltiples equipos en la misma hoja
+    private List<Equipo> equipos = new ArrayList<>();
 
     // Getters y Setters
 
@@ -145,5 +151,22 @@ public class HojaServicioData {
 
     public void setAclaraciones(String aclaraciones) {
         this.aclaraciones = aclaraciones;
+    }
+
+    public List<Equipo> getEquipos() {
+        return equipos;
+    }
+
+    public void setEquipos(List<Equipo> equipos) {
+        this.equipos = equipos != null ? equipos : new ArrayList<>();
+        // Mantener compatibilidad: si hay al menos un equipo, rellenar los campos individuales con el primero
+        if (!this.equipos.isEmpty()) {
+            Equipo primero = this.equipos.get(0);
+            this.equipoTipo = primero.getTipo();
+            this.equipoMarca = primero.getMarca();
+            this.equipoModelo = primero.getModelo();
+            this.equipoSerie = primero.getSerie();
+            this.fallaReportada = primero.getFalla();
+        }
     }
 }

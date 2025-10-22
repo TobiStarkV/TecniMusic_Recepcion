@@ -27,6 +27,7 @@ import java.net.URL;
 import java.text.NumberFormat;
 import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
+import java.util.List;
 import java.util.Locale;
 import java.util.Properties;
 
@@ -124,16 +125,39 @@ public class PdfGenerator {
         addInfoRow(clienteTable, "Dirección:", data.getClienteDireccion(), false);
         document.add(clienteTable);
 
-        document.add(createSectionHeader("Datos del Equipo", headerColor));
-        Table equipoTable = new Table(UnitValue.createPercentArray(new float[]{1, 2, 1, 2})).useAllAvailableWidth().setMarginTop(5);
-        addInfoRow(equipoTable, "Tipo:", data.getEquipoTipo(), false);
-        addInfoRow(equipoTable, "Marca:", data.getEquipoMarca(), false);
-        addInfoRow(equipoTable, "Serie:", data.getEquipoSerie(), false);
-        addInfoRow(equipoTable, "Modelo:", data.getEquipoModelo(), false);
-        document.add(equipoTable);
+        // Datos de equipo: si hay varios equipos, imprimir tabla con todos ellos
+        List<Equipo> equipos = data.getEquipos();
+        if (equipos != null && equipos.size() > 1) {
+            document.add(createSectionHeader("Equipos Recibidos", headerColor));
+            Table multiEquipoTable = new Table(UnitValue.createPercentArray(new float[]{2, 2, 2, 2, 3})).useAllAvailableWidth().setMarginTop(5);
+            // Header
+            multiEquipoTable.addHeaderCell(new com.itextpdf.layout.element.Cell().add(new Paragraph("Tipo").setBold()).setBorder(Border.NO_BORDER));
+            multiEquipoTable.addHeaderCell(new com.itextpdf.layout.element.Cell().add(new Paragraph("Marca").setBold()).setBorder(Border.NO_BORDER));
+            multiEquipoTable.addHeaderCell(new com.itextpdf.layout.element.Cell().add(new Paragraph("Modelo").setBold()).setBorder(Border.NO_BORDER));
+            multiEquipoTable.addHeaderCell(new com.itextpdf.layout.element.Cell().add(new Paragraph("Serie").setBold()).setBorder(Border.NO_BORDER));
+            multiEquipoTable.addHeaderCell(new com.itextpdf.layout.element.Cell().add(new Paragraph("Falla Reportada").setBold()).setBorder(Border.NO_BORDER));
 
-        document.add(createSectionHeader("Falla Reportada por el Cliente", headerColor));
-        document.add(new Paragraph(data.getFallaReportada()).setFontSize(9).setMarginTop(5).setMarginBottom(5));
+            for (Equipo eq : equipos) {
+                multiEquipoTable.addCell(new com.itextpdf.layout.element.Cell().add(new Paragraph(nullToEmpty(eq.getTipo()))).setBorder(Border.NO_BORDER));
+                multiEquipoTable.addCell(new com.itextpdf.layout.element.Cell().add(new Paragraph(nullToEmpty(eq.getMarca()))).setBorder(Border.NO_BORDER));
+                multiEquipoTable.addCell(new com.itextpdf.layout.element.Cell().add(new Paragraph(nullToEmpty(eq.getModelo()))).setBorder(Border.NO_BORDER));
+                multiEquipoTable.addCell(new com.itextpdf.layout.element.Cell().add(new Paragraph(nullToEmpty(eq.getSerie()))).setBorder(Border.NO_BORDER));
+                multiEquipoTable.addCell(new com.itextpdf.layout.element.Cell().add(new Paragraph(nullToEmpty(eq.getFalla())).setFontSize(9)).setBorder(Border.NO_BORDER));
+            }
+            document.add(multiEquipoTable);
+        } else {
+            // Retrocompatibilidad: mostrar un solo equipo con los campos individuales
+            document.add(createSectionHeader("Datos del Equipo", headerColor));
+            Table equipoTable = new Table(UnitValue.createPercentArray(new float[]{1, 2, 1, 2})).useAllAvailableWidth().setMarginTop(5);
+            addInfoRow(equipoTable, "Tipo:", data.getEquipoTipo(), false);
+            addInfoRow(equipoTable, "Marca:", data.getEquipoMarca(), false);
+            addInfoRow(equipoTable, "Serie:", data.getEquipoSerie(), false);
+            addInfoRow(equipoTable, "Modelo:", data.getEquipoModelo(), false);
+            document.add(equipoTable);
+
+            document.add(createSectionHeader("Falla Reportada por el Cliente", headerColor));
+            document.add(new Paragraph(data.getFallaReportada()).setFontSize(9).setMarginTop(5).setMarginBottom(5));
+        }
 
         document.add(createSectionHeader("Diagnóstico y Desglose de Costos", headerColor));
         document.add(new Paragraph(data.getInformeCostos()).setFontSize(9).setMarginTop(5));
@@ -209,6 +233,10 @@ public class PdfGenerator {
         }
         valueCell.setBorder(Border.NO_BORDER).setPadding(1);
         table.addCell(valueCell);
+    }
+
+    private String nullToEmpty(String s) {
+        return s == null ? "" : s;
     }
 
     private void mostrarAlerta(Alert.AlertType tipo, String titulo, String contenido) {
