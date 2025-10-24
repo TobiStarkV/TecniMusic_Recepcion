@@ -114,6 +114,17 @@
                               </GridPane>
                               <Label text="Falla Reportada:" />
                               <TextArea fx:id="equipoFallaArea" prefHeight="80.0" wrapText="true" />
+                              <GridPane hgap="10.0" vgap="5.0">
+                                 <columnConstraints>
+                                    <ColumnConstraints hgrow="SOMETIMES" prefWidth="140.0" />
+                                    <ColumnConstraints hgrow="SOMETIMES" prefWidth="150.0" />
+                                    <ColumnConstraints hgrow="ALWAYS" />
+                                 </columnConstraints>
+                                 <children>
+                                    <Label text="Costo de Reparación:" />
+                                    <TextField fx:id="equipoCostoField" prefWidth="150.0" GridPane.columnIndex="1" />
+                                 </children>
+                              </GridPane>
 
                               <!-- Botones para añadir/quitar equipos -->
                               <HBox spacing="10.0" alignment="CENTER_RIGHT">
@@ -131,6 +142,7 @@
                                     <TableColumn fx:id="colModelo" text="Modelo" />
                                     <TableColumn fx:id="colSerie" text="Serie" />
                                     <TableColumn fx:id="colFalla" text="Falla" />
+                                    <TableColumn fx:id="colCosto" text="Costo" />
                                  </columns>
                               </TableView>
                            </children>

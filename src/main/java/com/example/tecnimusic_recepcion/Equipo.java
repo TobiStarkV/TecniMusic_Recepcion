@@ -1,11 +1,14 @@
 package com.example.tecnimusic_recepcion;
 
+import java.math.BigDecimal;
+
 public class Equipo {
     private String tipo;
     private String marca;
     private String serie;
     private String modelo;
     private String falla;
+    private BigDecimal costo;
 
     public Equipo() {}
 
@@ -15,6 +18,15 @@ public class Equipo {
         this.serie = serie;
         this.modelo = modelo;
         this.falla = falla;
+    }
+
+    public Equipo(String tipo, String marca, String serie, String modelo, String falla, BigDecimal costo) {
+        this.tipo = tipo;
+        this.marca = marca;
+        this.serie = serie;
+        this.modelo = modelo;
+        this.falla = falla;
+        this.costo = costo;
     }
 
     public String getTipo() {
@@ -56,5 +68,12 @@ public class Equipo {
     public void setFalla(String falla) {
         this.falla = falla;
     }
-}
 
+    public BigDecimal getCosto() {
+        return costo;
+    }
+
+    public void setCosto(BigDecimal costo) {
+        this.costo = costo;
+    }
+}
