@@ -2,6 +2,7 @@ package com.example.tecnimusic_recepcion;
 
 import javafx.application.Platform;
 import javafx.collections.FXCollections;
+import javafx.collections.ListChangeListener;
 import javafx.collections.ObservableList;
 import javafx.fxml.FXML;
 import javafx.scene.Node;
@@ -34,7 +35,7 @@ import java.awt.print.PrinterException;
 
 public class tecniMusicController {
 
-    @FXML private Label localNombreLabel, localDireccionLabel, localTelefonoLabel;
+    @FXML private Label localNombreLabel, localDireccionLabel, localTelefonoLabel, totalCostoLabel;
     @FXML private TextField ordenNumeroField, clienteNombreField, clienteDireccionField, clienteTelefonoField;
     @FXML private TextField equipoSerieField, equipoTipoField, equipoCompaniaField, equipoModeloField, costosTotalField, entregaFirmaField, equipoCostoField;
     @FXML private DatePicker ordenFechaPicker, entregaFechaPicker;
@@ -95,6 +96,10 @@ public class tecniMusicController {
             });
         }
 
+        equiposObservable.addListener((ListChangeListener.Change<? extends Equipo> c) -> {
+            actualizarCostoTotal();
+        });
+
         if (addEquipoButton != null) addEquipoButton.setOnAction(e -> onAddEquipo());
         if (removeEquipoButton != null) removeEquipoButton.setOnAction(e -> onRemoveEquipo());
 
@@ -147,6 +152,19 @@ public class tecniMusicController {
             return;
         }
         equiposObservable.remove(seleccionado);
+    }
+
+    private void actualizarCostoTotal() {
+        BigDecimal total = BigDecimal.ZERO;
+        for (Equipo equipo : equiposObservable) {
+            if (equipo.getCosto() != null) {
+                total = total.add(equipo.getCosto());
+            }
+        }
+        NumberFormat currencyFormat = NumberFormat.getCurrencyInstance(SPANISH_MEXICO_LOCALE);
+        if (totalCostoLabel != null) {
+            totalCostoLabel.setText(currencyFormat.format(total));
+        }
     }
 
     public void loadForViewing(HojaServicioData data) {
@@ -563,6 +581,7 @@ public class tecniMusicController {
             Equipo single = new Equipo(data.getEquipoTipo(), data.getEquipoMarca(), data.getEquipoSerie(), data.getEquipoModelo(), data.getFallaReportada(), null); // Costo no está en el modelo de datos anterior
             equiposObservable.add(single);
         }
+        actualizarCostoTotal();
     }
 
     private boolean showConfirmationDialog(String title, String header) {
