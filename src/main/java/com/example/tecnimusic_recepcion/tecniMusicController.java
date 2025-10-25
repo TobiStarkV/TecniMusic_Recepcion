@@ -35,7 +35,7 @@ import java.awt.print.PrinterException;
 
 public class tecniMusicController {
 
-    @FXML private Label localNombreLabel, localDireccionLabel, localTelefonoLabel, totalCostoLabel;
+    @FXML private Label localNombreLabel, localDireccionLabel, localTelefonoLabel, subtotalLabel;
     @FXML private TextField ordenNumeroField, clienteNombreField, clienteDireccionField, clienteTelefonoField;
     @FXML private TextField equipoSerieField, equipoTipoField, equipoCompaniaField, equipoModeloField, costosTotalField, entregaFirmaField, equipoCostoField, anticipoField;
     @FXML private DatePicker ordenFechaPicker, entregaFechaPicker;
@@ -163,8 +163,8 @@ public class tecniMusicController {
             }
         }
         NumberFormat currencyFormat = NumberFormat.getCurrencyInstance(SPANISH_MEXICO_LOCALE);
-        if (totalCostoLabel != null) {
-            totalCostoLabel.setText(currencyFormat.format(total));
+        if (subtotalLabel != null) {
+            subtotalLabel.setText(currencyFormat.format(total));
         }
     }
 

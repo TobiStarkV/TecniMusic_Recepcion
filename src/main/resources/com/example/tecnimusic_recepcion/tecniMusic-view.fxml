@@ -147,8 +147,8 @@
                               </TableView>
                               <HBox alignment="CENTER_RIGHT" spacing="10.0">
                                  <children>
-                                    <Label text="Total:" style="-fx-font-weight: bold;"/>
-                                    <Label fx:id="totalCostoLabel" text="\$0.00" style="-fx-font-weight: bold;"/>
+                                    <Label text="Subtotal:" style="-fx-font-weight: bold;"/>
+                                    <Label fx:id="subtotalLabel" text="\$0.00" style="-fx-font-weight: bold;"/>
                                  </children>
                               </HBox>
                               <HBox alignment="CENTER_RIGHT" spacing="10.0">
