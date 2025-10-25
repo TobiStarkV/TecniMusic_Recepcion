@@ -179,15 +179,12 @@
                            <rowConstraints>
                               <RowConstraints minHeight="10.0" prefHeight="30.0" vgrow="SOMETIMES" />
                               <RowConstraints minHeight="10.0" prefHeight="30.0" vgrow="SOMETIMES" />
-                              <RowConstraints minHeight="10.0" prefHeight="30.0" vgrow="SOMETIMES" />
                            </rowConstraints>
                            <children>
                               <Label text="Fecha de Entrega:" />
                               <DatePicker fx:id="entregaFechaPicker" GridPane.columnIndex="1" />
-                              <Label text="Aclaración de Entrega:" GridPane.rowIndex="1" />
-                              <TextField fx:id="entregaFirmaField" GridPane.columnIndex="1" GridPane.rowIndex="1" />
-                              <Label text="Aclaraciones Adicionales:" GridPane.rowIndex="2" />
-                              <TextArea fx:id="aclaracionesArea" prefHeight="80.0" wrapText="true" GridPane.columnIndex="1" GridPane.rowIndex="2" />
+                              <Label text="Aclaraciones Adicionales:" GridPane.rowIndex="1" />
+                              <TextArea fx:id="aclaracionesArea" prefHeight="80.0" wrapText="true" GridPane.columnIndex="1" GridPane.rowIndex="1" />
                            </children>
                         </GridPane>
                      </content>

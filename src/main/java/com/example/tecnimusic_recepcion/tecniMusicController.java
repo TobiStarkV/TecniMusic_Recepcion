@@ -37,7 +37,7 @@ public class tecniMusicController {
 
     @FXML private Label localNombreLabel, localDireccionLabel, localTelefonoLabel, subtotalLabel, totalFinalLabel;
     @FXML private TextField ordenNumeroField, clienteNombreField, clienteDireccionField, clienteTelefonoField;
-    @FXML private TextField equipoSerieField, equipoTipoField, equipoCompaniaField, equipoModeloField, entregaFirmaField, equipoCostoField, anticipoField;
+    @FXML private TextField equipoSerieField, equipoTipoField, equipoCompaniaField, equipoModeloField, equipoCostoField, anticipoField;
     @FXML private DatePicker ordenFechaPicker, entregaFechaPicker;
     @FXML private TextArea equipoFallaArea, aclaracionesArea;
     @FXML private HBox actionButtonsBox;
@@ -188,7 +188,7 @@ public class tecniMusicController {
         this.isViewOnlyMode = true;
         populateFormWithData(data);
 
-        for (Node node : List.of(clienteNombreField, clienteDireccionField, clienteTelefonoField, equipoSerieField, equipoTipoField, equipoCompaniaField, equipoModeloField, entregaFirmaField, equipoCostoField, anticipoField, ordenFechaPicker, entregaFechaPicker, equipoFallaArea, aclaracionesArea)) {
+        for (Node node : List.of(clienteNombreField, clienteDireccionField, clienteTelefonoField, equipoSerieField, equipoTipoField, equipoCompaniaField, equipoModeloField, equipoCostoField, anticipoField, ordenFechaPicker, entregaFechaPicker, equipoFallaArea, aclaracionesArea)) {
             if (node instanceof TextInputControl) {
                 ((TextInputControl) node).setEditable(false);
             } else if (node instanceof DatePicker) {
@@ -247,7 +247,7 @@ public class tecniMusicController {
                     idClienteSeleccionado, clienteNombreField.getText(), clienteTelefonoField.getText(), clienteDireccionField.getText(),
                     new ArrayList<>(equiposObservable),
                     ordenFechaPicker.getValue(), "", subtotal, anticipo, // Updated parameters
-                    entregaFechaPicker.getValue(), entregaFirmaField.getText(), aclaracionesArea.getText()
+                    entregaFechaPicker.getValue(), "", aclaracionesArea.getText()
             );
 
             HojaServicioData data = createHojaServicioDataFromForm(realOrdenNumero);
@@ -510,7 +510,6 @@ public class tecniMusicController {
         subtotalLabel.setText("$0.00");
         totalFinalLabel.setText("$0.00");
         entregaFechaPicker.setValue(null);
-        entregaFirmaField.clear();
         aclaracionesArea.clear();
         ordenFechaPicker.setValue(LocalDate.now());
         equiposObservable.clear();
@@ -534,7 +533,6 @@ public class tecniMusicController {
                !equiposObservable.isEmpty() ||
                !equipoFallaArea.getText().trim().isEmpty() ||
                entregaFechaPicker.getValue() != null ||
-               !entregaFirmaField.getText().trim().isEmpty() ||
                !aclaracionesArea.getText().trim().isEmpty();
     }
 
@@ -552,7 +550,7 @@ public class tecniMusicController {
         data.setFallaReportada(equipoFallaArea.getText());
         // data.setInformeCostos(costosInformeArea.getText()); // Eliminado
         data.setFechaEntrega(entregaFechaPicker.getValue());
-        data.setFirmaAclaracion(entregaFirmaField.getText());
+        data.setFirmaAclaracion("");
         data.setAclaraciones(aclaracionesArea.getText());
 
         // Subtotal de costos
@@ -603,7 +601,6 @@ public class tecniMusicController {
             anticipoField.clear();
         }
         entregaFechaPicker.setValue(data.getFechaEntrega());
-        entregaFirmaField.setText(data.getFirmaAclaracion());
         aclaracionesArea.setText(data.getAclaraciones());
 
         // Rellenar tabla de equipos si la data contiene varios

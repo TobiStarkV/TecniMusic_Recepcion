@@ -160,7 +160,7 @@ public class PdfGenerator {
         }
 
         document.add(createSectionHeader("Diagnóstico y Desglose de Costos", headerColor));
-        document.add(new Paragraph(data.getInformeCostos()).setFontSize(9).setMarginTop(5));
+        document.add(new Paragraph(nullToEmpty(data.getInformeCostos())).setFontSize(9).setMarginTop(5));
         if (data.getTotalCostos() != null) {
             NumberFormat currencyFormat = NumberFormat.getCurrencyInstance(SPANISH_MEXICO_LOCALE);
             String formattedTotal = currencyFormat.format(data.getTotalCostos());
@@ -171,7 +171,6 @@ public class PdfGenerator {
         LocalDate fechaEntrega = data.getFechaEntrega();
         Table entregaTable = new Table(UnitValue.createPercentArray(new float[]{1, 4})).useAllAvailableWidth().setMarginTop(5);
         addInfoRow(entregaTable, "Fecha de Entrega:", (fechaEntrega != null ? fechaEntrega.format(DateTimeFormatter.ofPattern("dd/MM/yyyy")) : "Pendiente"), false);
-        addInfoRow(entregaTable, "Aclaración de Entrega:", data.getFirmaAclaracion(), false);
         document.add(entregaTable);
 
         document.add(new Paragraph("Aclaraciones Adicionales:").setBold().setFontSize(9).setMarginTop(5));
