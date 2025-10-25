@@ -159,7 +159,7 @@ public class PdfGenerator {
             document.add(new Paragraph(data.getFallaReportada()).setFontSize(9).setMarginTop(5).setMarginBottom(5));
         }
 
-        document.add(createSectionHeader("Diagnóstico y Desglose de Costos", headerColor));
+        document.add(createSectionHeader("Desglose de Costos", headerColor));
         document.add(new Paragraph(nullToEmpty(data.getInformeCostos())).setFontSize(9).setMarginTop(5));
         if (data.getTotalCostos() != null) {
             NumberFormat currencyFormat = NumberFormat.getCurrencyInstance(SPANISH_MEXICO_LOCALE);
