@@ -157,6 +157,12 @@
                                     <TextField fx:id="anticipoField" prefWidth="100.0" promptText="\$0.00"/>
                                  </children>
                               </HBox>
+                              <HBox alignment="CENTER_RIGHT" spacing="10.0">
+                                 <children>
+                                    <Label text="Total:" style="-fx-font-weight: bold;"/>
+                                    <Label fx:id="totalFinalLabel" text="\$0.00" style="-fx-font-weight: bold;"/>
+                                 </children>
+                              </HBox>
                            </children>
                         </VBox>
                      </content>

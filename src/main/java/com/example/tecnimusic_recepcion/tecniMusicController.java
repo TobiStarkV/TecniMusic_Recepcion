@@ -35,7 +35,7 @@ import java.awt.print.PrinterException;
 
 public class tecniMusicController {
 
-    @FXML private Label localNombreLabel, localDireccionLabel, localTelefonoLabel, subtotalLabel;
+    @FXML private Label localNombreLabel, localDireccionLabel, localTelefonoLabel, subtotalLabel, totalFinalLabel;
     @FXML private TextField ordenNumeroField, clienteNombreField, clienteDireccionField, clienteTelefonoField;
     @FXML private TextField equipoSerieField, equipoTipoField, equipoCompaniaField, equipoModeloField, costosTotalField, entregaFirmaField, equipoCostoField, anticipoField;
     @FXML private DatePicker ordenFechaPicker, entregaFechaPicker;
@@ -98,8 +98,10 @@ public class tecniMusicController {
         }
 
         equiposObservable.addListener((ListChangeListener.Change<? extends Equipo> c) -> {
-            actualizarCostoTotal();
+            actualizarCostosTotales();
         });
+
+        anticipoField.textProperty().addListener((observable, oldValue, newValue) -> actualizarCostosTotales());
 
         if (addEquipoButton != null) addEquipoButton.setOnAction(e -> onAddEquipo());
         if (removeEquipoButton != null) removeEquipoButton.setOnAction(e -> onRemoveEquipo());
@@ -155,16 +157,31 @@ public class tecniMusicController {
         equiposObservable.remove(seleccionado);
     }
 
-    private void actualizarCostoTotal() {
-        BigDecimal total = BigDecimal.ZERO;
+    private void actualizarCostosTotales() {
+        BigDecimal subtotal = BigDecimal.ZERO;
         for (Equipo equipo : equiposObservable) {
             if (equipo.getCosto() != null) {
-                total = total.add(equipo.getCosto());
+                subtotal = subtotal.add(equipo.getCosto());
             }
         }
         NumberFormat currencyFormat = NumberFormat.getCurrencyInstance(SPANISH_MEXICO_LOCALE);
         if (subtotalLabel != null) {
-            subtotalLabel.setText(currencyFormat.format(total));
+            subtotalLabel.setText(currencyFormat.format(subtotal));
+        }
+
+        BigDecimal anticipo = BigDecimal.ZERO;
+        String anticipoStr = anticipoField.getText().replaceAll("\\D", "");
+        if (!anticipoStr.isEmpty()) {
+            try {
+                anticipo = new BigDecimal(anticipoStr).setScale(2, RoundingMode.HALF_UP).divide(new BigDecimal(100), RoundingMode.HALF_UP);
+            } catch (NumberFormatException e) {
+                // Ignorar si el formato es inválido, se manejará en setupCurrencyField
+            }
+        }
+
+        BigDecimal totalFinal = subtotal.subtract(anticipo);
+        if (totalFinalLabel != null) {
+            totalFinalLabel.setText(currencyFormat.format(totalFinal));
         }
     }
 
@@ -172,7 +189,7 @@ public class tecniMusicController {
         this.isViewOnlyMode = true;
         populateFormWithData(data);
 
-        for (Node node : List.of(clienteNombreField, clienteDireccionField, clienteTelefonoField, equipoSerieField, equipoTipoField, equipoCompaniaField, equipoModeloField, costosTotalField, entregaFirmaField, equipoCostoField, anticipoField, ordenFechaPicker, entregaFechaPicker, equipoFallaArea, costosInformeArea, aclaracionesArea)) {
+        for (Node node : List.of(clienteNombreField, clienteDireccionField, clienteTelefonoField, equipoSerieField, equipoTipoField, equipoCompaniaField, equipoModeloField, costosTotalField, entregaFirmaField, equipoCostoField, anticipoField, totalFinalLabel, ordenFechaPicker, entregaFechaPicker, equipoFallaArea, costosInformeArea, aclaracionesArea)) {
             if (node instanceof TextInputControl) {
                 ((TextInputControl) node).setEditable(false);
             } else if (node instanceof DatePicker) {
@@ -483,6 +500,8 @@ public class tecniMusicController {
         costosTotalField.clear();
         equipoCostoField.clear();
         anticipoField.clear();
+        subtotalLabel.setText("$0.00");
+        totalFinalLabel.setText("$0.00");
         entregaFechaPicker.setValue(null);
         entregaFirmaField.clear();
         aclaracionesArea.clear();
@@ -503,6 +522,8 @@ public class tecniMusicController {
                !equipoModeloField.getText().trim().isEmpty() ||
                !equipoCostoField.getText().trim().isEmpty() ||
                !anticipoField.getText().trim().isEmpty() ||
+               !subtotalLabel.getText().equals("$0.00") ||
+               !totalFinalLabel.getText().equals("$0.00") ||
                !equiposObservable.isEmpty() ||
                !equipoFallaArea.getText().trim().isEmpty() ||
                !costosInformeArea.getText().trim().isEmpty() ||
@@ -591,12 +612,8 @@ public class tecniMusicController {
         equiposObservable.clear();
         if (data.getEquipos() != null && !data.getEquipos().isEmpty()) {
             equiposObservable.addAll(data.getEquipos());
-        } else {
-            // Si no hay lista, pero hay campos individuales, crear un equipo con esos campos
-            Equipo single = new Equipo(data.getEquipoTipo(), data.getEquipoMarca(), data.getEquipoSerie(), data.getEquipoModelo(), data.getFallaReportada(), null); // Costo no está en el modelo de datos anterior
-            equiposObservable.add(single);
         }
-        actualizarCostoTotal();
+        actualizarCostosTotales();
     }
 
     private boolean showConfirmationDialog(String title, String header) {
