@@ -24,6 +24,7 @@ public class HojaServicioData {
     private String fallaReportada;
     private String informeCostos;
     private BigDecimal totalCostos;
+    private BigDecimal anticipo; // Nuevo campo para el anticipo
     private LocalDate fechaEntrega;
     private String firmaAclaracion;
     private String aclaraciones;
@@ -127,6 +128,14 @@ public class HojaServicioData {
 
     public void setTotalCostos(BigDecimal totalCostos) {
         this.totalCostos = totalCostos;
+    }
+
+    public BigDecimal getAnticipo() {
+        return anticipo;
+    }
+
+    public void setAnticipo(BigDecimal anticipo) {
+        this.anticipo = anticipo;
     }
 
     public LocalDate getFechaEntrega() {

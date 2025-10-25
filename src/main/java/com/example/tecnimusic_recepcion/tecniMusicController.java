@@ -37,7 +37,7 @@ public class tecniMusicController {
 
     @FXML private Label localNombreLabel, localDireccionLabel, localTelefonoLabel, totalCostoLabel;
     @FXML private TextField ordenNumeroField, clienteNombreField, clienteDireccionField, clienteTelefonoField;
-    @FXML private TextField equipoSerieField, equipoTipoField, equipoCompaniaField, equipoModeloField, costosTotalField, entregaFirmaField, equipoCostoField;
+    @FXML private TextField equipoSerieField, equipoTipoField, equipoCompaniaField, equipoModeloField, costosTotalField, entregaFirmaField, equipoCostoField, anticipoField;
     @FXML private DatePicker ordenFechaPicker, entregaFechaPicker;
     @FXML private TextArea equipoFallaArea, costosInformeArea, aclaracionesArea;
     @FXML private HBox actionButtonsBox;
@@ -72,6 +72,7 @@ public class tecniMusicController {
         setupListeners();
         setupCurrencyField(costosTotalField);
         setupCurrencyField(equipoCostoField);
+        setupCurrencyField(anticipoField);
         cargarSugerenciasGlobales();
         setupAutocompleteFields();
         resetFormulario();
@@ -171,7 +172,7 @@ public class tecniMusicController {
         this.isViewOnlyMode = true;
         populateFormWithData(data);
 
-        for (Node node : List.of(clienteNombreField, clienteDireccionField, clienteTelefonoField, equipoSerieField, equipoTipoField, equipoCompaniaField, equipoModeloField, costosTotalField, entregaFirmaField, equipoCostoField, ordenFechaPicker, entregaFechaPicker, equipoFallaArea, costosInformeArea, aclaracionesArea)) {
+        for (Node node : List.of(clienteNombreField, clienteDireccionField, clienteTelefonoField, equipoSerieField, equipoTipoField, equipoCompaniaField, equipoModeloField, costosTotalField, entregaFirmaField, equipoCostoField, anticipoField, ordenFechaPicker, entregaFechaPicker, equipoFallaArea, costosInformeArea, aclaracionesArea)) {
             if (node instanceof TextInputControl) {
                 ((TextInputControl) node).setEditable(false);
             } else if (node instanceof DatePicker) {
@@ -481,6 +482,7 @@ public class tecniMusicController {
         costosInformeArea.clear();
         costosTotalField.clear();
         equipoCostoField.clear();
+        anticipoField.clear();
         entregaFechaPicker.setValue(null);
         entregaFirmaField.clear();
         aclaracionesArea.clear();
@@ -500,6 +502,7 @@ public class tecniMusicController {
                !equipoCompaniaField.getText().trim().isEmpty() ||
                !equipoModeloField.getText().trim().isEmpty() ||
                !equipoCostoField.getText().trim().isEmpty() ||
+               !anticipoField.getText().trim().isEmpty() ||
                !equiposObservable.isEmpty() ||
                !equipoFallaArea.getText().trim().isEmpty() ||
                !costosInformeArea.getText().trim().isEmpty() ||
@@ -531,6 +534,13 @@ public class tecniMusicController {
         if (totalCostosStr != null && !totalCostosStr.isEmpty()) {
             Number number = NumberFormat.getCurrencyInstance(SPANISH_MEXICO_LOCALE).parse(totalCostosStr);
             data.setTotalCostos(BigDecimal.valueOf(number.doubleValue()));
+        }
+
+        // Anticipo
+        String anticipoStr = anticipoField.getText();
+        if (anticipoStr != null && !anticipoStr.isEmpty()) {
+            Number number = NumberFormat.getCurrencyInstance(SPANISH_MEXICO_LOCALE).parse(anticipoStr);
+            data.setAnticipo(BigDecimal.valueOf(number.doubleValue()));
         }
 
         // Añadir lista de equipos (si existen), mantener compatibilidad con campos individuales usando el primero
@@ -567,6 +577,11 @@ public class tecniMusicController {
             costosTotalField.setText(NumberFormat.getCurrencyInstance(SPANISH_MEXICO_LOCALE).format(data.getTotalCostos()));
         } else {
             costosTotalField.clear();
+        }
+        if (data.getAnticipo() != null) {
+            anticipoField.setText(NumberFormat.getCurrencyInstance(SPANISH_MEXICO_LOCALE).format(data.getAnticipo()));
+        } else {
+            anticipoField.clear();
         }
         entregaFechaPicker.setValue(data.getFechaEntrega());
         entregaFirmaField.setText(data.getFirmaAclaracion());
