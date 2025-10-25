@@ -37,9 +37,9 @@ public class tecniMusicController {
 
     @FXML private Label localNombreLabel, localDireccionLabel, localTelefonoLabel, subtotalLabel, totalFinalLabel;
     @FXML private TextField ordenNumeroField, clienteNombreField, clienteDireccionField, clienteTelefonoField;
-    @FXML private TextField equipoSerieField, equipoTipoField, equipoCompaniaField, equipoModeloField, costosTotalField, entregaFirmaField, equipoCostoField, anticipoField;
+    @FXML private TextField equipoSerieField, equipoTipoField, equipoCompaniaField, equipoModeloField, entregaFirmaField, equipoCostoField, anticipoField;
     @FXML private DatePicker ordenFechaPicker, entregaFechaPicker;
-    @FXML private TextArea equipoFallaArea, costosInformeArea, aclaracionesArea;
+    @FXML private TextArea equipoFallaArea, aclaracionesArea;
     @FXML private HBox actionButtonsBox;
     @FXML private Button guardarButton, limpiarButton, salirButton, printButton;
 
@@ -70,7 +70,6 @@ public class tecniMusicController {
         ordenNumeroField.setEditable(false);
         cargarDatosDelLocal();
         setupListeners();
-        setupCurrencyField(costosTotalField);
         setupCurrencyField(equipoCostoField);
         setupCurrencyField(anticipoField);
         cargarSugerenciasGlobales();
@@ -189,7 +188,7 @@ public class tecniMusicController {
         this.isViewOnlyMode = true;
         populateFormWithData(data);
 
-        for (Node node : List.of(clienteNombreField, clienteDireccionField, clienteTelefonoField, equipoSerieField, equipoTipoField, equipoCompaniaField, equipoModeloField, costosTotalField, entregaFirmaField, equipoCostoField, anticipoField, totalFinalLabel, ordenFechaPicker, entregaFechaPicker, equipoFallaArea, costosInformeArea, aclaracionesArea)) {
+        for (Node node : List.of(clienteNombreField, clienteDireccionField, clienteTelefonoField, equipoSerieField, equipoTipoField, equipoCompaniaField, equipoModeloField, entregaFirmaField, equipoCostoField, anticipoField, ordenFechaPicker, entregaFechaPicker, equipoFallaArea, aclaracionesArea)) {
             if (node instanceof TextInputControl) {
                 ((TextInputControl) node).setEditable(false);
             } else if (node instanceof DatePicker) {
@@ -241,11 +240,14 @@ public class tecniMusicController {
 
         String predictedOrdenNumero = ordenNumeroField.getText();
         try {
-            // Llamar al servicio con la lista completa de equipos
+            BigDecimal subtotal = parseCurrency(subtotalLabel.getText());
+            BigDecimal anticipo = parseCurrency(anticipoField.getText());
+
             String realOrdenNumero = DatabaseService.getInstance().guardarHojaServicioCompleta(
                     idClienteSeleccionado, clienteNombreField.getText(), clienteTelefonoField.getText(), clienteDireccionField.getText(),
                     new ArrayList<>(equiposObservable),
-                    ordenFechaPicker.getValue(), costosInformeArea.getText(), costosTotalField.getText(), entregaFechaPicker.getValue(), entregaFirmaField.getText(), aclaracionesArea.getText()
+                    ordenFechaPicker.getValue(), "", subtotal, anticipo, // Updated parameters
+                    entregaFechaPicker.getValue(), entregaFirmaField.getText(), aclaracionesArea.getText()
             );
 
             HojaServicioData data = createHojaServicioDataFromForm(realOrdenNumero);
@@ -378,6 +380,14 @@ public class tecniMusicController {
         TextFields.bindAutoCompletion(equipoModeloField, modeloGlobalSuggestions);
     }
 
+    private BigDecimal parseCurrency(String text) throws ParseException {
+        if (text == null || text.trim().isEmpty()) {
+            return BigDecimal.ZERO;
+        }
+        NumberFormat currencyFormat = NumberFormat.getCurrencyInstance(SPANISH_MEXICO_LOCALE);
+        return BigDecimal.valueOf(currencyFormat.parse(text).doubleValue());
+    }
+
     private void setupCurrencyField(TextField textField) {
         textField.textProperty().addListener((observable, oldValue, newValue) -> {
             if (newValue == null || newValue.equals(oldValue)) return;
@@ -496,9 +506,6 @@ public class tecniMusicController {
         resetCamposCliente();
         clienteNombreField.clear();
         equipoFallaArea.clear();
-        costosInformeArea.clear();
-        costosTotalField.clear();
-        equipoCostoField.clear();
         anticipoField.clear();
         subtotalLabel.setText("$0.00");
         totalFinalLabel.setText("$0.00");
@@ -526,8 +533,6 @@ public class tecniMusicController {
                !totalFinalLabel.getText().equals("$0.00") ||
                !equiposObservable.isEmpty() ||
                !equipoFallaArea.getText().trim().isEmpty() ||
-               !costosInformeArea.getText().trim().isEmpty() ||
-               !costosTotalField.getText().trim().isEmpty() ||
                entregaFechaPicker.getValue() != null ||
                !entregaFirmaField.getText().trim().isEmpty() ||
                !aclaracionesArea.getText().trim().isEmpty();
@@ -545,24 +550,16 @@ public class tecniMusicController {
         data.setEquipoSerie(equipoSerieField.getText());
         data.setEquipoModelo(equipoModeloField.getText());
         data.setFallaReportada(equipoFallaArea.getText());
-        data.setInformeCostos(costosInformeArea.getText());
+        // data.setInformeCostos(costosInformeArea.getText()); // Eliminado
         data.setFechaEntrega(entregaFechaPicker.getValue());
         data.setFirmaAclaracion(entregaFirmaField.getText());
         data.setAclaraciones(aclaracionesArea.getText());
 
-        // Total de costos
-        String totalCostosStr = costosTotalField.getText();
-        if (totalCostosStr != null && !totalCostosStr.isEmpty()) {
-            Number number = NumberFormat.getCurrencyInstance(SPANISH_MEXICO_LOCALE).parse(totalCostosStr);
-            data.setTotalCostos(BigDecimal.valueOf(number.doubleValue()));
-        }
+        // Subtotal de costos
+        data.setTotalCostos(parseCurrency(subtotalLabel.getText())); // totalCostos en HojaServicioData ahora es el subtotal
 
         // Anticipo
-        String anticipoStr = anticipoField.getText();
-        if (anticipoStr != null && !anticipoStr.isEmpty()) {
-            Number number = NumberFormat.getCurrencyInstance(SPANISH_MEXICO_LOCALE).parse(anticipoStr);
-            data.setAnticipo(BigDecimal.valueOf(number.doubleValue()));
-        }
+        data.setAnticipo(parseCurrency(anticipoField.getText()));
 
         // Añadir lista de equipos (si existen), mantener compatibilidad con campos individuales usando el primero
         if (!equiposObservable.isEmpty()) {
@@ -593,11 +590,12 @@ public class tecniMusicController {
         equipoCompaniaField.setText(data.getEquipoMarca());
         equipoModeloField.setText(data.getEquipoModelo());
         equipoFallaArea.setText(data.getFallaReportada());
-        costosInformeArea.setText(data.getInformeCostos());
+        // costosInformeArea.setText(data.getInformeCostos()); // Eliminado
+
         if (data.getTotalCostos() != null) {
-            costosTotalField.setText(NumberFormat.getCurrencyInstance(SPANISH_MEXICO_LOCALE).format(data.getTotalCostos()));
+            subtotalLabel.setText(NumberFormat.getCurrencyInstance(SPANISH_MEXICO_LOCALE).format(data.getTotalCostos()));
         } else {
-            costosTotalField.clear();
+            subtotalLabel.setText("$0.00");
         }
         if (data.getAnticipo() != null) {
             anticipoField.setText(NumberFormat.getCurrencyInstance(SPANISH_MEXICO_LOCALE).format(data.getAnticipo()));
@@ -613,7 +611,7 @@ public class tecniMusicController {
         if (data.getEquipos() != null && !data.getEquipos().isEmpty()) {
             equiposObservable.addAll(data.getEquipos());
         }
-        actualizarCostosTotales();
+        actualizarCostosTotales(); // Para calcular y mostrar el total final
     }
 
     private boolean showConfirmationDialog(String title, String header) {
@@ -648,7 +646,7 @@ public class tecniMusicController {
         if (!equiposObservable.isEmpty()) {
             Equipo primero = equiposObservable.get(0);
             if (primero.getTipo() == null || primero.getTipo().trim().isEmpty()) camposFaltantes.add("• Tipo de Equipo (primer equipo)");
-            if (primero.getMarca() == null || primero.getMarca().trim().isEmpty()) camposFaltantes.add("• Marca (primer equipo)");
+            if (primero.getMarca() == null || primero.getMarca().trim().isEmpty()) camposFaltantes.add("• • Marca (primer equipo)");
         }
 
         if (!camposFaltantes.isEmpty()) {

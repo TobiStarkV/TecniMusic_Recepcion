@@ -168,24 +168,6 @@
                      </content>
                   </TitledPane>
 
-                  <!-- Diagnóstico y Costos -->
-                  <TitledPane animated="false" text="Diagnóstico y Costos">
-                     <content>
-                        <VBox spacing="10.0">
-                           <children>
-                              <Label text="Informe de Diagnóstico:" />
-                              <TextArea fx:id="costosInformeArea" prefHeight="100.0" wrapText="true" />
-                              <HBox alignment="CENTER_RIGHT" spacing="10.0">
-                                 <children>
-                                    <Label text="Total:" />
-                                    <TextField fx:id="costosTotalField" prefWidth="150.0" />
-                                 </children>
-                              </HBox>
-                           </children>
-                        </VBox>
-                     </content>
-                  </TitledPane>
-
                   <!-- Entrega y Aclaraciones -->
                   <TitledPane animated="false" text="Entrega y Aclaraciones">
                      <content>

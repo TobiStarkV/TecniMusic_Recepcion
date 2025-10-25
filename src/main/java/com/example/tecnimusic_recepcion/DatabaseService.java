@@ -272,13 +272,21 @@ public class DatabaseService {
         throw new SQLException("No se encontró un StatusLabel apropiado (con la marca 'pending' activada o con el nombre 'Pendiente').\nPor favor, configure uno en Snipe-IT para registrar nuevos equipos desde la aplicación.");
     }
 
+    private void ensureAnticipoColumnExists(Connection conn) throws SQLException {
+        String checkColumnSql = "SELECT COUNT(*) FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'x_hojas_servicio' AND COLUMN_NAME = 'anticipo'";
+        try (Statement stmt = conn.createStatement(); ResultSet rs = stmt.executeQuery(checkColumnSql)) {
+            if (rs.next() && rs.getInt(1) == 0) {
+                String addColumnSql = "ALTER TABLE x_hojas_servicio ADD COLUMN anticipo DECIMAL(10, 2) DEFAULT 0.00";
+                try (Statement alterStmt = conn.createStatement()) {
+                    alterStmt.execute(addColumnSql);
+                }
+            }
+        }
+    }
+
     // --------------------------------------------------
     // API pública: guardar hoja con múltiples equipos
     // --------------------------------------------------
-
-    /* Implementación para un único equipo eliminada intencionadamente — se mantiene
-       la sobrecarga delegada más abajo que envuelve el equipo en una lista y la
-       implementación que acepta `List<Equipo>`. */
 
     /**
      * Nueva sobrecarga: guarda una hoja de servicio que puede contener múltiples equipos.
@@ -288,7 +296,7 @@ public class DatabaseService {
     public String guardarHojaServicioCompleta(
             Long idClienteSeleccionado, String nombreCliente, String telefonoCliente, String direccionCliente,
             List<Equipo> equipos,
-            LocalDate fechaOrden, String informeCostos, String totalCostos,
+            LocalDate fechaOrden, String informeDiagnostico, BigDecimal subtotal, BigDecimal anticipo, // Changed parameters
             LocalDate fechaEntrega, String firmaAclaracion, String aclaraciones) throws SQLException {
 
         Connection conn = null;
@@ -296,10 +304,12 @@ public class DatabaseService {
             conn = DatabaseManager.getInstance().getConnection();
             conn.setAutoCommit(false);
 
+            ensureAnticipoColumnExists(conn); // Ensure anticipo column exists
+
             long clienteId = gestionarCliente(conn, idClienteSeleccionado, nombreCliente, telefonoCliente, direccionCliente);
 
             // Crear la hoja maestra (sin datos de equipo específicos) y obtener su ID
-            long hojaId = insertarHojaServicioMaestra(conn, clienteId, fechaOrden, informeCostos, totalCostos, fechaEntrega, firmaAclaracion, aclaraciones);
+            long hojaId = insertarHojaServicioMaestra(conn, clienteId, fechaOrden, informeDiagnostico, subtotal, anticipo, fechaEntrega, firmaAclaracion, aclaraciones);
             String realOrdenNumero = "TM-" + LocalDate.now().getYear() + "-" + hojaId;
             actualizarNumeroDeOrden(conn, hojaId, realOrdenNumero);
 
@@ -330,9 +340,8 @@ public class DatabaseService {
         }
     }
 
-    // Versión delegada (compatibilidad) que envuelve un único equipo en una lista
-    private long insertarHojaServicioMaestra(Connection conn, long clienteId, LocalDate fechaOrden, String informeCostos, String totalCostos, LocalDate fechaEntrega, String firmaAclaracion, String aclaraciones) throws SQLException {
-        String sql = "INSERT INTO x_hojas_servicio (fecha_orden, cliente_id, asset_id, equipo_serie, equipo_tipo, equipo_marca, equipo_modelo, falla_reportada, informe_costos, total_costos, fecha_entrega, firma_aclaracion, aclaraciones) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
+    private long insertarHojaServicioMaestra(Connection conn, long clienteId, LocalDate fechaOrden, String informeDiagnostico, BigDecimal subtotal, BigDecimal anticipo, LocalDate fechaEntrega, String firmaAclaracion, String aclaraciones) throws SQLException {
+        String sql = "INSERT INTO x_hojas_servicio (fecha_orden, cliente_id, asset_id, equipo_serie, equipo_tipo, equipo_marca, equipo_modelo, falla_reportada, informe_costos, total_costos, anticipo, fecha_entrega, firma_aclaracion, aclaraciones) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
         try (PreparedStatement pstmt = conn.prepareStatement(sql, Statement.RETURN_GENERATED_KEYS)) {
             pstmt.setDate(1, fechaOrden != null ? Date.valueOf(fechaOrden) : null);
             pstmt.setLong(2, clienteId);
@@ -342,16 +351,12 @@ public class DatabaseService {
             pstmt.setNull(6, Types.VARCHAR);
             pstmt.setNull(7, Types.VARCHAR);
             pstmt.setNull(8, Types.VARCHAR);
-            pstmt.setString(9, informeCostos);
-            try {
-                String totalText = totalCostos == null ? "" : totalCostos.trim().replaceAll("[^\\d.]", "");
-                if (totalText.isEmpty()) pstmt.setNull(10, Types.DECIMAL); else pstmt.setBigDecimal(10, new BigDecimal(totalText));
-            } catch (NumberFormatException e) {
-                pstmt.setNull(10, Types.DECIMAL);
-            }
-            pstmt.setDate(11, fechaEntrega != null ? Date.valueOf(fechaEntrega) : null);
-            pstmt.setString(12, firmaAclaracion);
-            pstmt.setString(13, aclaraciones);
+            pstmt.setString(9, informeDiagnostico);
+            if (subtotal != null) pstmt.setBigDecimal(10, subtotal); else pstmt.setNull(10, Types.DECIMAL);
+            if (anticipo != null) pstmt.setBigDecimal(11, anticipo); else pstmt.setNull(11, Types.DECIMAL);
+            pstmt.setDate(12, fechaEntrega != null ? Date.valueOf(fechaEntrega) : null);
+            pstmt.setString(13, firmaAclaracion);
+            pstmt.setString(14, aclaraciones);
 
             pstmt.executeUpdate();
             ResultSet rs = pstmt.getGeneratedKeys();
