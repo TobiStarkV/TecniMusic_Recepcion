@@ -9,6 +9,7 @@ import java.sql.SQLException;
 import java.sql.Statement;
 import java.sql.Types;
 import java.time.LocalDate;
+import java.util.ArrayList;
 import java.util.List;
 
 /**
@@ -395,4 +396,87 @@ public class DatabaseService {
         }
     }
 
+    // --------------------------------------------------
+    // API pública: leer hoja para PDF de prueba
+    // --------------------------------------------------
+
+    /**
+     * Obtiene el ID de la última hoja de servicio creada.
+     * @return El ID más alto de la tabla x_hojas_servicio, o -1 si no hay ninguna.
+     * @throws SQLException Si ocurre un error de base de datos.
+     */
+    public long getLastHojaServicioId() throws SQLException {
+        String sql = "SELECT MAX(id) FROM x_hojas_servicio";
+        try (Connection conn = DatabaseManager.getInstance().getConnection();
+             Statement stmt = conn.createStatement();
+             ResultSet rs = stmt.executeQuery(sql)) {
+            if (rs.next()) {
+                return rs.getLong(1);
+            }
+        }
+        return -1; // No records found
+    }
+
+    /**
+     * Obtiene todos los datos de una hoja de servicio, incluyendo sus equipos, para reconstruirla.
+     * @param hojaId El ID de la hoja de servicio a obtener.
+     * @return Un objeto HojaServicioData completamente poblado, o null si no se encuentra.
+     * @throws SQLException Si ocurre un error de base de datos.
+     */
+    public HojaServicioData getHojaServicioCompleta(long hojaId) throws SQLException {
+        HojaServicioData data = null;
+        String sqlHoja = "SELECT hs.*, c.nombre as cliente_nombre, c.direccion as cliente_direccion, c.telefono as cliente_telefono " +
+                         "FROM x_hojas_servicio hs " +
+                         "JOIN x_clientes c ON hs.cliente_id = c.id " +
+                         "WHERE hs.id = ?";
+
+        try (Connection conn = DatabaseManager.getInstance().getConnection();
+             PreparedStatement pstmtHoja = conn.prepareStatement(sqlHoja)) {
+
+            pstmtHoja.setLong(1, hojaId);
+            ResultSet rsHoja = pstmtHoja.executeQuery();
+
+            if (rsHoja.next()) {
+                data = new HojaServicioData();
+                data.setNumeroOrden(rsHoja.getString("numero_orden"));
+                Date fechaOrden = rsHoja.getDate("fecha_orden");
+                if (fechaOrden != null) data.setFechaOrden(fechaOrden.toLocalDate());
+
+                data.setClienteNombre(rsHoja.getString("cliente_nombre"));
+                data.setClienteDireccion(rsHoja.getString("cliente_direccion"));
+                data.setClienteTelefono(rsHoja.getString("cliente_telefono"));
+
+                data.setTotalCostos(rsHoja.getBigDecimal("total_costos"));
+                data.setAnticipo(rsHoja.getBigDecimal("anticipo"));
+
+                Date fechaEntrega = rsHoja.getDate("fecha_entrega");
+                if (fechaEntrega != null) data.setFechaEntrega(fechaEntrega.toLocalDate());
+                
+                data.setAclaraciones(rsHoja.getString("aclaraciones"));
+                data.setFirmaAclaracion(""); 
+                data.setInformeCostos(rsHoja.getString("informe_costos"));
+
+                // Ahora, cargar los equipos asociados
+                String sqlEquipos = "SELECT * FROM x_hojas_servicio_equipos WHERE hoja_id = ?";
+                try (PreparedStatement pstmtEquipos = conn.prepareStatement(sqlEquipos)) {
+                    pstmtEquipos.setLong(1, hojaId);
+                    ResultSet rsEquipos = pstmtEquipos.executeQuery();
+                    List<Equipo> equipos = new ArrayList<>();
+                    while (rsEquipos.next()) {
+                        Equipo equipo = new Equipo(
+                            rsEquipos.getString("equipo_tipo"),
+                            rsEquipos.getString("equipo_marca"),
+                            rsEquipos.getString("equipo_serie"),
+                            rsEquipos.getString("equipo_modelo"),
+                            rsEquipos.getString("falla_reportada"),
+                            null // El costo individual por equipo no se guarda en esta tabla
+                        );
+                        equipos.add(equipo);
+                    }
+                    data.setEquipos(equipos);
+                }
+            }
+        }
+        return data;
+    }
 }

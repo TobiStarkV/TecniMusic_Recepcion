@@ -41,7 +41,7 @@ public class tecniMusicController {
     @FXML private DatePicker ordenFechaPicker, entregaFechaPicker;
     @FXML private TextArea equipoFallaArea, aclaracionesArea;
     @FXML private HBox actionButtonsBox;
-    @FXML private Button guardarButton, limpiarButton, salirButton, printButton;
+    @FXML private Button guardarButton, limpiarButton, salirButton, printButton, testPdfButton;
 
     // Nuevos campos para múltiples equipos
     @FXML private TableView<Equipo> equiposTable;
@@ -298,6 +298,31 @@ public class tecniMusicController {
         } catch (IOException | ParseException e) {
             showAlert(Alert.AlertType.ERROR, "Error de PDF", "No se pudo generar el PDF. Error: " + e.getMessage());
             e.printStackTrace();
+        }
+    }
+
+    @FXML
+    protected void onTestPdfClicked() {
+        try {
+            long lastId = DatabaseService.getInstance().getLastHojaServicioId();
+            if (lastId == -1) {
+                showAlert(Alert.AlertType.INFORMATION, "Sin Hojas de Servicio", "No hay hojas de servicio guardadas para generar un PDF de prueba.");
+                return;
+            }
+
+            HojaServicioData data = DatabaseService.getInstance().getHojaServicioCompleta(lastId);
+            if (data == null) {
+                showAlert(Alert.AlertType.ERROR, "Error de Datos", "No se pudieron recuperar los datos de la última hoja de servicio.");
+                return;
+            }
+
+            String pdfPath = new PdfGenerator().generatePdf(data);
+            showAlert(Alert.AlertType.INFORMATION, "PDF de Prueba Generado", "El PDF de prueba para la hoja de servicio " + data.getNumeroOrden() + " ha sido generado en: " + pdfPath);
+
+        } catch (SQLException e) {
+            showAlert(Alert.AlertType.ERROR, "Error de Base de Datos", "No se pudo acceder a la base de datos para generar el PDF de prueba. Error: " + e.getMessage());
+        } catch (IOException e) {
+            showAlert(Alert.AlertType.ERROR, "Error de PDF", "No se pudo generar el PDF de prueba. Error: " + e.getMessage());
         }
     }
 
