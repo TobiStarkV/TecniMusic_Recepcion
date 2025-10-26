@@ -23,6 +23,7 @@ import javafx.scene.control.Alert;
 import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
+import java.math.BigDecimal;
 import java.net.URL;
 import java.text.NumberFormat;
 import java.time.LocalDate;
@@ -72,8 +73,7 @@ public class PdfGenerator {
         agregarMarcaDeAgua(pdf);
 
         document.close();
-        // Se elimina la alerta de aquí, el controlador la manejará.
-        return dest; // Devuelve la ruta del PDF generado
+        return dest;
     }
 
     private String crearRutaDestinoPdf(String numeroOrden) {
@@ -125,47 +125,64 @@ public class PdfGenerator {
         addInfoRow(clienteTable, "Dirección:", data.getClienteDireccion(), false);
         document.add(clienteTable);
 
-        // Datos de equipo: si hay varios equipos, imprimir tabla con todos ellos
+        // Título de la nueva sección combinada
+        document.add(createSectionHeader("Equipos y Desglose de Costos", headerColor));
+
         List<Equipo> equipos = data.getEquipos();
-        if (equipos != null && equipos.size() > 1) {
-            document.add(createSectionHeader("Equipos Recibidos", headerColor));
-            Table multiEquipoTable = new Table(UnitValue.createPercentArray(new float[]{2, 2, 2, 2, 3})).useAllAvailableWidth().setMarginTop(5);
-            // Header
-            multiEquipoTable.addHeaderCell(new com.itextpdf.layout.element.Cell().add(new Paragraph("Tipo").setBold()).setBorder(Border.NO_BORDER));
-            multiEquipoTable.addHeaderCell(new com.itextpdf.layout.element.Cell().add(new Paragraph("Marca").setBold()).setBorder(Border.NO_BORDER));
-            multiEquipoTable.addHeaderCell(new com.itextpdf.layout.element.Cell().add(new Paragraph("Modelo").setBold()).setBorder(Border.NO_BORDER));
-            multiEquipoTable.addHeaderCell(new com.itextpdf.layout.element.Cell().add(new Paragraph("Serie").setBold()).setBorder(Border.NO_BORDER));
-            multiEquipoTable.addHeaderCell(new com.itextpdf.layout.element.Cell().add(new Paragraph("Falla Reportada").setBold()).setBorder(Border.NO_BORDER));
+        if (equipos != null && !equipos.isEmpty()) {
+            // Tabla combinada con detalles de equipo y costo
+            Table equiposCostosTable = new Table(UnitValue.createPercentArray(new float[]{1.5f, 1.5f, 1.5f, 1.5f, 3, 1.5f})).useAllAvailableWidth().setMarginTop(5);
 
-            for (Equipo eq : equipos) {
-                multiEquipoTable.addCell(new com.itextpdf.layout.element.Cell().add(new Paragraph(nullToEmpty(eq.getTipo()))).setBorder(Border.NO_BORDER));
-                multiEquipoTable.addCell(new com.itextpdf.layout.element.Cell().add(new Paragraph(nullToEmpty(eq.getMarca()))).setBorder(Border.NO_BORDER));
-                multiEquipoTable.addCell(new com.itextpdf.layout.element.Cell().add(new Paragraph(nullToEmpty(eq.getModelo()))).setBorder(Border.NO_BORDER));
-                multiEquipoTable.addCell(new com.itextpdf.layout.element.Cell().add(new Paragraph(nullToEmpty(eq.getSerie()))).setBorder(Border.NO_BORDER));
-                multiEquipoTable.addCell(new com.itextpdf.layout.element.Cell().add(new Paragraph(nullToEmpty(eq.getFalla())).setFontSize(9)).setBorder(Border.NO_BORDER));
-            }
-            document.add(multiEquipoTable);
-        } else {
-            // Retrocompatibilidad: mostrar un solo equipo con los campos individuales
-            document.add(createSectionHeader("Datos del Equipo", headerColor));
-            Table equipoTable = new Table(UnitValue.createPercentArray(new float[]{1, 2, 1, 2})).useAllAvailableWidth().setMarginTop(5);
-            addInfoRow(equipoTable, "Tipo:", data.getEquipoTipo(), false);
-            addInfoRow(equipoTable, "Marca:", data.getEquipoMarca(), false);
-            addInfoRow(equipoTable, "Serie:", data.getEquipoSerie(), false);
-            addInfoRow(equipoTable, "Modelo:", data.getEquipoModelo(), false);
-            document.add(equipoTable);
+            // Encabezados de la tabla
+            equiposCostosTable.addHeaderCell(new com.itextpdf.layout.element.Cell().add(new Paragraph("Tipo").setBold().setFontSize(9)).setBorder(Border.NO_BORDER));
+            equiposCostosTable.addHeaderCell(new com.itextpdf.layout.element.Cell().add(new Paragraph("Marca").setBold().setFontSize(9)).setBorder(Border.NO_BORDER));
+            equiposCostosTable.addHeaderCell(new com.itextpdf.layout.element.Cell().add(new Paragraph("Modelo").setBold().setFontSize(9)).setBorder(Border.NO_BORDER));
+            equiposCostosTable.addHeaderCell(new com.itextpdf.layout.element.Cell().add(new Paragraph("Serie").setBold().setFontSize(9)).setBorder(Border.NO_BORDER));
+            equiposCostosTable.addHeaderCell(new com.itextpdf.layout.element.Cell().add(new Paragraph("Falla Reportada").setBold().setFontSize(9)).setBorder(Border.NO_BORDER));
+            equiposCostosTable.addHeaderCell(new com.itextpdf.layout.element.Cell().add(new Paragraph("Costo").setBold().setFontSize(9).setTextAlignment(TextAlignment.RIGHT)).setBorder(Border.NO_BORDER));
 
-            document.add(createSectionHeader("Falla Reportada por el Cliente", headerColor));
-            document.add(new Paragraph(data.getFallaReportada()).setFontSize(9).setMarginTop(5).setMarginBottom(5));
-        }
-
-        document.add(createSectionHeader("Desglose de Costos", headerColor));
-        document.add(new Paragraph(nullToEmpty(data.getInformeCostos())).setFontSize(9).setMarginTop(5));
-        if (data.getTotalCostos() != null) {
             NumberFormat currencyFormat = NumberFormat.getCurrencyInstance(SPANISH_MEXICO_LOCALE);
-            String formattedTotal = currencyFormat.format(data.getTotalCostos());
-            document.add(new Paragraph("Total: " + formattedTotal).setFontSize(12).setBold().setTextAlignment(TextAlignment.RIGHT).setMarginTop(5));
+
+            // Contenido de la tabla
+            for (Equipo eq : equipos) {
+                equiposCostosTable.addCell(new com.itextpdf.layout.element.Cell().add(new Paragraph(nullToEmpty(eq.getTipo())).setFontSize(8)).setBorder(Border.NO_BORDER));
+                equiposCostosTable.addCell(new com.itextpdf.layout.element.Cell().add(new Paragraph(nullToEmpty(eq.getMarca())).setFontSize(8)).setBorder(Border.NO_BORDER));
+                equiposCostosTable.addCell(new com.itextpdf.layout.element.Cell().add(new Paragraph(nullToEmpty(eq.getModelo())).setFontSize(8)).setBorder(Border.NO_BORDER));
+                equiposCostosTable.addCell(new com.itextpdf.layout.element.Cell().add(new Paragraph(nullToEmpty(eq.getSerie())).setFontSize(8)).setBorder(Border.NO_BORDER));
+                equiposCostosTable.addCell(new com.itextpdf.layout.element.Cell().add(new Paragraph(nullToEmpty(eq.getFalla())).setFontSize(8)).setBorder(Border.NO_BORDER));
+                String costoFormateado = eq.getCosto() != null ? currencyFormat.format(eq.getCosto()) : currencyFormat.format(0);
+                equiposCostosTable.addCell(new com.itextpdf.layout.element.Cell().add(new Paragraph(costoFormateado).setFontSize(8).setTextAlignment(TextAlignment.RIGHT)).setBorder(Border.NO_BORDER));
+            }
+            document.add(equiposCostosTable);
+        } else {
+            document.add(new Paragraph("No se han registrado equipos.").setFontSize(9).setMarginTop(5));
         }
+
+        // Línea separadora antes de los totales
+        document.add(new LineSeparator(new SolidLine(0.5f)).setMarginTop(5));
+
+        // Tabla de Totales
+        Table totalesTable = new Table(UnitValue.createPercentArray(new float[]{3, 1})).useAllAvailableWidth().setMarginTop(5);
+        totalesTable.setBorder(Border.NO_BORDER);
+
+        BigDecimal subtotal = data.getTotalCostos() != null ? data.getTotalCostos() : BigDecimal.ZERO;
+        BigDecimal anticipo = data.getAnticipo() != null ? data.getAnticipo() : BigDecimal.ZERO;
+        BigDecimal totalFinal = subtotal.subtract(anticipo);
+        NumberFormat currencyFormat = NumberFormat.getCurrencyInstance(SPANISH_MEXICO_LOCALE);
+
+        // Fila Subtotal
+        totalesTable.addCell(new com.itextpdf.layout.element.Cell().add(new Paragraph("Subtotal:")).setTextAlignment(TextAlignment.RIGHT).setBorder(Border.NO_BORDER).setBold());
+        totalesTable.addCell(new com.itextpdf.layout.element.Cell().add(new Paragraph(currencyFormat.format(subtotal))).setTextAlignment(TextAlignment.RIGHT).setBorder(Border.NO_BORDER));
+
+        // Fila Anticipo
+        totalesTable.addCell(new com.itextpdf.layout.element.Cell().add(new Paragraph("Anticipo:")).setTextAlignment(TextAlignment.RIGHT).setBorder(Border.NO_BORDER).setBold());
+        totalesTable.addCell(new com.itextpdf.layout.element.Cell().add(new Paragraph(currencyFormat.format(anticipo))).setTextAlignment(TextAlignment.RIGHT).setBorder(Border.NO_BORDER));
+
+        // Fila Total a Pagar
+        totalesTable.addCell(new com.itextpdf.layout.element.Cell().add(new Paragraph("Total a Pagar:")).setTextAlignment(TextAlignment.RIGHT).setBorder(Border.NO_BORDER).setBold().setFontSize(12));
+        totalesTable.addCell(new com.itextpdf.layout.element.Cell().add(new Paragraph(currencyFormat.format(totalFinal))).setTextAlignment(TextAlignment.RIGHT).setBorder(Border.NO_BORDER).setBold().setFontSize(12));
+
+        document.add(totalesTable);
 
         document.add(createSectionHeader("Entrega y Cierre", headerColor));
         LocalDate fechaEntrega = data.getFechaEntrega();
