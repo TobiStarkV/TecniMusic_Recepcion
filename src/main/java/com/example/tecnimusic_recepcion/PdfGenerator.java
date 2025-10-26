@@ -190,8 +190,11 @@ public class PdfGenerator {
         addInfoRow(entregaTable, "Fecha de Entrega:", (fechaEntrega != null ? fechaEntrega.format(DateTimeFormatter.ofPattern("dd/MM/yyyy")) : "Pendiente"), false);
         document.add(entregaTable);
 
-        document.add(new Paragraph("Aclaraciones Adicionales:").setBold().setFontSize(9).setMarginTop(5));
-        document.add(new Paragraph(data.getAclaraciones()).setFontSize(9));
+        String aclaraciones = data.getAclaraciones();
+        if (aclaraciones != null && !aclaraciones.trim().isEmpty()) {
+            document.add(new Paragraph("Aclaraciones Adicionales:").setBold().setFontSize(9).setMarginTop(5));
+            document.add(new Paragraph(aclaraciones).setFontSize(9));
+        }
     }
 
     private void agregarSeccionFirma(Document document, HojaServicioData data) {
