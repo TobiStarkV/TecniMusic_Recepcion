@@ -94,6 +94,12 @@ public class tecniMusicController {
                 }
                 return new javafx.beans.property.SimpleStringProperty(formattedCosto);
             });
+
+            equiposTable.getSelectionModel().selectedItemProperty().addListener((obs, oldSelection, newSelection) -> {
+                if (newSelection != null) {
+                    populateEquipoFields(newSelection);
+                }
+            });
         }
 
         equiposObservable.addListener((ListChangeListener.Change<? extends Equipo> c) -> {
@@ -621,6 +627,8 @@ public class tecniMusicController {
         equiposObservable.clear();
         if (data.getEquipos() != null && !data.getEquipos().isEmpty()) {
             equiposObservable.addAll(data.getEquipos());
+            // Seleccionar el primer equipo de la lista para mostrar sus detalles
+            equiposTable.getSelectionModel().selectFirst();
         } else {
             // Para mantener compatibilidad con hojas de servicio viejas sin la lista de equipos
             Equipo equipoLegacy = new Equipo(
@@ -632,6 +640,7 @@ public class tecniMusicController {
                 data.getTotalCostos() // Asumiendo que el costo total era el costo del único equipo
             );
             equiposObservable.add(equipoLegacy);
+            equiposTable.getSelectionModel().selectFirst();
         }
     
         BigDecimal subtotal = data.getTotalCostos() != null ? data.getTotalCostos() : BigDecimal.ZERO;
@@ -656,6 +665,19 @@ public class tecniMusicController {
     
         entregaFechaPicker.setValue(data.getFechaEntrega());
         aclaracionesArea.setText(data.getAclaraciones());
+    }
+
+    private void populateEquipoFields(Equipo equipo) {
+        equipoTipoField.setText(equipo.getTipo());
+        equipoCompaniaField.setText(equipo.getMarca());
+        equipoModeloField.setText(equipo.getModelo());
+        equipoSerieField.setText(equipo.getSerie());
+        equipoFallaArea.setText(equipo.getFalla());
+        if (equipo.getCosto() != null) {
+            equipoCostoField.setText(NumberFormat.getCurrencyInstance(SPANISH_MEXICO_LOCALE).format(equipo.getCosto()));
+        } else {
+            equipoCostoField.clear();
+        }
     }
 
     private boolean showConfirmationDialog(String title, String header) {
