@@ -14,8 +14,11 @@ import javafx.stage.Stage;
 
 import java.io.File;
 import java.io.IOException;
+import java.math.BigDecimal;
 import java.sql.*;
 import java.time.LocalDate;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Optional;
 
 // Importaciones para la impresión de PDF
@@ -219,7 +222,7 @@ public class ManageServiceSheetsController {
             ResultSet rs = pstmt.executeQuery();
 
             if (rs.next()) {
-                HojaServicioData data = createHojaServicioDataFromResultSet(rs);
+                HojaServicioData data = createHojaServicioDataFromResultSet(rs, conn);
                 dataConsumer.accept(data);
             } else {
                 showAlert(Alert.AlertType.ERROR, "Error", "No se encontraron los detalles para la hoja de servicio seleccionada.");
@@ -231,8 +234,9 @@ public class ManageServiceSheetsController {
         }
     }
 
-    private HojaServicioData createHojaServicioDataFromResultSet(ResultSet rs) throws SQLException {
+    private HojaServicioData createHojaServicioDataFromResultSet(ResultSet rs, Connection conn) throws SQLException {
         HojaServicioData data = new HojaServicioData();
+        long hojaServicioId = rs.getLong("id");
         data.setNumeroOrden(rs.getString("numero_orden"));
         Date fechaOrden = rs.getDate("fecha_orden");
         if (fechaOrden != null) data.setFechaOrden(fechaOrden.toLocalDate());
@@ -246,11 +250,34 @@ public class ManageServiceSheetsController {
         data.setFallaReportada(rs.getString("falla_reportada"));
         data.setInformeCostos(rs.getString("informe_costos"));
         data.setTotalCostos(rs.getBigDecimal("total_costos"));
+        data.setAnticipo(rs.getBigDecimal("anticipo"));
         Date fechaEntrega = rs.getDate("fecha_entrega");
         if (fechaEntrega != null) data.setFechaEntrega(fechaEntrega.toLocalDate());
         data.setFirmaAclaracion(rs.getString("firma_aclaracion"));
         data.setAclaraciones(rs.getString("aclaraciones"));
+
+        // Cargar equipos asociados
+        data.setEquipos(loadEquiposForHojaServicio(hojaServicioId, conn));
+
         return data;
+    }
+
+    private List<Equipo> loadEquiposForHojaServicio(long hojaServicioId, Connection conn) throws SQLException {
+        List<Equipo> equipos = new ArrayList<>();
+        String sql = "SELECT * FROM x_hojas_servicio_equipos WHERE hoja_id = ?";
+        try (PreparedStatement pstmt = conn.prepareStatement(sql)) {
+            pstmt.setLong(1, hojaServicioId);
+            ResultSet rs = pstmt.executeQuery();
+            while (rs.next()) {
+                String tipo = rs.getString("equipo_tipo");
+                String marca = rs.getString("equipo_marca");
+                String modelo = rs.getString("equipo_modelo");
+                String serie = rs.getString("equipo_serie");
+                String falla = rs.getString("falla_reportada");
+                equipos.add(new Equipo(tipo, marca, serie, modelo, falla));
+            }
+        }
+        return equipos;
     }
 
     private void showAlert(Alert.AlertType type, String title, String message) {

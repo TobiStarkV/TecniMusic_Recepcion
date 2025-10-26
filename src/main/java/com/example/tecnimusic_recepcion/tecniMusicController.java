@@ -608,32 +608,54 @@ public class tecniMusicController {
         clienteNombreField.setText(data.getClienteNombre());
         clienteDireccionField.setText(data.getClienteDireccion());
         clienteTelefonoField.setText(data.getClienteTelefono());
-        equipoSerieField.setText(data.getEquipoSerie());
-        equipoTipoField.setText(data.getEquipoTipo());
-        equipoCompaniaField.setText(data.getEquipoMarca());
-        equipoModeloField.setText(data.getEquipoModelo());
-        equipoFallaArea.setText(data.getFallaReportada());
-        // costosInformeArea.setText(data.getInformeCostos()); // Eliminado
-
-        if (data.getTotalCostos() != null) {
-            subtotalLabel.setText(NumberFormat.getCurrencyInstance(SPANISH_MEXICO_LOCALE).format(data.getTotalCostos()));
-        } else {
-            subtotalLabel.setText("$0.00");
-        }
-        if (data.getAnticipo() != null) {
-            anticipoField.setText(NumberFormat.getCurrencyInstance(SPANISH_MEXICO_LOCALE).format(data.getAnticipo()));
-        } else {
-            anticipoField.clear();
-        }
-        entregaFechaPicker.setValue(data.getFechaEntrega());
-        aclaracionesArea.setText(data.getAclaraciones());
-
+    
+        // Limpiar campos de equipo individuales antes de popular
+        equipoSerieField.clear();
+        equipoTipoField.clear();
+        equipoCompaniaField.clear();
+        equipoModeloField.clear();
+        equipoFallaArea.clear();
+        equipoCostoField.clear();
+    
         // Rellenar tabla de equipos si la data contiene varios
         equiposObservable.clear();
         if (data.getEquipos() != null && !data.getEquipos().isEmpty()) {
             equiposObservable.addAll(data.getEquipos());
+        } else {
+            // Para mantener compatibilidad con hojas de servicio viejas sin la lista de equipos
+            Equipo equipoLegacy = new Equipo(
+                data.getEquipoTipo(),
+                data.getEquipoMarca(),
+                data.getEquipoSerie(),
+                data.getEquipoModelo(),
+                data.getFallaReportada(),
+                data.getTotalCostos() // Asumiendo que el costo total era el costo del único equipo
+            );
+            equiposObservable.add(equipoLegacy);
         }
-        actualizarCostosTotales(); // Para calcular y mostrar el total final
+    
+        BigDecimal subtotal = data.getTotalCostos() != null ? data.getTotalCostos() : BigDecimal.ZERO;
+        BigDecimal anticipo = data.getAnticipo() != null ? data.getAnticipo() : BigDecimal.ZERO;
+        BigDecimal totalFinal = subtotal.subtract(anticipo);
+    
+        NumberFormat currencyFormat = NumberFormat.getCurrencyInstance(SPANISH_MEXICO_LOCALE);
+    
+        if (data.getTotalCostos() != null) {
+            subtotalLabel.setText(currencyFormat.format(data.getTotalCostos()));
+        } else {
+            subtotalLabel.setText("$0.00");
+        }
+        if (data.getAnticipo() != null) {
+            anticipoField.setText(currencyFormat.format(data.getAnticipo()));
+        } else {
+            anticipoField.clear();
+        }
+        if (totalFinalLabel != null) {
+            totalFinalLabel.setText(currencyFormat.format(totalFinal));
+        }
+    
+        entregaFechaPicker.setValue(data.getFechaEntrega());
+        aclaracionesArea.setText(data.getAclaraciones());
     }
 
     private boolean showConfirmationDialog(String title, String header) {
