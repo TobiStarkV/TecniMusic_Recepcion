@@ -48,6 +48,13 @@ public class ManageServiceSheetsController {
 
     @FXML
     public void initialize() {
+        try {
+            DatabaseService.getInstance().checkAndUpgradeSchema();
+        } catch (SQLException e) {
+            e.printStackTrace();
+            showAlert(Alert.AlertType.ERROR, "Error de Base de Datos", "No se pudo verificar o actualizar la estructura de la base de datos.");
+        }
+
         orderNumberCol.setCellValueFactory(new PropertyValueFactory<>("orderNumber"));
         dateCol.setCellValueFactory(new PropertyValueFactory<>("date"));
         clientNameCol.setCellValueFactory(new PropertyValueFactory<>("clientName"));
@@ -274,7 +281,8 @@ public class ManageServiceSheetsController {
                 String modelo = rs.getString("equipo_modelo");
                 String serie = rs.getString("equipo_serie");
                 String falla = rs.getString("falla_reportada");
-                equipos.add(new Equipo(tipo, marca, serie, modelo, falla));
+                BigDecimal costo = rs.getBigDecimal("costo");
+                equipos.add(new Equipo(tipo, marca, serie, modelo, falla, costo));
             }
         }
         return equipos;

@@ -67,6 +67,13 @@ public class tecniMusicController {
 
     @FXML
     public void initialize() {
+        try {
+            DatabaseService.getInstance().checkAndUpgradeSchema();
+        } catch (SQLException e) {
+            e.printStackTrace();
+            showAlert(Alert.AlertType.ERROR, "Error de Base de Datos", "No se pudo verificar o actualizar la estructura de la base de datos.");
+        }
+
         ordenNumeroField.setEditable(false);
         cargarDatosDelLocal();
         setupListeners();
@@ -664,7 +671,21 @@ public class tecniMusicController {
         }
     
         entregaFechaPicker.setValue(data.getFechaEntrega());
-        aclaracionesArea.setText(data.getAclaraciones());
+        
+        String aclaraciones = data.getAclaraciones() != null ? data.getAclaraciones() : "";
+        String informeCostos = data.getInformeCostos() != null ? data.getInformeCostos() : "";
+        StringBuilder combinedText = new StringBuilder();
+        if (!informeCostos.isEmpty()) {
+            combinedText.append("--- INFORME DE COSTOS ---\n");
+            combinedText.append(informeCostos);
+        }
+        if (!aclaraciones.isEmpty()) {
+            if (combinedText.length() > 0) {
+                combinedText.append("\n\n--- ACLARACIONES ---\n");
+            }
+            combinedText.append(aclaraciones);
+        }
+        aclaracionesArea.setText(combinedText.toString());
     }
 
     private void populateEquipoFields(Equipo equipo) {
