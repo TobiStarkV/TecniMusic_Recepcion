@@ -86,7 +86,19 @@ public class MainMenuController {
 
     @FXML
     protected void onSettingsClicked() {
-        showAlert(Alert.AlertType.INFORMATION, "Información", "La funcionalidad de configuración aún no está implementada.");
+        try {
+            FXMLLoader fxmlLoader = new FXMLLoader(getClass().getResource("/com/example/tecnimusic_recepcion/settings-view.fxml"));
+            Scene scene = new Scene(fxmlLoader.load());
+            Stage stage = new Stage();
+            stage.setTitle("TecniMusic - Configuración");
+            stage.getIcons().add(new Image(getClass().getResourceAsStream("/logo.png")));
+            stage.setScene(scene);
+            stage.initModality(Modality.APPLICATION_MODAL);
+            stage.showAndWait();
+        } catch (IOException e) {
+            e.printStackTrace();
+            showAlert(Alert.AlertType.ERROR, "Error", "No se pudo abrir la ventana de Configuración.");
+        }
     }
 
     @FXML
