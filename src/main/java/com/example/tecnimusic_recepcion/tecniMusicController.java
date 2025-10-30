@@ -213,7 +213,7 @@ public class tecniMusicController {
         // Deshabilitar gestión de equipos en vista sólo lectura
         if (addEquipoButton != null) addEquipoButton.setDisable(true);
         if (removeEquipoButton != null) removeEquipoButton.setDisable(true);
-        if (equiposTable != null) equiposTable.setDisable(true);
+        // if (equiposTable != null) equiposTable.setDisable(true);
 
         guardarButton.setVisible(false);
         limpiarButton.setVisible(false);
