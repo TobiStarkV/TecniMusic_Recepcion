@@ -20,6 +20,8 @@ public class MainMenuController {
     private Button manageServiceSheetsButton;
     @FXML
     private Button manageClientsButton;
+    @FXML
+    private Button settingsButton;
 
     @FXML
     public void initialize() {
@@ -80,6 +82,11 @@ public class MainMenuController {
             e.printStackTrace();
             showAlert(Alert.AlertType.ERROR, "Error", "No se pudo abrir la ventana de Gestión de Clientes.");
         }
+    }
+
+    @FXML
+    protected void onSettingsClicked() {
+        showAlert(Alert.AlertType.INFORMATION, "Información", "La funcionalidad de configuración aún no está implementada.");
     }
 
     @FXML

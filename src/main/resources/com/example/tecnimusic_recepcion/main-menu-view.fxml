@@ -39,6 +39,12 @@
         </font>
     </Button>
 
+    <Button fx:id="settingsButton" onAction="#onSettingsClicked" prefHeight="40.0" prefWidth="320.0" minWidth="320.0" text="Configuración">
+        <font>
+            <Font size="14.0" />
+        </font>
+    </Button>
+
     <Button onAction="#onExitClicked" prefHeight="40.0" prefWidth="320.0" minWidth="320.0" text="Salir">
         <font>
             <Font size="14.0" />
