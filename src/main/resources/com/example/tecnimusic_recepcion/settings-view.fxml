@@ -5,6 +5,7 @@
 <?import javafx.scene.control.Label?>
 <?import javafx.scene.control.PasswordField?>
 <?import javafx.scene.control.Separator?>
+<?import javafx.scene.control.TextArea?>
 <?import javafx.scene.control.TextField?>
 <?import javafx.scene.layout.ColumnConstraints?>
 <?import javafx.scene.layout.GridPane?>
@@ -70,11 +71,11 @@
                     <ColumnConstraints hgrow="SOMETIMES" minWidth="10.0" prefWidth="250.0" />
                 </columnConstraints>
                 <rowConstraints>
-                    <RowConstraints minHeight="10.0" prefHeight="30.0" vgrow="SOMETIMES" />
+                    <RowConstraints minHeight="10.0" prefHeight="80.0" vgrow="SOMETIMES" />
                 </rowConstraints>
                 <children>
                     <Label text="Pie de Página:" />
-                    <TextField fx:id="pdfFooterField" GridPane.columnIndex="1" />
+                    <TextArea fx:id="pdfFooterField" prefHeight="80.0" wrapText="true" GridPane.columnIndex="1" />
                 </children>
             </GridPane>
         </children>
