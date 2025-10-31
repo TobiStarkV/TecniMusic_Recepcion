@@ -10,11 +10,14 @@ import java.util.Properties;
 public class DatabaseConfig {
 
     private static final String CONFIG_FILE = "src/main/resources/config.properties";
+    // Database properties
     private static final String KEY_HOST = "db.host";
     private static final String KEY_PORT = "db.port";
     private static final String KEY_DB_NAME = "db.name";
     private static final String KEY_USER = "db.user";
     private static final String KEY_PASSWORD = "db.password";
+    // PDF properties
+    private static final String KEY_PDF_FOOTER = "pdf.footer";
 
     private Properties props;
 
@@ -23,6 +26,7 @@ public class DatabaseConfig {
     private String dbName;
     private String user;
     private String password;
+    private String pdfFooter;
 
     public DatabaseConfig() {
         props = new Properties();
@@ -37,6 +41,7 @@ public class DatabaseConfig {
             dbName = props.getProperty(KEY_DB_NAME, "snipeit");
             user = props.getProperty(KEY_USER, "root");
             password = props.getProperty(KEY_PASSWORD, "");
+            pdfFooter = props.getProperty(KEY_PDF_FOOTER, "");
         } catch (IOException ex) {
             // Si el archivo no existe, se usarán los valores por defecto y se creará al guardar.
             host = "localhost";
@@ -44,6 +49,7 @@ public class DatabaseConfig {
             dbName = "snipeit";
             user = "root";
             password = "";
+            pdfFooter = "";
         }
     }
 
@@ -54,7 +60,8 @@ public class DatabaseConfig {
             props.setProperty(KEY_DB_NAME, dbName);
             props.setProperty(KEY_USER, user);
             props.setProperty(KEY_PASSWORD, password);
-            props.store(output, "Database Configuration");
+            props.setProperty(KEY_PDF_FOOTER, pdfFooter);
+            props.store(output, "Application Configuration");
         } catch (IOException ex) {
             ex.printStackTrace();
         }
@@ -100,5 +107,13 @@ public class DatabaseConfig {
 
     public void setPassword(String password) {
         this.password = password;
+    }
+
+    public String getPdfFooter() {
+        return pdfFooter;
+    }
+
+    public void setPdfFooter(String pdfFooter) {
+        this.pdfFooter = pdfFooter;
     }
 }

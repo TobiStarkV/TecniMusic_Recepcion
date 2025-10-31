@@ -18,6 +18,8 @@ public class SettingsController {
     private TextField userField;
     @FXML
     private PasswordField passwordField;
+    @FXML
+    private TextField pdfFooterField;
 
     private DatabaseConfig dbConfig;
 
@@ -33,6 +35,7 @@ public class SettingsController {
         dbNameField.setText(dbConfig.getDbName());
         userField.setText(dbConfig.getUser());
         passwordField.setText(dbConfig.getPassword());
+        pdfFooterField.setText(dbConfig.getPdfFooter());
     }
 
     @FXML
@@ -42,9 +45,10 @@ public class SettingsController {
         dbConfig.setDbName(dbNameField.getText());
         dbConfig.setUser(userField.getText());
         dbConfig.setPassword(passwordField.getText());
+        dbConfig.setPdfFooter(pdfFooterField.getText());
         dbConfig.save();
 
-        showAlert(Alert.AlertType.INFORMATION, "Configuración Guardada", "La configuración de la base de datos se ha guardado correctamente.");
+        showAlert(Alert.AlertType.INFORMATION, "Configuración Guardada", "La configuración se ha guardado correctamente.");
         closeWindow();
     }
 
