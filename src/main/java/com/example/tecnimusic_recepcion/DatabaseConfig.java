@@ -1,17 +1,22 @@
 package com.example.tecnimusic_recepcion;
 
-import java.util.prefs.Preferences;
+import java.io.FileInputStream;
+import java.io.FileOutputStream;
+import java.io.IOException;
+import java.io.InputStream;
+import java.io.OutputStream;
+import java.util.Properties;
 
 public class DatabaseConfig {
 
-    private static final String PREF_NODE = "com/example/tecnimusic_recepcion";
-    private static final String KEY_HOST = "db_host";
-    private static final String KEY_PORT = "db_port";
-    private static final String KEY_DB_NAME = "db_name";
-    private static final String KEY_USER = "db_user";
-    private static final String KEY_PASSWORD = "db_password";
+    private static final String CONFIG_FILE = "src/main/resources/config.properties";
+    private static final String KEY_HOST = "db.host";
+    private static final String KEY_PORT = "db.port";
+    private static final String KEY_DB_NAME = "db.name";
+    private static final String KEY_USER = "db.user";
+    private static final String KEY_PASSWORD = "db.password";
 
-    private Preferences prefs;
+    private Properties props;
 
     private String host;
     private String port;
@@ -20,24 +25,39 @@ public class DatabaseConfig {
     private String password;
 
     public DatabaseConfig() {
-        prefs = Preferences.userRoot().node(PREF_NODE);
+        props = new Properties();
         load();
     }
 
     private void load() {
-        host = prefs.get(KEY_HOST, "localhost");
-        port = prefs.get(KEY_PORT, "3306");
-        dbName = prefs.get(KEY_DB_NAME, "snipeit");
-        user = prefs.get(KEY_USER, "root");
-        password = prefs.get(KEY_PASSWORD, "");
+        try (InputStream input = new FileInputStream(CONFIG_FILE)) {
+            props.load(input);
+            host = props.getProperty(KEY_HOST, "localhost");
+            port = props.getProperty(KEY_PORT, "3306");
+            dbName = props.getProperty(KEY_DB_NAME, "snipeit");
+            user = props.getProperty(KEY_USER, "root");
+            password = props.getProperty(KEY_PASSWORD, "");
+        } catch (IOException ex) {
+            // Si el archivo no existe, se usarán los valores por defecto y se creará al guardar.
+            host = "localhost";
+            port = "3306";
+            dbName = "snipeit";
+            user = "root";
+            password = "";
+        }
     }
 
     public void save() {
-        prefs.put(KEY_HOST, host);
-        prefs.put(KEY_PORT, port);
-        prefs.put(KEY_DB_NAME, dbName);
-        prefs.put(KEY_USER, user);
-        prefs.put(KEY_PASSWORD, password);
+        try (OutputStream output = new FileOutputStream(CONFIG_FILE)) {
+            props.setProperty(KEY_HOST, host);
+            props.setProperty(KEY_PORT, port);
+            props.setProperty(KEY_DB_NAME, dbName);
+            props.setProperty(KEY_USER, user);
+            props.setProperty(KEY_PASSWORD, password);
+            props.store(output, "Database Configuration");
+        } catch (IOException ex) {
+            ex.printStackTrace();
+        }
     }
 
     // Getters and Setters

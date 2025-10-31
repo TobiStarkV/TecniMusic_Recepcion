@@ -11,6 +11,7 @@ import javafx.scene.Scene;
 import javafx.scene.control.Alert;
 import javafx.scene.image.Image;
 import javafx.scene.image.ImageView;
+import javafx.stage.Modality;
 import javafx.stage.Stage;
 import javafx.util.Duration;
 
@@ -30,6 +31,7 @@ public class LoadingController {
 
     private List<Image> animationFrames;
     private int currentFrame = 0;
+    private Timeline timeline;
 
     private volatile boolean isDatabaseReady = false;
     private volatile boolean isAnimationCycleComplete = false;
@@ -44,7 +46,7 @@ public class LoadingController {
 
         loadAnimationFrames();
 
-        Timeline timeline = new Timeline();
+        timeline = new Timeline();
         timeline.setCycleCount(Timeline.INDEFINITE);
         timeline.getKeyFrames().add(
                 new KeyFrame(Duration.millis(33), event -> {
@@ -90,19 +92,47 @@ public class LoadingController {
                 trySwitchToMainView();
             } else {
                 Platform.runLater(() -> {
+                    timeline.stop();
                     Alert alert = new Alert(Alert.AlertType.ERROR);
                     alert.setTitle("Error de Base de Datos");
                     alert.setHeaderText("No se pudo conectar a la base de datos de Snipe-IT.");
-                    alert.setContentText("La aplicación no puede continuar.\nError: " + databaseTask.getMessage());
+                    alert.setContentText("Por favor, verifique la configuración de la conexión.\nError: " + databaseTask.getMessage());
                     alert.getDialogPane().getStylesheets().add(getClass().getResource("styles.css").toExternalForm());
                     ((Stage) alert.getDialogPane().getScene().getWindow()).getIcons().add(new Image(getClass().getResourceAsStream("/logo.png")));
                     alert.showAndWait();
-                    Platform.exit();
+                    showSettingsAndRetry();
                 });
             }
         });
 
         new Thread(databaseTask).start();
+    }
+
+    private void showSettingsAndRetry() {
+        try {
+            FXMLLoader fxmlLoader = new FXMLLoader(getClass().getResource("/com/example/tecnimusic_recepcion/settings-view.fxml"));
+            Scene scene = new Scene(fxmlLoader.load());
+            Stage stage = new Stage();
+            stage.setTitle("TecniMusic - Configuración");
+            stage.getIcons().add(new Image(getClass().getResourceAsStream("/logo.png")));
+            stage.setScene(scene);
+            stage.initModality(Modality.APPLICATION_MODAL);
+            stage.showAndWait();
+
+            timeline.play();
+            startDatabaseLoadTask();
+
+        } catch (IOException e) {
+            e.printStackTrace();
+            Platform.runLater(() -> {
+                Alert alert = new Alert(Alert.AlertType.ERROR);
+                alert.setTitle("Error Crítico");
+                alert.setHeaderText("No se pudo abrir la ventana de configuración.");
+                alert.setContentText("La aplicación no puede continuar y se cerrará.");
+                alert.showAndWait();
+                Platform.exit();
+            });
+        }
     }
 
     private void loadAnimationFrames() {
