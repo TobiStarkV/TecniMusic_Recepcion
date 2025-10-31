@@ -21,7 +21,6 @@ import com.itextpdf.layout.element.Paragraph;
 import com.itextpdf.layout.element.Table;
 import com.itextpdf.layout.properties.TextAlignment;
 import com.itextpdf.layout.properties.UnitValue;
-import com.itextpdf.layout.properties.VerticalAlignment;
 import javafx.scene.control.Alert;
 
 import java.io.File;
@@ -58,14 +57,14 @@ public class PdfGenerator {
         PdfWriter writer = new PdfWriter(dest);
         PdfDocument pdf = new PdfDocument(writer);
 
-        // Añadir el manejador de eventos para el pie de página
-        if (pdfFooter != null && !pdfFooter.trim().isEmpty()) {
-            pdf.addEventHandler(PdfDocumentEvent.END_PAGE, new FooterEventHandler(pdfFooter));
-        }
-
         // El margen inferior debe ser suficiente para el pie de página
         Document document = new Document(pdf);
-        document.setMargins(20, 20, 40, 20);
+        document.setMargins(20, 20, 80, 20); // Aumentar el margen inferior
+
+        // Añadir el manejador de eventos para el pie de página
+        if (pdfFooter != null && !pdfFooter.trim().isEmpty()) {
+            pdf.addEventHandler(PdfDocumentEvent.END_PAGE, new FooterEventHandler(pdfFooter, document));
+        }
 
         com.itextpdf.kernel.colors.Color headerColor = new DeviceRgb(45, 65, 84);
 
@@ -83,30 +82,36 @@ public class PdfGenerator {
     // Clase interna para manejar el evento de pie de página
     protected static class FooterEventHandler implements IEventHandler {
         private final String footerText;
+        private final Document doc;
 
-        public FooterEventHandler(String footerText) {
+        public FooterEventHandler(String footerText, Document doc) {
             this.footerText = footerText;
+            this.doc = doc;
         }
 
         @Override
         public void handleEvent(Event event) {
             PdfDocumentEvent docEvent = (PdfDocumentEvent) event;
-            PdfDocument pdf = docEvent.getDocument();
             PdfPage page = docEvent.getPage();
             Rectangle pageSize = page.getPageSize();
-            PdfCanvas pdfCanvas = new PdfCanvas(page.newContentStreamBefore(), page.getResources(), pdf);
 
-            try (Canvas canvas = new Canvas(pdfCanvas, pageSize)) {
-                Paragraph footer = new Paragraph(footerText)
-                        .setFontSize(8)
-                        .setItalic();
+            // Define el área rectangular para el pie de página.
+            float footerAreaHeight = 75; // Aumentar la altura del área del pie de página
+            float x = pageSize.getLeft() + doc.getLeftMargin();
+            float y = pageSize.getBottom() + 5; // Un pequeño margen desde el borde inferior
+            float width = pageSize.getWidth() - doc.getLeftMargin() - doc.getRightMargin();
+            Rectangle footerArea = new Rectangle(x, y, width, footerAreaHeight);
 
-                // Coordenadas para el pie de página
-                float x = pageSize.getWidth() / 2;
-                float y = 20; // Posición fija desde la parte inferior
+            PdfCanvas pdfCanvas = new PdfCanvas(page.newContentStreamBefore(), page.getResources(), docEvent.getDocument());
+            Canvas canvas = new Canvas(pdfCanvas, footerArea);
 
-                canvas.showTextAligned(footer, x, y, TextAlignment.CENTER, VerticalAlignment.BOTTOM);
-            }
+            Paragraph footer = new Paragraph(footerText)
+                    .setFontSize(8)
+                    .setItalic()
+                    .setTextAlignment(TextAlignment.CENTER);
+
+            canvas.add(footer);
+            canvas.close();
         }
     }
 
