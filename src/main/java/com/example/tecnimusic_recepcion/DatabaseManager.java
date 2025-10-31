@@ -1,11 +1,8 @@
 package com.example.tecnimusic_recepcion;
 
-import java.io.IOException;
-import java.io.InputStream;
 import java.sql.Connection;
 import java.sql.DriverManager;
 import java.sql.SQLException;
-import java.util.Properties;
 
 public class DatabaseManager {
 
@@ -18,18 +15,10 @@ public class DatabaseManager {
     }
 
     private static volatile DatabaseManager instance;
-    private final Properties properties;
+    private final DatabaseConfig dbConfig;
 
     private DatabaseManager() {
-        this.properties = new Properties();
-        try (InputStream input = getClass().getClassLoader().getResourceAsStream("config.properties")) {
-            if (input == null) {
-                throw new IOException("No se encuentra el archivo 'config.properties' en la carpeta resources.");
-            }
-            this.properties.load(input);
-        } catch (IOException e) {
-            throw new RuntimeException("Error fatal: No se pudo cargar el archivo de configuración 'config.properties'.", e);
-        }
+        this.dbConfig = new DatabaseConfig();
     }
 
     public static DatabaseManager getInstance() {
@@ -43,15 +32,20 @@ public class DatabaseManager {
         return instance;
     }
 
+    public static void resetInstance() {
+        synchronized (DatabaseManager.class) {
+            instance = null;
+        }
+    }
+
     public Connection getConnection() throws SQLException {
         DriverManager.setLoginTimeout(10);
 
         String url = "jdbc:mysql://" +
-                properties.getProperty("db.host") + ":" +
-                properties.getProperty("db.port") + "/" +
-                properties.getProperty("db.name") +
-                properties.getProperty("db.params");
+                dbConfig.getHost() + ":" +
+                dbConfig.getPort() + "/" +
+                dbConfig.getDbName();
 
-        return DriverManager.getConnection(url, properties.getProperty("db.user"), properties.getProperty("db.password"));
+        return DriverManager.getConnection(url, dbConfig.getUser(), dbConfig.getPassword());
     }
 }

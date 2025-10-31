@@ -119,6 +119,9 @@ public class LoadingController {
             stage.initModality(Modality.APPLICATION_MODAL);
             stage.showAndWait();
 
+            // Reiniciar la instancia del DatabaseManager para recargar la configuración
+            DatabaseManager.resetInstance();
+
             timeline.play();
             startDatabaseLoadTask();
 
