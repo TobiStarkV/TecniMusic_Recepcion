@@ -3,6 +3,9 @@ package com.example.tecnimusic_recepcion;
 import com.itextpdf.io.image.ImageDataFactory;
 import com.itextpdf.kernel.colors.ColorConstants;
 import com.itextpdf.kernel.colors.DeviceRgb;
+import com.itextpdf.kernel.events.Event;
+import com.itextpdf.kernel.events.IEventHandler;
+import com.itextpdf.kernel.events.PdfDocumentEvent;
 import com.itextpdf.kernel.geom.Rectangle;
 import com.itextpdf.kernel.pdf.PdfDocument;
 import com.itextpdf.kernel.pdf.PdfPage;
@@ -18,6 +21,7 @@ import com.itextpdf.layout.element.Paragraph;
 import com.itextpdf.layout.element.Table;
 import com.itextpdf.layout.properties.TextAlignment;
 import com.itextpdf.layout.properties.UnitValue;
+import com.itextpdf.layout.properties.VerticalAlignment;
 import javafx.scene.control.Alert;
 
 import java.io.File;
@@ -30,28 +34,21 @@ import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
 import java.util.List;
 import java.util.Locale;
-import java.util.Properties;
 
 public class PdfGenerator {
 
     private final String localNombre;
     private final String localDireccion;
     private final String localTelefono;
+    private final String pdfFooter;
     private static final Locale SPANISH_MEXICO_LOCALE = new Locale("es", "MX");
 
     public PdfGenerator() {
-        Properties props = new Properties();
-        try (InputStream input = getClass().getClassLoader().getResourceAsStream("config.properties")) {
-            if (input == null) {
-                throw new IOException("No se encuentra el archivo 'config.properties'");
-            }
-            props.load(input);
-            this.localNombre = props.getProperty("local.nombre", "(No configurado)");
-            this.localDireccion = props.getProperty("local.direccion", "(No configurado)");
-            this.localTelefono = props.getProperty("local.telefono", "(No configurado)");
-        } catch (IOException ex) {
-            throw new RuntimeException("No se pudo leer el archivo de propiedades.", ex);
-        }
+        DatabaseConfig dbConfig = new DatabaseConfig();
+        this.localNombre = "TecniMusic"; // Ejemplo, puedes hacerlo configurable si quieres
+        this.localDireccion = "Dirección de ejemplo";
+        this.localTelefono = "123-456-7890";
+        this.pdfFooter = dbConfig.getPdfFooter();
     }
 
     public String generatePdf(HojaServicioData data) throws IOException {
@@ -60,8 +57,15 @@ public class PdfGenerator {
 
         PdfWriter writer = new PdfWriter(dest);
         PdfDocument pdf = new PdfDocument(writer);
+
+        // Añadir el manejador de eventos para el pie de página
+        if (pdfFooter != null && !pdfFooter.trim().isEmpty()) {
+            pdf.addEventHandler(PdfDocumentEvent.END_PAGE, new FooterEventHandler(pdfFooter));
+        }
+
+        // El margen inferior debe ser suficiente para el pie de página
         Document document = new Document(pdf);
-        document.setMargins(20, 20, 20, 20);
+        document.setMargins(20, 20, 40, 20);
 
         com.itextpdf.kernel.colors.Color headerColor = new DeviceRgb(45, 65, 84);
 
@@ -74,6 +78,36 @@ public class PdfGenerator {
 
         document.close();
         return dest;
+    }
+
+    // Clase interna para manejar el evento de pie de página
+    protected static class FooterEventHandler implements IEventHandler {
+        private final String footerText;
+
+        public FooterEventHandler(String footerText) {
+            this.footerText = footerText;
+        }
+
+        @Override
+        public void handleEvent(Event event) {
+            PdfDocumentEvent docEvent = (PdfDocumentEvent) event;
+            PdfDocument pdf = docEvent.getDocument();
+            PdfPage page = docEvent.getPage();
+            Rectangle pageSize = page.getPageSize();
+            PdfCanvas pdfCanvas = new PdfCanvas(page.newContentStreamBefore(), page.getResources(), pdf);
+
+            try (Canvas canvas = new Canvas(pdfCanvas, pageSize)) {
+                Paragraph footer = new Paragraph(footerText)
+                        .setFontSize(8)
+                        .setItalic();
+
+                // Coordenadas para el pie de página
+                float x = pageSize.getWidth() / 2;
+                float y = 20; // Posición fija desde la parte inferior
+
+                canvas.showTextAligned(footer, x, y, TextAlignment.CENTER, VerticalAlignment.BOTTOM);
+            }
+        }
     }
 
     private String crearRutaDestinoPdf(String numeroOrden) {
@@ -125,15 +159,12 @@ public class PdfGenerator {
         addInfoRow(clienteTable, "Dirección:", data.getClienteDireccion(), false);
         document.add(clienteTable);
 
-        // Título de la nueva sección combinada
         document.add(createSectionHeader("Equipos y Desglose de Costos", headerColor));
 
         List<Equipo> equipos = data.getEquipos();
         if (equipos != null && !equipos.isEmpty()) {
-            // Tabla combinada con detalles de equipo y costo
             Table equiposCostosTable = new Table(UnitValue.createPercentArray(new float[]{1.5f, 1.5f, 1.5f, 1.5f, 3, 1.5f})).useAllAvailableWidth().setMarginTop(5);
 
-            // Encabezados de la tabla
             equiposCostosTable.addHeaderCell(new com.itextpdf.layout.element.Cell().add(new Paragraph("Tipo").setBold().setFontSize(9)).setBorder(Border.NO_BORDER));
             equiposCostosTable.addHeaderCell(new com.itextpdf.layout.element.Cell().add(new Paragraph("Marca").setBold().setFontSize(9)).setBorder(Border.NO_BORDER));
             equiposCostosTable.addHeaderCell(new com.itextpdf.layout.element.Cell().add(new Paragraph("Modelo").setBold().setFontSize(9)).setBorder(Border.NO_BORDER));
@@ -143,7 +174,6 @@ public class PdfGenerator {
 
             NumberFormat currencyFormat = NumberFormat.getCurrencyInstance(SPANISH_MEXICO_LOCALE);
 
-            // Contenido de la tabla
             for (Equipo eq : equipos) {
                 equiposCostosTable.addCell(new com.itextpdf.layout.element.Cell().add(new Paragraph(nullToEmpty(eq.getTipo())).setFontSize(8)).setBorder(Border.NO_BORDER));
                 equiposCostosTable.addCell(new com.itextpdf.layout.element.Cell().add(new Paragraph(nullToEmpty(eq.getMarca())).setFontSize(8)).setBorder(Border.NO_BORDER));
@@ -158,10 +188,8 @@ public class PdfGenerator {
             document.add(new Paragraph("No se han registrado equipos.").setFontSize(9).setMarginTop(5));
         }
 
-        // Línea separadora antes de los totales
         document.add(new LineSeparator(new SolidLine(0.5f)).setMarginTop(5));
 
-        // Tabla de Totales
         Table totalesTable = new Table(UnitValue.createPercentArray(new float[]{3, 1})).useAllAvailableWidth().setMarginTop(5);
         totalesTable.setBorder(Border.NO_BORDER);
 
@@ -170,15 +198,12 @@ public class PdfGenerator {
         BigDecimal totalFinal = subtotal.subtract(anticipo);
         NumberFormat currencyFormat = NumberFormat.getCurrencyInstance(SPANISH_MEXICO_LOCALE);
 
-        // Fila Subtotal
         totalesTable.addCell(new com.itextpdf.layout.element.Cell().add(new Paragraph("Subtotal:")).setTextAlignment(TextAlignment.RIGHT).setBorder(Border.NO_BORDER).setBold());
         totalesTable.addCell(new com.itextpdf.layout.element.Cell().add(new Paragraph(currencyFormat.format(subtotal))).setTextAlignment(TextAlignment.RIGHT).setBorder(Border.NO_BORDER));
 
-        // Fila Anticipo
         totalesTable.addCell(new com.itextpdf.layout.element.Cell().add(new Paragraph("Anticipo:")).setTextAlignment(TextAlignment.RIGHT).setBorder(Border.NO_BORDER).setBold());
         totalesTable.addCell(new com.itextpdf.layout.element.Cell().add(new Paragraph(currencyFormat.format(anticipo))).setTextAlignment(TextAlignment.RIGHT).setBorder(Border.NO_BORDER));
 
-        // Fila Total a Pagar
         totalesTable.addCell(new com.itextpdf.layout.element.Cell().add(new Paragraph("Total a Pagar:")).setTextAlignment(TextAlignment.RIGHT).setBorder(Border.NO_BORDER).setBold().setFontSize(12));
         totalesTable.addCell(new com.itextpdf.layout.element.Cell().add(new Paragraph(currencyFormat.format(totalFinal))).setTextAlignment(TextAlignment.RIGHT).setBorder(Border.NO_BORDER).setBold().setFontSize(12));
 
