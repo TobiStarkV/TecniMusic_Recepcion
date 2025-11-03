@@ -1,5 +1,6 @@
 package com.example.tecnimusic_recepcion;
 
+import javafx.animation.PauseTransition;
 import javafx.application.Platform;
 import javafx.collections.FXCollections;
 import javafx.collections.ListChangeListener;
@@ -10,6 +11,7 @@ import javafx.scene.control.*;
 import javafx.scene.image.Image;
 import javafx.scene.layout.HBox;
 import javafx.stage.Stage;
+import javafx.util.Duration;
 import org.controlsfx.control.textfield.TextFields;
 import org.languagetool.rules.RuleMatch;
 
@@ -27,6 +29,7 @@ import java.util.List;
 import java.util.Locale;
 import java.util.Optional;
 import java.util.Properties;
+import java.util.stream.Collectors;
 
 // Importaciones para la impresión de PDF
 import org.apache.pdfbox.pdmodel.PDDocument;
@@ -126,23 +129,116 @@ public class tecniMusicController {
 
         // Corrector ortográfico
         if (equipoFallaArea != null) {
-            ContextMenu contextMenu = new ContextMenu();
-            MenuItem spellCheckItem = new MenuItem("Verificar Ortografía");
-            spellCheckItem.setOnAction(e -> verificarOrtografia(equipoFallaArea));
-            contextMenu.getItems().add(spellCheckItem);
-            equipoFallaArea.setContextMenu(contextMenu);
+            setupSpellChecking(equipoFallaArea);
         }
 
         if (aclaracionesArea != null) {
-            ContextMenu contextMenu = new ContextMenu();
-            MenuItem spellCheckItem = new MenuItem("Verificar Ortografía");
-            spellCheckItem.setOnAction(e -> verificarOrtografia(aclaracionesArea));
-            contextMenu.getItems().add(spellCheckItem);
-            aclaracionesArea.setContextMenu(contextMenu);
+            setupSpellChecking(aclaracionesArea);
         }
     }
 
-    private void verificarOrtografia(TextArea textArea) {
+    private void setupSpellChecking(TextArea textArea) {
+        PauseTransition pause = new PauseTransition(Duration.seconds(0.8));
+        Tooltip errorTooltip = new Tooltip();
+        textArea.setUserData(new ArrayList<RuleMatch>());
+
+        textArea.textProperty().addListener((observable, oldValue, newValue) -> {
+            if (newValue == null || newValue.trim().isEmpty()) {
+                textArea.setStyle("");
+                Tooltip.uninstall(textArea, errorTooltip);
+                ((List<?>) textArea.getUserData()).clear();
+                return;
+            }
+
+            pause.setOnFinished(event -> {
+                Platform.runLater(() -> {
+                    try {
+                        @SuppressWarnings("unchecked")
+                        List<RuleMatch> mistakes = (List<RuleMatch>) textArea.getUserData();
+                        mistakes.clear();
+                        mistakes.addAll(CorrectorOrtografico.verificar(newValue));
+
+                        if (mistakes.isEmpty()) {
+                            textArea.setStyle("");
+                            Tooltip.uninstall(textArea, errorTooltip);
+                        } else {
+                            textArea.setStyle("-fx-border-color: red; -fx-border-width: 1.5px; -fx-background-color: #fff0f0;");
+                            String errorSummary = mistakes.stream()
+                                    .map(match -> "\"" + newValue.substring(match.getFromPos(), match.getToPos()) + "\"")
+                                    .distinct()
+                                    .collect(Collectors.joining(", "));
+                            errorTooltip.setText("Posibles errores: " + errorSummary);
+                            Tooltip.install(textArea, errorTooltip);
+                        }
+                    } catch (IOException e) {
+                        textArea.setStyle("");
+                        Tooltip.uninstall(textArea, errorTooltip);
+                    }
+                });
+            });
+            pause.playFromStart();
+        });
+
+        ContextMenu contextMenu = new ContextMenu();
+        textArea.setContextMenu(contextMenu);
+
+        contextMenu.setOnShowing(e -> {
+            contextMenu.getItems().clear();
+            String text = textArea.getText();
+            if (text == null || text.trim().isEmpty()) return;
+
+            int caretPosition = textArea.getCaretPosition();
+
+            @SuppressWarnings("unchecked")
+            List<RuleMatch> mistakes = (List<RuleMatch>) textArea.getUserData();
+            if (mistakes == null) return;
+
+            Optional<RuleMatch> matchAtCaret = mistakes.stream()
+                    .filter(m -> caretPosition >= m.getFromPos() && caretPosition <= m.getToPos())
+                    .findFirst();
+
+            if (matchAtCaret.isPresent()) {
+                RuleMatch currentMatch = matchAtCaret.get();
+                List<String> suggestions = currentMatch.getSuggestedReplacements();
+
+                if (!suggestions.isEmpty()) {
+                    for (String suggestion : suggestions) {
+                        MenuItem item = new MenuItem(suggestion);
+                        item.setOnAction(evt -> {
+                            textArea.replaceText(currentMatch.getFromPos(), currentMatch.getToPos(), suggestion);
+                            // The text change will trigger the listener, which will re-validate.
+                        });
+                        contextMenu.getItems().add(item);
+                    }
+                    contextMenu.getItems().add(new SeparatorMenuItem());
+                }
+            }
+
+            MenuItem fullCheck = new MenuItem("Verificar Ortografía (Informe completo)");
+            fullCheck.setOnAction(evt -> verificarOrtografiaCompleta(textArea));
+            contextMenu.getItems().add(fullCheck);
+        });
+    }
+
+    private int[] getWordBounds(String text, int caretPosition) {
+        if (text == null || text.isEmpty()) {
+            return new int[]{0, 0};
+        }
+
+        int start = Math.max(0, caretPosition - 1);
+        while (start > 0 && !Character.isWhitespace(text.charAt(start - 1))) {
+            start--;
+        }
+
+        int end = caretPosition;
+        while (end < text.length() && !Character.isWhitespace(text.charAt(end))) {
+            end++;
+        }
+
+        return new int[]{start, end};
+    }
+
+    private void verificarOrtografiaCompleta(TextArea textArea) {
         if (textArea.getText() == null || textArea.getText().trim().isEmpty()) {
             showAlert(Alert.AlertType.INFORMATION, "Texto Vacío", "No hay texto para verificar.");
             return;
