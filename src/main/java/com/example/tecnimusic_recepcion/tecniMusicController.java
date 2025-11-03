@@ -11,6 +11,7 @@ import javafx.scene.image.Image;
 import javafx.scene.layout.HBox;
 import javafx.stage.Stage;
 import org.controlsfx.control.textfield.TextFields;
+import org.languagetool.rules.RuleMatch;
 
 import java.io.File;
 import java.io.IOException;
@@ -121,6 +122,62 @@ public class tecniMusicController {
         if (printButton != null) {
             printButton.setVisible(false);
             printButton.setManaged(false);
+        }
+
+        // Corrector ortográfico
+        if (equipoFallaArea != null) {
+            ContextMenu contextMenu = new ContextMenu();
+            MenuItem spellCheckItem = new MenuItem("Verificar Ortografía");
+            spellCheckItem.setOnAction(e -> verificarOrtografia(equipoFallaArea));
+            contextMenu.getItems().add(spellCheckItem);
+            equipoFallaArea.setContextMenu(contextMenu);
+        }
+
+        if (aclaracionesArea != null) {
+            ContextMenu contextMenu = new ContextMenu();
+            MenuItem spellCheckItem = new MenuItem("Verificar Ortografía");
+            spellCheckItem.setOnAction(e -> verificarOrtografia(aclaracionesArea));
+            contextMenu.getItems().add(spellCheckItem);
+            aclaracionesArea.setContextMenu(contextMenu);
+        }
+    }
+
+    private void verificarOrtografia(TextArea textArea) {
+        if (textArea.getText() == null || textArea.getText().trim().isEmpty()) {
+            showAlert(Alert.AlertType.INFORMATION, "Texto Vacío", "No hay texto para verificar.");
+            return;
+        }
+        try {
+            List<RuleMatch> matches = CorrectorOrtografico.verificar(textArea.getText());
+            if (matches.isEmpty()) {
+                showAlert(Alert.AlertType.INFORMATION, "Ortografía Correcta", "No se encontraron errores de ortografía o gramática.");
+            } else {
+                StringBuilder errors = new StringBuilder("Se encontraron los siguientes errores:\n\n");
+                for (RuleMatch match : matches) {
+                    errors.append("Error: '").append(textArea.getText(), match.getFromPos(), match.getToPos()).append("'\n");
+                    errors.append("Mensaje: ").append(match.getMessage()).append("\n");
+                    errors.append("Sugerencias: ").append(match.getSuggestedReplacements()).append("\n\n");
+                }
+
+                Alert errorAlert = new Alert(Alert.AlertType.WARNING);
+                errorAlert.setTitle("Revisión de Ortografía");
+                errorAlert.setHeaderText("Se encontraron posibles errores en el texto.");
+
+                TextArea errorTextArea = new TextArea(errors.toString());
+                errorTextArea.setEditable(false);
+                errorTextArea.setWrapText(true);
+                errorTextArea.setPrefHeight(300);
+
+                errorAlert.getDialogPane().setContent(errorTextArea);
+                errorAlert.getDialogPane().getStylesheets().add(getClass().getResource("styles.css").toExternalForm());
+                ((Stage) errorAlert.getDialogPane().getScene().getWindow()).getIcons().add(new Image(getClass().getResourceAsStream("/logo.png")));
+                errorAlert.setResizable(true);
+
+                errorAlert.showAndWait();
+            }
+        } catch (IOException e) {
+            showAlert(Alert.AlertType.ERROR, "Error del Corrector", "No se pudo inicializar el corrector ortográfico.");
+            e.printStackTrace();
         }
     }
 

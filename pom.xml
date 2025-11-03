@@ -70,6 +70,16 @@
             <version>${junit.version}</version>
             <scope>test</scope>
         </dependency>
+        <dependency>
+            <groupId>org.languagetool</groupId>
+            <artifactId>languagetool-core</artifactId>
+            <version>6.3</version>
+        </dependency>
+        <dependency>
+            <groupId>org.languagetool</groupId>
+            <artifactId>language-es</artifactId>
+            <version>6.3</version>
+        </dependency>
 
         <!-- Dependencias de iText para PDF -->
         <dependency>
