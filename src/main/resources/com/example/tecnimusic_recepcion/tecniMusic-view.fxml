@@ -8,7 +8,7 @@
 <?import javafx.scene.control.ScrollPane?>
 <?import javafx.scene.control.TableColumn?>
 <?import javafx.scene.control.TableView?>
-<?import javafx.scene.control.TextArea?>
+<?import org.fxmisc.richtext.StyleClassedTextArea?>
 <?import javafx.scene.control.TextField?>
 <?import javafx.scene.control.TitledPane?>
 <?import javafx.scene.layout.BorderPane?>
@@ -113,7 +113,7 @@
                                  </children>
                               </GridPane>
                               <Label text="Falla Reportada:" />
-                              <TextArea fx:id="equipoFallaArea" prefHeight="80.0" wrapText="true" />
+                              <StyleClassedTextArea fx:id="equipoFallaArea" prefHeight="80.0" wrapText="true" />
                               <GridPane hgap="10.0" vgap="5.0">
                                  <columnConstraints>
                                     <ColumnConstraints hgrow="SOMETIMES" prefWidth="140.0" />
@@ -184,7 +184,7 @@
                               <Label text="Fecha de Entrega:" />
                               <DatePicker fx:id="entregaFechaPicker" GridPane.columnIndex="1" />
                               <Label text="Aclaraciones Adicionales:" GridPane.rowIndex="1" />
-                              <TextArea fx:id="aclaracionesArea" prefHeight="80.0" wrapText="true" GridPane.columnIndex="1" GridPane.rowIndex="1" />
+                              <StyleClassedTextArea fx:id="aclaracionesArea" prefHeight="80.0" wrapText="true" GridPane.columnIndex="1" GridPane.rowIndex="1" />
                            </children>
                         </GridPane>
                      </content>

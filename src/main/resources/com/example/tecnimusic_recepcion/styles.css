@@ -68,23 +68,38 @@
     -fx-border-color: #D32F2F;
 }
 
-/* Text Area */
-.text-area {
+/* Text Area & StyleClassedTextArea */
+.text-area, .style-classed-text-area {
     -fx-background-color: #1E2A3A;
-    -fx-text-fill: #E0E0E0;
     -fx-border-color: #303E4D;
     -fx-border-radius: 5;
     -fx-background-radius: 5;
     -fx-font-size: 14px;
-    -fx-prompt-text-fill: #7A8A99;
 }
 
 .text-area .content {
     -fx-background-color: #1E2A3A;
 }
 
-.text-area:focused {
+/* Crucial fix for RichTextFX background */
+.style-classed-text-area .paragraph-box {
+    -fx-background-color: #1E2A3A;
+}
+
+.style-classed-text-area .text {
+    -fx-fill: #E0E0E0; 
+}
+
+
+.text-area:focused, .style-classed-text-area:focused {
     -fx-border-color: #D32F2F;
+}
+
+.spell-error {
+    -fx-underline: true;
+    -fx-stroke: red;
+    -fx-stroke-width: 1px;
+    -fx-stroke-dash-array: 1 2;
 }
 
 /* Table View */
@@ -273,14 +288,22 @@
 
 /* --- Styles for Disabled/Non-Editable Controls --- */
 .text-field:disabled,
-.text-area:disabled {
+.text-area:disabled,
+.style-classed-text-area:disabled {
     -fx-opacity: 1.0;
     -fx-background-color: #152232;
-    -fx-text-fill: #8A9AAB;
 }
 
 .text-area:disabled .content {
      -fx-background-color: #152232;
+}
+
+.style-classed-text-area:disabled .paragraph-box {
+    -fx-background-color: #152232;
+}
+
+.style-classed-text-area:disabled .text {
+    -fx-fill: #8A9AAB;
 }
 
 .date-picker:disabled {

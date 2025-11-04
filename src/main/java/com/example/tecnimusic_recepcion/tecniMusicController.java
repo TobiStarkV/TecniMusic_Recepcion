@@ -13,6 +13,7 @@ import javafx.scene.layout.HBox;
 import javafx.stage.Stage;
 import javafx.util.Duration;
 import org.controlsfx.control.textfield.TextFields;
+import org.fxmisc.richtext.StyleClassedTextArea;
 import org.languagetool.rules.RuleMatch;
 
 import java.io.File;
@@ -25,6 +26,8 @@ import java.text.NumberFormat;
 import java.text.ParseException;
 import java.time.LocalDate;
 import java.util.ArrayList;
+import java.util.Collection;
+import java.util.Collections;
 import java.util.List;
 import java.util.Locale;
 import java.util.Optional;
@@ -43,7 +46,7 @@ public class tecniMusicController {
     @FXML private TextField ordenNumeroField, clienteNombreField, clienteDireccionField, clienteTelefonoField;
     @FXML private TextField equipoSerieField, equipoTipoField, equipoCompaniaField, equipoModeloField, equipoCostoField, anticipoField;
     @FXML private DatePicker ordenFechaPicker, entregaFechaPicker;
-    @FXML private TextArea equipoFallaArea, aclaracionesArea;
+    @FXML private StyleClassedTextArea equipoFallaArea, aclaracionesArea;
     @FXML private HBox actionButtonsBox;
     @FXML private Button guardarButton, limpiarButton, salirButton, printButton, testPdfButton;
 
@@ -137,42 +140,16 @@ public class tecniMusicController {
         }
     }
 
-    private void setupSpellChecking(TextArea textArea) {
-        PauseTransition pause = new PauseTransition(Duration.seconds(0.8));
-        Tooltip errorTooltip = new Tooltip();
-        textArea.setUserData(new ArrayList<RuleMatch>());
-
+    private void setupSpellChecking(StyleClassedTextArea textArea) {
+        PauseTransition pause = new PauseTransition(Duration.seconds(0.5));
         textArea.textProperty().addListener((observable, oldValue, newValue) -> {
-            if (newValue == null || newValue.trim().isEmpty()) {
-                textArea.setStyle("");
-                Tooltip.uninstall(textArea, errorTooltip);
-                ((List<?>) textArea.getUserData()).clear();
-                return;
-            }
-
             pause.setOnFinished(event -> {
                 Platform.runLater(() -> {
                     try {
-                        @SuppressWarnings("unchecked")
-                        List<RuleMatch> mistakes = (List<RuleMatch>) textArea.getUserData();
-                        mistakes.clear();
-                        mistakes.addAll(CorrectorOrtografico.verificar(newValue));
-
-                        if (mistakes.isEmpty()) {
-                            textArea.setStyle("");
-                            Tooltip.uninstall(textArea, errorTooltip);
-                        } else {
-                            textArea.setStyle("-fx-border-color: red; -fx-border-width: 1.5px; -fx-background-color: #fff0f0;");
-                            String errorSummary = mistakes.stream()
-                                    .map(match -> "\"" + newValue.substring(match.getFromPos(), match.getToPos()) + "\"")
-                                    .distinct()
-                                    .collect(Collectors.joining(", "));
-                            errorTooltip.setText("Posibles errores: " + errorSummary);
-                            Tooltip.install(textArea, errorTooltip);
-                        }
+                        List<RuleMatch> matches = CorrectorOrtografico.verificar(newValue);
+                        applyHighlighting(textArea, matches);
                     } catch (IOException e) {
-                        textArea.setStyle("");
-                        Tooltip.uninstall(textArea, errorTooltip);
+                        // ignore
                     }
                 });
             });
@@ -189,56 +166,55 @@ public class tecniMusicController {
 
             int caretPosition = textArea.getCaretPosition();
 
-            @SuppressWarnings("unchecked")
-            List<RuleMatch> mistakes = (List<RuleMatch>) textArea.getUserData();
-            if (mistakes == null) return;
+            try {
+                List<RuleMatch> allMatches = CorrectorOrtografico.verificar(text);
+                Optional<RuleMatch> matchAtCaret = allMatches.stream()
+                        .filter(m -> caretPosition >= m.getFromPos() && caretPosition <= m.getToPos())
+                        .findFirst();
 
-            Optional<RuleMatch> matchAtCaret = mistakes.stream()
-                    .filter(m -> caretPosition >= m.getFromPos() && caretPosition <= m.getToPos())
-                    .findFirst();
+                if (matchAtCaret.isPresent()) {
+                    RuleMatch currentMatch = matchAtCaret.get();
+                    List<String> suggestions = currentMatch.getSuggestedReplacements();
 
-            if (matchAtCaret.isPresent()) {
-                RuleMatch currentMatch = matchAtCaret.get();
-                List<String> suggestions = currentMatch.getSuggestedReplacements();
-
-                if (!suggestions.isEmpty()) {
-                    for (String suggestion : suggestions) {
-                        MenuItem item = new MenuItem(suggestion);
-                        item.setOnAction(evt -> {
-                            textArea.replaceText(currentMatch.getFromPos(), currentMatch.getToPos(), suggestion);
-                            // The text change will trigger the listener, which will re-validate.
-                        });
-                        contextMenu.getItems().add(item);
+                    if (!suggestions.isEmpty()) {
+                        for (String suggestion : suggestions) {
+                            MenuItem item = new MenuItem(suggestion);
+                            item.setOnAction(evt -> {
+                                textArea.replaceText(currentMatch.getFromPos(), currentMatch.getToPos(), suggestion);
+                            });
+                            contextMenu.getItems().add(item);
+                        }
+                        contextMenu.getItems().add(new SeparatorMenuItem());
                     }
-                    contextMenu.getItems().add(new SeparatorMenuItem());
                 }
-            }
 
-            MenuItem fullCheck = new MenuItem("Verificar Ortografía (Informe completo)");
-            fullCheck.setOnAction(evt -> verificarOrtografiaCompleta(textArea));
-            contextMenu.getItems().add(fullCheck);
+                MenuItem fullCheck = new MenuItem("Verificar Ortografía (Informe completo)");
+                fullCheck.setOnAction(evt -> verificarOrtografiaCompleta(textArea));
+                contextMenu.getItems().add(fullCheck);
+
+            } catch (IOException ex) {
+                // ignore
+            }
         });
     }
 
-    private int[] getWordBounds(String text, int caretPosition) {
-        if (text == null || text.isEmpty()) {
-            return new int[]{0, 0};
-        }
-
-        int start = Math.max(0, caretPosition - 1);
-        while (start > 0 && !Character.isWhitespace(text.charAt(start - 1))) {
-            start--;
-        }
-
-        int end = caretPosition;
-        while (end < text.length() && !Character.isWhitespace(text.charAt(end))) {
-            end++;
-        }
-
-        return new int[]{start, end};
+    private void applyHighlighting(StyleClassedTextArea textArea, List<RuleMatch> matches) {
+        textArea.setStyleSpans(0, computeHighlighting(textArea.getText(), matches));
     }
 
-    private void verificarOrtografiaCompleta(TextArea textArea) {
+    private static org.fxmisc.richtext.model.StyleSpans<Collection<String>> computeHighlighting(String text, List<RuleMatch> matches) {
+        int lastKwEnd = 0;
+        org.fxmisc.richtext.model.StyleSpansBuilder<Collection<String>> spansBuilder = new org.fxmisc.richtext.model.StyleSpansBuilder<>();
+        for (RuleMatch match : matches) {
+            spansBuilder.add(Collections.emptyList(), match.getFromPos() - lastKwEnd);
+            spansBuilder.add(Collections.singleton("spell-error"), match.getToPos() - match.getFromPos());
+            lastKwEnd = match.getToPos();
+        }
+        spansBuilder.add(Collections.emptyList(), text.length() - lastKwEnd);
+        return spansBuilder.create();
+    }
+
+    private void verificarOrtografiaCompleta(StyleClassedTextArea textArea) {
         if (textArea.getText() == null || textArea.getText().trim().isEmpty()) {
             showAlert(Alert.AlertType.INFORMATION, "Texto Vacío", "No hay texto para verificar.");
             return;
@@ -838,7 +814,7 @@ public class tecniMusicController {
             }
             combinedText.append(aclaraciones);
         }
-        aclaracionesArea.setText(combinedText.toString());
+        aclaracionesArea.replaceText(combinedText.toString());
     }
 
     private void populateEquipoFields(Equipo equipo) {
@@ -846,7 +822,7 @@ public class tecniMusicController {
         equipoCompaniaField.setText(equipo.getMarca());
         equipoModeloField.setText(equipo.getModelo());
         equipoSerieField.setText(equipo.getSerie());
-        equipoFallaArea.setText(equipo.getFalla());
+        equipoFallaArea.replaceText(equipo.getFalla());
         if (equipo.getCosto() != null) {
             equipoCostoField.setText(NumberFormat.getCurrencyInstance(SPANISH_MEXICO_LOCALE).format(equipo.getCosto()));
         } else {
