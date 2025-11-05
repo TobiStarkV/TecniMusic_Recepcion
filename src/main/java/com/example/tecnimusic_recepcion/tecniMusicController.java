@@ -134,10 +134,12 @@ public class tecniMusicController {
         // Corrector ortográfico
         if (equipoFallaArea != null) {
             setupSpellChecking(equipoFallaArea);
+            equipoFallaArea.setStyle("-fx-background-color: #1E2A3A;");
         }
 
         if (aclaracionesArea != null) {
             setupSpellChecking(aclaracionesArea);
+            aclaracionesArea.setStyle("-fx-background-color: #1E2A3A;");
         }
     }
 

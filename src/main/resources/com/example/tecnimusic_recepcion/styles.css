@@ -68,29 +68,48 @@
     -fx-border-color: #D32F2F;
 }
 
-/* Text Area & StyleClassedTextArea */
+/* ======================================================= */
+/* === Estilos para TextArea y StyleClassedTextArea    === */
+/* ======================================================= */
+
+/* --- Contenedor Principal (Borde y Radio) --- */
 .text-area, .style-classed-text-area {
-    -fx-background-color: #1E2A3A;
+    -fx-background-color: #1E2A3A; /* Color de fondo principal */
     -fx-border-color: #303E4D;
+    -fx-border-width: 1;
     -fx-border-radius: 5;
     -fx-background-radius: 5;
     -fx-font-size: 14px;
 }
 
+/* --- Contenido Interno (Color de fondo y texto) --- */
+
+/* Para TextArea estándar de JavaFX */
 .text-area .content {
     -fx-background-color: #1E2A3A;
 }
 
-/* Crucial fix for RichTextFX background */
-.style-classed-text-area .paragraph-box {
+/* Para StyleClassedTextArea de RichTextFX (Múltiples capas) */
+.style-classed-text-area .content,
+.style-classed-text-area .virtualized-scroll-pane,
+.style-classed-text-area .viewport {
+   -fx-background-color: #1E2A3A;
+}
+
+.style-classed-text-area .scroll-pane .viewport .content {
     -fx-background-color: #1E2A3A;
 }
 
-.style-classed-text-area .text {
-    -fx-fill: #E0E0E0; 
+.style-classed-text-area .paragraph-box {
+    -fx-background-color: #1E2A3A;
+    -fx-padding: 5px; /* Espacio interno para que el texto no pegue al borde */
 }
 
+.style-classed-text-area .text {
+    -fx-fill: #E0E0E0; /* Color del texto */
+}
 
+/* --- Estado :focus --- */
 .text-area:focused, .style-classed-text-area:focused {
     -fx-border-color: #D32F2F;
 }
