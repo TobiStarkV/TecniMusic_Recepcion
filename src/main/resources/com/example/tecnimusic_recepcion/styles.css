@@ -321,3 +321,6 @@
 }
 
 /* End of stylesheet */
+.context-menu .label {
+    -fx-text-fill: black;
+}
