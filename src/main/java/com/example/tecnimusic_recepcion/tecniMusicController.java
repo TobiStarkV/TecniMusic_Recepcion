@@ -6,6 +6,7 @@ import javafx.collections.FXCollections;
 import javafx.collections.ListChangeListener;
 import javafx.collections.ObservableList;
 import javafx.fxml.FXML;
+import javafx.geometry.Point2D;
 import javafx.scene.Node;
 import javafx.scene.control.*;
 import javafx.scene.image.Image;
@@ -141,6 +142,7 @@ public class tecniMusicController {
     }
 
     private void setupSpellChecking(StyleClassedTextArea textArea) {
+        // Esta parte para resaltar el texto mientras se escribe es correcta y se mantiene.
         PauseTransition pause = new PauseTransition(Duration.seconds(0.5));
         textArea.textProperty().addListener((observable, oldValue, newValue) -> {
             pause.setOnFinished(event -> {
@@ -156,13 +158,34 @@ public class tecniMusicController {
             pause.playFromStart();
         });
 
-        ContextMenu contextMenu = new ContextMenu();
+        // --- INICIO DE LA CORRECCIÓN ---
+
+        // 1. Crea el objeto ContextMenu.
+        final ContextMenu contextMenu = new ContextMenu();
+
+        // 2. Asigna el menú al área de texto.
+        //    Esto es importante para que el framework sepa que existe un menú.
         textArea.setContextMenu(contextMenu);
 
-        contextMenu.setOnShowing(e -> {
+        // 3. Usa setOnContextMenuRequested para controlar todo el proceso.
+        textArea.setOnContextMenuRequested(event -> {
+            // Primero, esconde el menú si ya estaba visible por alguna razón.
+            contextMenu.hide();
+
+            // Mueve el cursor a la posición del clic.
+            Point2D click = new Point2D(event.getX(), event.getY());
+            int characterIndex = textArea.hit(click.getX(), click.getY()).getCharacterIndex().orElse(-1);
+            if (characterIndex != -1) {
+                textArea.moveTo(characterIndex);
+            }
+
+            // Ahora, pobla el menú (lógica que antes estaba en setOnShowing).
             contextMenu.getItems().clear();
             String text = textArea.getText();
-            if (text == null || text.trim().isEmpty()) return;
+            if (text == null || text.trim().isEmpty()) {
+                event.consume(); // No hay texto, no hagas nada más.
+                return;
+            }
 
             int caretPosition = textArea.getCaretPosition();
 
@@ -195,7 +218,19 @@ public class tecniMusicController {
             } catch (IOException ex) {
                 // ignore
             }
+
+            // Si hay items para mostrar, muestra el menú en la posición del evento.
+            if (!contextMenu.getItems().isEmpty()) {
+                contextMenu.show(textArea, event.getScreenX(), event.getScreenY());
+            }
+            
+            // Consume el evento para prevenir que el sistema muestre otro menú.
+            event.consume();
         });
+        
+        // Ya no necesitamos el manejador setOnShowing.
+        
+        // --- FIN DE LA CORRECCIÓN ---
     }
 
     private void applyHighlighting(StyleClassedTextArea textArea, List<RuleMatch> matches) {
