@@ -344,7 +344,41 @@
     -fx-background-color: transparent;
 }
 
-/* End of stylesheet */
+/* ======================================================= */
+/* === Estilos para Context Menu                       === */
+/* ======================================================= */
+
+.context-menu {
+    -fx-background-color: #1E2A3A; /* Panel dark */
+    -fx-border-color: #303E4D;
+    -fx-border-width: 1px;
+    -fx-background-radius: 6;
+    -fx-border-radius: 6;
+    -fx-padding: 5;
+}
+
+.context-menu .menu-item {
+    -fx-background-color: transparent;
+    -fx-padding: 5 10;
+}
+
 .context-menu .label {
-    -fx-text-fill: black;
+    -fx-text-fill: #E0E0E0; /* text-light */
+    -fx-font-size: 14px;
+}
+
+.context-menu .menu-item:focused {
+    -fx-background-color: #A11A1A; /* Red accent for selection */
+    -fx-background-radius: 4;
+}
+
+.context-menu .menu-item:focused .label {
+    -fx-text-fill: white;
+}
+
+/* Separator in context menu */
+.context-menu .separator .line {
+    -fx-border-color: #303E4D transparent transparent transparent;
+    -fx-border-insets: 0;
+    -fx-border-width: 1;
 }
