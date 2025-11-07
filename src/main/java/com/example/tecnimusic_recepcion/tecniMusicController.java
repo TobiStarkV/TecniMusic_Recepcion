@@ -171,6 +171,10 @@ public class tecniMusicController {
 
         // 3. Usa setOnContextMenuRequested para controlar todo el proceso.
         textArea.setOnContextMenuRequested(event -> {
+            if (isViewOnlyMode) {
+                event.consume();
+                return;
+            }
             // Primero, esconde el menú si ya estaba visible por alguna razón.
             contextMenu.hide();
 
