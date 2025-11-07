@@ -13,10 +13,7 @@
 <?import javafx.scene.layout.VBox?>
 <?import javafx.scene.text.Font?>
 
-<BorderPane maxHeight="-Infinity" maxWidth="-Infinity" minHeight="-Infinity" minWidth="-Infinity" prefHeight="600.0" prefWidth="800.0" xmlns="http://javafx.com/javafx/11.0.1" xmlns:fx="http://javafx.com/fxml/1" fx:controller="com.example.tecnimusic_recepcion.ManageClientsController">
-    <stylesheets>
-        <String fx:value="@styles.css" />
-    </stylesheets>
+<BorderPane maxHeight="-Infinity" maxWidth="-Infinity" minHeight="-Infinity" minWidth="-Infinity" prefHeight="600.0" prefWidth="800.0" xmlns="http://javafx.com/javafx/22" xmlns:fx="http://javafx.com/fxml/1" fx:controller="com.example.tecnimusic_recepcion.ManageClientsController" stylesheets="@styles.css">
     <top>
         <HBox alignment="CENTER_LEFT" spacing="10.0" BorderPane.alignment="CENTER">
             <padding>

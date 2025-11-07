@@ -12,10 +12,7 @@
 <?import javafx.scene.layout.Region?>
 <?import javafx.scene.text.Font?>
 
-<BorderPane prefHeight="600.0" prefWidth="900.0" xmlns="http://javafx.com/javafx/11.0.1" xmlns:fx="http://javafx.com/fxml/1" fx:controller="com.example.tecnimusic_recepcion.ManageServiceSheetsController">
-    <stylesheets>
-        <String fx:value="@styles.css" />
-    </stylesheets>
+<BorderPane prefHeight="600.0" prefWidth="900.0" xmlns="http://javafx.com/javafx/22" xmlns:fx="http://javafx.com/fxml/1" fx:controller="com.example.tecnimusic_recepcion.ManageServiceSheetsController" stylesheets="@styles.css">
     <top>
         <HBox alignment="CENTER_LEFT" spacing="10.0" BorderPane.alignment="CENTER">
             <padding>

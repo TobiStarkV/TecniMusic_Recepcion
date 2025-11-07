@@ -11,10 +11,7 @@
 <?import javafx.scene.layout.HBox?>
 <?import javafx.scene.text.Font?>
 
-<BorderPane prefHeight="400.0" prefWidth="700.0" xmlns="http://javafx.com/javafx/11.0.1" xmlns:fx="http://javafx.com/fxml/1" fx:controller="com.example.tecnimusic_recepcion.ClientServiceSheetsController">
-    <stylesheets>
-        <String fx:value="@styles.css" />
-    </stylesheets>
+<BorderPane prefHeight="400.0" prefWidth="700.0" xmlns="http://javafx.com/javafx/22" xmlns:fx="http://javafx.com/fxml/1" fx:controller="com.example.tecnimusic_recepcion.ClientServiceSheetsController" stylesheets="@styles.css">
     <top>
         <Label fx:id="clientNameLabel" text="Hojas de Servicio para: [Nombre del Cliente]" BorderPane.alignment="CENTER">
             <font>
