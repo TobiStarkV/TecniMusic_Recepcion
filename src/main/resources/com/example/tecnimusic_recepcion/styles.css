@@ -109,6 +109,11 @@
     -fx-fill: #E0E0E0; /* Color del texto */
 }
 
+.falla-reportada-text-area .text {
+    -fx-fill: #FFFFFF; /* Forzar texto a blanco */
+}
+
+
 /* --- Estado :focus --- */
 .text-area:focused, .style-classed-text-area:focused {
     -fx-border-color: #D32F2F;
