@@ -937,9 +937,12 @@ public class tecniMusicController {
 
     private void predecirYAsignarNumeroDeOrden() {
         long maxId = 0;
-        try (Connection conn = DatabaseManager.getInstance().getConnection(); Statement stmt = conn.createStatement()) {
-            ResultSet rs = stmt.executeQuery("SELECT MAX(id) FROM x_hojas_servicio");
-            if (rs.next()) maxId = rs.getLong(1);
+        try (Connection conn = DatabaseManager.getInstance().getConnection()) {
+            conn.setTransactionIsolation(Connection.TRANSACTION_READ_COMMITTED);
+            try (Statement stmt = conn.createStatement()) {
+                ResultSet rs = stmt.executeQuery("SELECT MAX(id) FROM x_hojas_servicio");
+                if (rs.next()) maxId = rs.getLong(1);
+            }
         } catch (SQLException e) {
             showAlert(Alert.AlertType.WARNING, "Error de Predicción", "No se pudo predecir el número de orden.");
         }
@@ -949,19 +952,10 @@ public class tecniMusicController {
     }
 
     private void cargarDatosDelLocal() {
-        Properties props = new Properties();
-        try (InputStream input = getClass().getClassLoader().getResourceAsStream("config.properties")) {
-            if (input == null) {
-                showAlert(Alert.AlertType.ERROR, "Error de Configuración", "No se encuentra el archivo 'config.properties'");
-                return;
-            }
-            props.load(input);
-            localNombreLabel.setText(props.getProperty("local.nombre", "(No configurado)"));
-            localDireccionLabel.setText(props.getProperty("local.direccion", "(No configurado)"));
-            localTelefonoLabel.setText(props.getProperty("local.telefono", "(No configurado)"));
-        } catch (IOException ex) {
-            showAlert(Alert.AlertType.ERROR, "Error de Configuración", "No se pudo leer el archivo de propiedades.");
-        }
+        DatabaseConfig dbConfig = new DatabaseConfig();
+        localNombreLabel.setText(dbConfig.getLocalNombre());
+        localDireccionLabel.setText(dbConfig.getLocalDireccion());
+        localTelefonoLabel.setText(dbConfig.getLocalTelefono());
     }
 
     private void showAlert(Alert.AlertType tipo, String titulo, String contenido) {

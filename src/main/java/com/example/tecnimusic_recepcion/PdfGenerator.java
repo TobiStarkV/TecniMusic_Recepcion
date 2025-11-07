@@ -44,9 +44,9 @@ public class PdfGenerator {
 
     public PdfGenerator() {
         DatabaseConfig dbConfig = new DatabaseConfig();
-        this.localNombre = "TecniMusic"; // Ejemplo, puedes hacerlo configurable si quieres
-        this.localDireccion = "Dirección de ejemplo";
-        this.localTelefono = "123-456-7890";
+        this.localNombre = dbConfig.getLocalNombre();
+        this.localDireccion = dbConfig.getLocalDireccion();
+        this.localTelefono = dbConfig.getLocalTelefono();
         this.pdfFooter = dbConfig.getPdfFooter();
     }
 

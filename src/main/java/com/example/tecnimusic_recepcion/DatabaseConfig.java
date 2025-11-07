@@ -18,6 +18,11 @@ public class DatabaseConfig {
     private static final String KEY_PASSWORD = "db.password";
     // PDF properties
     private static final String KEY_PDF_FOOTER = "pdf.footer";
+    // Local properties
+    private static final String KEY_LOCAL_NOMBRE = "local.nombre";
+    private static final String KEY_LOCAL_DIRECCION = "local.direccion";
+    private static final String KEY_LOCAL_TELEFONO = "local.telefono";
+
 
     private Properties props;
 
@@ -27,6 +32,9 @@ public class DatabaseConfig {
     private String user;
     private String password;
     private String pdfFooter;
+    private String localNombre;
+    private String localDireccion;
+    private String localTelefono;
 
     public DatabaseConfig() {
         props = new Properties();
@@ -42,6 +50,9 @@ public class DatabaseConfig {
             user = props.getProperty(KEY_USER, "root");
             password = props.getProperty(KEY_PASSWORD, "");
             pdfFooter = props.getProperty(KEY_PDF_FOOTER, "");
+            localNombre = props.getProperty(KEY_LOCAL_NOMBRE, "TecniMusic");
+            localDireccion = props.getProperty(KEY_LOCAL_DIRECCION, "Dirección no configurada");
+            localTelefono = props.getProperty(KEY_LOCAL_TELEFONO, "Teléfono no configurado");
         } catch (IOException ex) {
             // Si el archivo no existe, se usarán los valores por defecto y se creará al guardar.
             host = "localhost";
@@ -50,6 +61,9 @@ public class DatabaseConfig {
             user = "root";
             password = "";
             pdfFooter = "";
+            localNombre = "TecniMusic";
+            localDireccion = "Dirección no configurada";
+            localTelefono = "Teléfono no configurado";
         }
     }
 
@@ -61,6 +75,9 @@ public class DatabaseConfig {
             props.setProperty(KEY_USER, user);
             props.setProperty(KEY_PASSWORD, password);
             props.setProperty(KEY_PDF_FOOTER, pdfFooter);
+            props.setProperty(KEY_LOCAL_NOMBRE, localNombre);
+            props.setProperty(KEY_LOCAL_DIRECCION, localDireccion);
+            props.setProperty(KEY_LOCAL_TELEFONO, localTelefono);
             props.store(output, "Application Configuration");
         } catch (IOException ex) {
             ex.printStackTrace();
@@ -115,5 +132,29 @@ public class DatabaseConfig {
 
     public void setPdfFooter(String pdfFooter) {
         this.pdfFooter = pdfFooter;
+    }
+
+    public String getLocalNombre() {
+        return localNombre;
+    }
+
+    public void setLocalNombre(String localNombre) {
+        this.localNombre = localNombre;
+    }
+
+    public String getLocalDireccion() {
+        return localDireccion;
+    }
+
+    public void setLocalDireccion(String localDireccion) {
+        this.localDireccion = localDireccion;
+    }
+
+    public String getLocalTelefono() {
+        return localTelefono;
+    }
+
+    public void setLocalTelefono(String localTelefono) {
+        this.localTelefono = localTelefono;
     }
 }

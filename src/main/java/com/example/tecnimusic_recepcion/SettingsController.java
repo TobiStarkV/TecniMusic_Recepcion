@@ -31,6 +31,12 @@ public class SettingsController {
     private PasswordField passwordField;
     @FXML
     private StyleClassedTextArea pdfFooterField;
+    @FXML
+    private TextField localNombreField;
+    @FXML
+    private TextField localDireccionField;
+    @FXML
+    private TextField localTelefonoField;
 
     private DatabaseConfig dbConfig;
 
@@ -60,6 +66,9 @@ public class SettingsController {
         userField.setText(dbConfig.getUser());
         passwordField.setText(dbConfig.getPassword());
         pdfFooterField.replaceText(dbConfig.getPdfFooter());
+        localNombreField.setText(dbConfig.getLocalNombre());
+        localDireccionField.setText(dbConfig.getLocalDireccion());
+        localTelefonoField.setText(dbConfig.getLocalTelefono());
     }
 
     @FXML
@@ -70,6 +79,9 @@ public class SettingsController {
         dbConfig.setUser(userField.getText());
         dbConfig.setPassword(passwordField.getText());
         dbConfig.setPdfFooter(pdfFooterField.getText());
+        dbConfig.setLocalNombre(localNombreField.getText());
+        dbConfig.setLocalDireccion(localDireccionField.getText());
+        dbConfig.setLocalTelefono(localTelefonoField.getText());
         dbConfig.save();
 
         showAlert(Alert.AlertType.INFORMATION, "Configuración Guardada", "La configuración se ha guardado correctamente.");
