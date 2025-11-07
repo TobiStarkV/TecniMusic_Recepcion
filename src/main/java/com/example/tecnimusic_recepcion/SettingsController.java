@@ -38,6 +38,15 @@ public class SettingsController {
     public void initialize() {
         dbConfig = new DatabaseConfig();
         loadSettings();
+
+        // Cargar la hoja de estilos programáticamente
+        Platform.runLater(() -> {
+            if (hostField.getScene() != null) {
+                String css = this.getClass().getResource("styles.css").toExternalForm();
+                hostField.getScene().getStylesheets().add(css);
+            }
+        });
+
         if (pdfFooterField != null) {
             setupSpellChecking(pdfFooterField);
         }
