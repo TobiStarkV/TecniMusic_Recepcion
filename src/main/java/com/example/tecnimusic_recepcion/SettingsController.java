@@ -49,6 +49,7 @@ public class SettingsController {
 
         if (pdfFooterField != null) {
             setupSpellChecking(pdfFooterField);
+            pdfFooterField.setStyle("-fx-background-color: #1E2A3A; -fx-text-fill: white;");
         }
     }
 

@@ -70,7 +70,7 @@
                             </rowConstraints>
                             <children>
                                 <Label text="Pie de Página:" styleClass="form-label" />
-                                <StyleClassedTextArea fx:id="pdfFooterField" prefHeight="80.0" wrapText="true" GridPane.columnIndex="1" />
+                                <StyleClassedTextArea fx:id="pdfFooterField" prefHeight="80.0" wrapText="true" GridPane.columnIndex="1" styleClass="falla-reportada-text-area" />
                             </children>
                         </GridPane>
                     </children>

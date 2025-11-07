@@ -134,12 +134,12 @@ public class tecniMusicController {
         // Corrector ortográfico
         if (equipoFallaArea != null) {
             setupSpellChecking(equipoFallaArea);
-            equipoFallaArea.setStyle("-fx-background-color: #1E2A3A;");
+            equipoFallaArea.setStyle("-fx-background-color: #1E2A3A; -fx-text-fill: white;");
         }
 
         if (aclaracionesArea != null) {
             setupSpellChecking(aclaracionesArea);
-            aclaracionesArea.setStyle("-fx-background-color: #1E2A3A;");
+            aclaracionesArea.setStyle("-fx-background-color: #1E2A3A; -fx-text-fill: white;");
         }
     }
 
@@ -370,6 +370,8 @@ public class tecniMusicController {
         for (Node node : List.of(clienteNombreField, clienteDireccionField, clienteTelefonoField, equipoSerieField, equipoTipoField, equipoCompaniaField, equipoModeloField, equipoCostoField, anticipoField, ordenFechaPicker, entregaFechaPicker, equipoFallaArea, aclaracionesArea)) {
             if (node instanceof TextInputControl) {
                 ((TextInputControl) node).setEditable(false);
+            } else if (node instanceof StyleClassedTextArea) {
+                ((StyleClassedTextArea) node).setEditable(false);
             } else if (node instanceof DatePicker) {
                 ((DatePicker) node).setEditable(false);
                 ((DatePicker) node).setDisable(true);
