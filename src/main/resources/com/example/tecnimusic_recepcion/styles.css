@@ -15,10 +15,51 @@
     -fx-background-color: #0A192F;
 }
 
+/* Specific VBox for settings content */
+.settings-vbox {
+    -fx-background-color: #0A192F !important;
+}
+
+.settings-vbox .label {
+    -fx-text-fill: #E0E0E0 !important;
+}
+
+.settings-vbox .text-field,
+.settings-vbox .password-field,
+.settings-vbox .text-area {
+    -fx-background-color: #1E2A3A !important;
+    -fx-text-fill: #E0E0E0 !important;
+    -fx-border-color: #303E4D !important;
+    -fx-border-width: 1 !important;
+    -fx-border-radius: 5 !important;
+    -fx-background-radius: 5 !important;
+    -fx-font-size: 14px !important;
+    -fx-prompt-text-fill: #7A8A99 !important;
+}
+
 /* Labels */
 .label {
     -fx-text-fill: #E0E0E0; /* Gris claro para texto */
     -fx-font-size: 14px;
+}
+
+/* Form Labels */
+.form-label {
+    -fx-text-fill: #E0E0E0;
+    -fx-font-size: 14px;
+}
+
+/* Heading Labels */
+.h1-label {
+    -fx-font-size: 20px;
+    -fx-font-weight: bold;
+    -fx-text-fill: #E0E0E0;
+}
+
+.h2-label {
+    -fx-font-size: 16px;
+    -fx-font-weight: bold;
+    -fx-text-fill: #E0E0E0;
 }
 
 /* Buttons: ajuste muy sutil, un poco menos oscuro */
@@ -80,6 +121,7 @@
     -fx-border-radius: 5;
     -fx-background-radius: 5;
     -fx-font-size: 14px;
+    -fx-text-fill: #E0E0E0; /* Asegurar color de texto para TextArea */
 }
 
 /* --- Contenido Interno (Color de fondo y texto) --- */
@@ -382,4 +424,14 @@
     -fx-border-color: #303E4D transparent transparent transparent;
     -fx-border-insets: 0;
     -fx-border-width: 1;
+}
+
+.separator {
+    -fx-background-color: #303E4D;
+    -fx-background-insets: 0;
+    -fx-padding: 0;
+}
+
+.separator .line {
+    -fx-border-color: transparent;
 }

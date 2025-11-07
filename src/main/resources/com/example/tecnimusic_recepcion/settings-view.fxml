@@ -1,89 +1,90 @@
 <?xml version="1.0" encoding="UTF-8"?>
 
+<?import java.lang.String?>
 <?import javafx.geometry.Insets?>
 <?import javafx.scene.control.Button?>
 <?import javafx.scene.control.Label?>
 <?import javafx.scene.control.PasswordField?>
 <?import javafx.scene.control.Separator?>
-<?import javafx.scene.control.TextArea?>
+<?import org.fxmisc.richtext.StyleClassedTextArea?>
 <?import javafx.scene.control.TextField?>
+<?import javafx.scene.layout.BorderPane?>
 <?import javafx.scene.layout.ColumnConstraints?>
 <?import javafx.scene.layout.GridPane?>
 <?import javafx.scene.layout.HBox?>
 <?import javafx.scene.layout.RowConstraints?>
 <?import javafx.scene.layout.VBox?>
-<?import javafx.scene.text.Font?>
 
-<VBox alignment="CENTER" spacing="15.0" xmlns="http://javafx.com/javafx/17" xmlns:fx="http://javafx.com/fxml/1" fx:controller="com.example.tecnimusic_recepcion.SettingsController">
+<BorderPane prefHeight="450.0" prefWidth="500.0" xmlns="http://javafx.com/javafx/17" xmlns:fx="http://javafx.com/fxml/1" fx:controller="com.example.tecnimusic_recepcion.SettingsController" style="-fx-background-color: #0A192F;">
+    <stylesheets>
+        <String fx:value="@styles.css" />
+    </stylesheets>
     <padding>
-        <Insets bottom="20.0" left="20.0" right="20.0" top="20.0" />
+        <Insets bottom="10.0" left="10.0" right="10.0" top="10.0" />
     </padding>
-    <Label text="Configuración">
-        <font>
-            <Font name="System Bold" size="20.0" />
-        </font>
-    </Label>
-    <VBox spacing="10.0">
-        <children>
-            <Label text="Base de Datos">
-                <font>
-                    <Font name="System Bold" size="14.0" />
-                </font>
-            </Label>
-            <GridPane hgap="10.0" vgap="10.0">
-                <columnConstraints>
-                    <ColumnConstraints hgrow="SOMETIMES" minWidth="10.0" prefWidth="100.0" />
-                    <ColumnConstraints hgrow="SOMETIMES" minWidth="10.0" prefWidth="250.0" />
-                </columnConstraints>
-                <rowConstraints>
-                    <RowConstraints minHeight="10.0" prefHeight="30.0" vgrow="SOMETIMES" />
-                    <RowConstraints minHeight="10.0" prefHeight="30.0" vgrow="SOMETIMES" />
-                    <RowConstraints minHeight="10.0" prefHeight="30.0" vgrow="SOMETIMES" />
-                    <RowConstraints minHeight="10.0" prefHeight="30.0" vgrow="SOMETIMES" />
-                    <RowConstraints minHeight="10.0" prefHeight="30.0" vgrow="SOMETIMES" />
-                </rowConstraints>
-                <children>
-                    <Label text="Host:" GridPane.rowIndex="0" />
-                    <TextField fx:id="hostField" GridPane.columnIndex="1" GridPane.rowIndex="0" />
-                    <Label text="Puerto:" GridPane.rowIndex="1" />
-                    <TextField fx:id="portField" GridPane.columnIndex="1" GridPane.rowIndex="1" />
-                    <Label text="Base de Datos:" GridPane.rowIndex="2" />
-                    <TextField fx:id="dbNameField" GridPane.columnIndex="1" GridPane.rowIndex="2" />
-                    <Label text="Usuario:" GridPane.rowIndex="3" />
-                    <TextField fx:id="userField" GridPane.columnIndex="1" GridPane.rowIndex="3" />
-                    <Label text="Contraseña:" GridPane.rowIndex="4" />
-                    <PasswordField fx:id="passwordField" GridPane.columnIndex="1" GridPane.rowIndex="4" />
-                </children>
-            </GridPane>
-        </children>
-    </VBox>
-    <Separator prefWidth="200.0" />
-    <VBox spacing="10.0">
-        <children>
-            <Label text="PDF">
-                <font>
-                    <Font name="System Bold" size="14.0" />
-                </font>
-            </Label>
-            <GridPane hgap="10.0" vgap="10.0">
-                <columnConstraints>
-                    <ColumnConstraints hgrow="SOMETIMES" minWidth="10.0" prefWidth="100.0" />
-                    <ColumnConstraints hgrow="SOMETIMES" minWidth="10.0" prefWidth="250.0" />
-                </columnConstraints>
-                <rowConstraints>
-                    <RowConstraints minHeight="10.0" prefHeight="80.0" vgrow="SOMETIMES" />
-                </rowConstraints>
-                <children>
-                    <Label text="Pie de Página:" />
-                    <TextArea fx:id="pdfFooterField" prefHeight="80.0" wrapText="true" GridPane.columnIndex="1" />
-                </children>
-            </GridPane>
-        </children>
-    </VBox>
-    <HBox alignment="CENTER_RIGHT" spacing="10.0">
-        <children>
-            <Button onAction="#handleSave" text="Guardar" />
-            <Button onAction="#handleCancel" text="Cancelar" />
-        </children>
-    </HBox>
-</VBox>
+    <center>
+        <VBox alignment="CENTER" spacing="15.0" style="-fx-background-color: #0A192F;">
+            <padding>
+                <Insets bottom="20.0" left="20.0" right="20.0" top="20.0" />
+            </padding>
+            <children>
+                <Label style="-fx-font-size: 20px; -fx-font-weight: bold; -fx-text-fill: #E0E0E0;" text="Configuración" />
+                <VBox spacing="10.0" style="-fx-background-color: #0A192F;">
+                    <children>
+                        <Label style="-fx-font-size: 16px; -fx-font-weight: bold; -fx-text-fill: #E0E0E0;" text="Base de Datos" />
+                        <GridPane hgap="10.0" vgap="10.0" style="-fx-background-color: #0A192F;">
+                            <columnConstraints>
+                                <ColumnConstraints hgrow="SOMETIMES" minWidth="10.0" prefWidth="100.0" />
+                                <ColumnConstraints hgrow="SOMETIMES" minWidth="10.0" prefWidth="250.0" />
+                            </columnConstraints>
+                            <rowConstraints>
+                                <RowConstraints minHeight="10.0" prefHeight="30.0" vgrow="SOMETIMES" />
+                                <RowConstraints minHeight="10.0" prefHeight="30.0" vgrow="SOMETIMES" />
+                                <RowConstraints minHeight="10.0" prefHeight="30.0" vgrow="SOMETIMES" />
+                                <RowConstraints minHeight="10.0" prefHeight="30.0" vgrow="SOMETIMES" />
+                                <RowConstraints minHeight="10.0" prefHeight="30.0" vgrow="SOMETIMES" />
+                            </rowConstraints>
+                            <children>
+                                <Label style="-fx-text-fill: #E0E0E0;" text="Host:" />
+                                <TextField fx:id="hostField" GridPane.columnIndex="1" style="-fx-background-color: #1E2A3A; -fx-text-fill: #E0E0E0; -fx-border-color: #303E4D;" />
+                                <Label style="-fx-text-fill: #E0E0E0;" text="Puerto:" GridPane.rowIndex="1" />
+                                <TextField fx:id="portField" GridPane.columnIndex="1" GridPane.rowIndex="1" style="-fx-background-color: #1E2A3A; -fx-text-fill: #E0E0E0; -fx-border-color: #303E4D;" />
+                                <Label style="-fx-text-fill: #E0E0E0;" text="Base de Datos:" GridPane.rowIndex="2" />
+                                <TextField fx:id="dbNameField" GridPane.columnIndex="1" GridPane.rowIndex="2" style="-fx-background-color: #1E2A3A; -fx-text-fill: #E0E0E0; -fx-border-color: #303E4D;" />
+                                <Label style="-fx-text-fill: #E0E0E0;" text="Usuario:" GridPane.rowIndex="3" />
+                                <TextField fx:id="userField" GridPane.columnIndex="1" GridPane.rowIndex="3" style="-fx-background-color: #1E2A3A; -fx-text-fill: #E0E0E0; -fx-border-color: #303E4D;" />
+                                <Label style="-fx-text-fill: #E0E0E0;" text="Contraseña:" GridPane.rowIndex="4" />
+                                <PasswordField fx:id="passwordField" GridPane.columnIndex="1" GridPane.rowIndex="4" style="-fx-background-color: #1E2A3A; -fx-text-fill: #E0E0E0; -fx-border-color: #303E4D;" />
+                            </children>
+                        </GridPane>
+                    </children>
+                </VBox>
+                <Separator prefWidth="200.0" style="-fx-background-color: #303E4D;" />
+                <VBox spacing="10.0" style="-fx-background-color: #0A192F;">
+                    <children>
+                        <Label style="-fx-font-size: 16px; -fx-font-weight: bold; -fx-text-fill: #E0E0E0;" text="PDF" />
+                        <GridPane hgap="10.0" vgap="10.0" style="-fx-background-color: #0A192F;">
+                            <columnConstraints>
+                                <ColumnConstraints hgrow="SOMETIMES" minWidth="10.0" prefWidth="100.0" />
+                                <ColumnConstraints hgrow="SOMETIMES" minWidth="10.0" prefWidth="250.0" />
+                            </columnConstraints>
+                            <rowConstraints>
+                                <RowConstraints minHeight="10.0" prefHeight="80.0" vgrow="SOMETIMES" />
+                            </rowConstraints>
+                            <children>
+                                <Label style="-fx-text-fill: #E0E0E0;" text="Pie de Página:" />
+                                <StyleClassedTextArea fx:id="pdfFooterField" prefHeight="80.0" wrapText="true" GridPane.columnIndex="1" style="-fx-background-color: #1E2A3A; -fx-text-fill: #E0E0E0; -fx-border-color: #303E4D;" styleClass="falla-reportada-text-area" />
+                            </children>
+                        </GridPane>
+                    </children>
+                </VBox>
+                <HBox alignment="CENTER_RIGHT" spacing="10.0">
+                    <children>
+                        <Button onAction="#handleSave" text="Guardar" style="-fx-background-color: linear-gradient(#A11A1A, #8A0E0E); -fx-text-fill: white; -fx-font-weight: bold; -fx-background-radius: 6; -fx-padding: 10 20; -fx-font-size: 14px; -fx-effect: dropshadow(gaussian, rgba(0,0,0,0.45), 6,0,0,3);" />
+                        <Button onAction="#handleCancel" text="Cancelar" style="-fx-background-color: linear-gradient(#A11A1A, #8A0E0E); -fx-text-fill: white; -fx-font-weight: bold; -fx-background-radius: 6; -fx-padding: 10 20; -fx-font-size: 14px; -fx-effect: dropshadow(gaussian, rgba(0,0,0,0.45), 6,0,0,3);" />
+                    </children>
+                </HBox>
+            </children>
+        </VBox>
+    </center>
+</BorderPane>
