@@ -861,7 +861,7 @@ public class tecniMusicController {
         equipoCompaniaField.setText(equipo.getMarca());
         equipoModeloField.setText(equipo.getModelo());
         equipoSerieField.setText(equipo.getSerie());
-        equipoFallaArea.replaceText(equipo.getFalla());
+        equipoFallaArea.replaceText(equipo.getFalla() != null ? equipo.getFalla() : "");
         if (equipo.getCosto() != null) {
             equipoCostoField.setText(NumberFormat.getCurrencyInstance(SPANISH_MEXICO_LOCALE).format(equipo.getCosto()));
         } else {
