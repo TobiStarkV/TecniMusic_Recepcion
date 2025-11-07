@@ -49,7 +49,6 @@ public class MainMenuController {
     @FXML
     protected void onManageServiceSheetsClicked() {
         try {
-            // TODO: Crear el FXML y el Controller para la gestión de hojas de servicio
             FXMLLoader fxmlLoader = new FXMLLoader(getClass().getResource("/com/example/tecnimusic_recepcion/manage-service-sheets-view.fxml"));
             Scene scene = new Scene(fxmlLoader.load());
             scene.getStylesheets().add(getClass().getResource("/com/example/tecnimusic_recepcion/styles.css").toExternalForm());
@@ -68,7 +67,6 @@ public class MainMenuController {
     @FXML
     protected void onManageClientsClicked() {
         try {
-            // TODO: Crear el FXML y el Controller para la gestión de clientes
             FXMLLoader fxmlLoader = new FXMLLoader(getClass().getResource("/com/example/tecnimusic_recepcion/manage-clients-view.fxml"));
             Scene scene = new Scene(fxmlLoader.load());
             scene.getStylesheets().add(getClass().getResource("/com/example/tecnimusic_recepcion/styles.css").toExternalForm());
