@@ -172,6 +172,32 @@
                     </execution>
                 </executions>
             </plugin>
+            <!-- Plugin para crear el instalador nativo -->
+            <plugin>
+                <groupId>org.panteleyev</groupId>
+                <artifactId>jpackage-maven-plugin</artifactId>
+                <version>1.5.0</version>
+                <configuration>
+                    <name>TecniMusic Recepcion</name>
+                    <appVersion>${project.version}</appVersion>
+                    <vendor>TecniMusic</vendor>
+                    <destination>target/dist</destination>
+                    <input>${project.build.directory}</input> <!-- Directorio de entrada -->
+                    <mainJar>${project.build.finalName}.jar</mainJar>
+                    <mainClass>${main.class}</mainClass>
+                    <type>APP_IMAGE</type>
+                    <icon>${project.basedir}/src/main/resources/logo.ico</icon>
+                </configuration>
+                <executions>
+                    <execution>
+                        <id>jpackage</id>
+                        <phase>package</phase>
+                        <goals>
+                            <goal>jpackage</goal>
+                        </goals>
+                    </execution>
+                </executions>
+            </plugin>
         </plugins>
     </build>
 </project>

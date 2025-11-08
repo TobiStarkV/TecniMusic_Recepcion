@@ -5,11 +5,19 @@ import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.util.Properties;
 
 public class DatabaseConfig {
 
-    private static final String CONFIG_FILE = "src/main/resources/config.properties";
+    // Ruta a la carpeta de configuración en el directorio home del usuario
+    private static final Path CONFIG_DIR = Paths.get(System.getProperty("user.home"), ".TecniMusic_Recepcion");
+    private static final Path CONFIG_FILE_PATH = CONFIG_DIR.resolve("config.properties");
+    // Ruta al archivo de configuración por defecto dentro del JAR
+    private static final String DEFAULT_CONFIG_RESOURCE = "/com/example/tecnimusic_recepcion/config.properties";
+
     // Database properties
     private static final String KEY_HOST = "db.host";
     private static final String KEY_PORT = "db.port";
@@ -22,7 +30,6 @@ public class DatabaseConfig {
     private static final String KEY_LOCAL_NOMBRE = "local.nombre";
     private static final String KEY_LOCAL_DIRECCION = "local.direccion";
     private static final String KEY_LOCAL_TELEFONO = "local.telefono";
-
 
     private Properties props;
 
@@ -42,43 +49,56 @@ public class DatabaseConfig {
     }
 
     private void load() {
-        try (InputStream input = new FileInputStream(CONFIG_FILE)) {
-            props.load(input);
-            host = props.getProperty(KEY_HOST, "localhost");
-            port = props.getProperty(KEY_PORT, "3306");
-            dbName = props.getProperty(KEY_DB_NAME, "snipeit");
-            user = props.getProperty(KEY_USER, "root");
-            password = props.getProperty(KEY_PASSWORD, "");
-            pdfFooter = props.getProperty(KEY_PDF_FOOTER, "");
-            localNombre = props.getProperty(KEY_LOCAL_NOMBRE, "TecniMusic");
-            localDireccion = props.getProperty(KEY_LOCAL_DIRECCION, "Dirección no configurada");
-            localTelefono = props.getProperty(KEY_LOCAL_TELEFONO, "Teléfono no configurado");
-        } catch (IOException ex) {
-            // Si el archivo no existe, se usarán los valores por defecto y se creará al guardar.
-            host = "localhost";
-            port = "3306";
-            dbName = "snipeit";
-            user = "root";
-            password = "";
-            pdfFooter = "";
-            localNombre = "TecniMusic";
-            localDireccion = "Dirección no configurada";
-            localTelefono = "Teléfono no configurado";
+        // Primero, intentar cargar desde el archivo de configuración del usuario
+        if (Files.exists(CONFIG_FILE_PATH)) {
+            try (InputStream input = new FileInputStream(CONFIG_FILE_PATH.toFile())) {
+                props.load(input);
+            } catch (IOException ex) {
+                System.err.println("Error al cargar el archivo de configuración del usuario: " + ex.getMessage());
+            }
+        } else {
+            // Si no existe, cargar la configuración por defecto desde los recursos del JAR
+            try (InputStream input = getClass().getResourceAsStream(DEFAULT_CONFIG_RESOURCE)) {
+                if (input != null) {
+                    props.load(input);
+                }
+            } catch (IOException ex) {
+                System.err.println("Error al cargar la configuración por defecto: " + ex.getMessage());
+            }
         }
+
+        // Asignar valores desde las propiedades, con valores por defecto si no se encuentran
+        host = props.getProperty(KEY_HOST, "localhost");
+        port = props.getProperty(KEY_PORT, "3306");
+        dbName = props.getProperty(KEY_DB_NAME, "snipeit");
+        user = props.getProperty(KEY_USER, "root");
+        password = props.getProperty(KEY_PASSWORD, "");
+        pdfFooter = props.getProperty(KEY_PDF_FOOTER, "");
+        localNombre = props.getProperty(KEY_LOCAL_NOMBRE, "TecniMusic");
+        localDireccion = props.getProperty(KEY_LOCAL_DIRECCION, "Dirección no configurada");
+        localTelefono = props.getProperty(KEY_LOCAL_TELEFONO, "Teléfono no configurado");
     }
 
     public void save() {
-        try (OutputStream output = new FileOutputStream(CONFIG_FILE)) {
-            props.setProperty(KEY_HOST, host);
-            props.setProperty(KEY_PORT, port);
-            props.setProperty(KEY_DB_NAME, dbName);
-            props.setProperty(KEY_USER, user);
-            props.setProperty(KEY_PASSWORD, password);
-            props.setProperty(KEY_PDF_FOOTER, pdfFooter);
-            props.setProperty(KEY_LOCAL_NOMBRE, localNombre);
-            props.setProperty(KEY_LOCAL_DIRECCION, localDireccion);
-            props.setProperty(KEY_LOCAL_TELEFONO, localTelefono);
-            props.store(output, "Application Configuration");
+        try {
+            // Asegurarse de que el directorio de configuración exista
+            if (!Files.exists(CONFIG_DIR)) {
+                Files.createDirectories(CONFIG_DIR);
+            }
+
+            // Guardar las propiedades en el archivo de configuración del usuario
+            try (OutputStream output = new FileOutputStream(CONFIG_FILE_PATH.toFile())) {
+                props.setProperty(KEY_HOST, host);
+                props.setProperty(KEY_PORT, port);
+                props.setProperty(KEY_DB_NAME, dbName);
+                props.setProperty(KEY_USER, user);
+                props.setProperty(KEY_PASSWORD, password);
+                props.setProperty(KEY_PDF_FOOTER, pdfFooter);
+                props.setProperty(KEY_LOCAL_NOMBRE, localNombre);
+                props.setProperty(KEY_LOCAL_DIRECCION, localDireccion);
+                props.setProperty(KEY_LOCAL_TELEFONO, localTelefono);
+                props.store(output, "TecniMusic Recepcion User Configuration");
+            }
         } catch (IOException ex) {
             ex.printStackTrace();
         }
