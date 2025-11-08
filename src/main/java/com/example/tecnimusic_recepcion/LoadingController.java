@@ -9,6 +9,7 @@ import javafx.fxml.FXMLLoader;
 import javafx.scene.Parent;
 import javafx.scene.Scene;
 import javafx.scene.control.Alert;
+import javafx.scene.control.ButtonType;
 import javafx.scene.image.Image;
 import javafx.scene.image.ImageView;
 import javafx.stage.Modality;
@@ -19,6 +20,7 @@ import java.io.IOException;
 import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Optional;
 
 public class LoadingController {
 
@@ -97,10 +99,21 @@ public class LoadingController {
                     alert.setTitle("Error de Base de Datos");
                     alert.setHeaderText("No se pudo conectar a la base de datos de Snipe-IT.");
                     alert.setContentText("Por favor, verifique la configuración de la conexión.\nError: " + databaseTask.getMessage());
+
+                    ButtonType retryButton = new ButtonType("Reintentar");
+                    ButtonType exitButton = new ButtonType("Salir");
+
+                    alert.getButtonTypes().setAll(retryButton, exitButton);
+
                     alert.getDialogPane().getStylesheets().add(getClass().getResource("styles.css").toExternalForm());
                     ((Stage) alert.getDialogPane().getScene().getWindow()).getIcons().add(new Image(getClass().getResourceAsStream("/logo.png")));
-                    alert.showAndWait();
-                    showSettingsAndRetry();
+
+                    Optional<ButtonType> result = alert.showAndWait();
+                    if (result.isPresent() && result.get() == retryButton) {
+                        showSettingsAndRetry();
+                    } else {
+                        Platform.exit();
+                    }
                 });
             }
         });
