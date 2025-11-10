@@ -8,8 +8,6 @@ import com.itextpdf.kernel.pdf.PdfDocument;
 import com.itextpdf.kernel.pdf.PdfPage;
 import com.itextpdf.kernel.pdf.PdfWriter;
 import com.itextpdf.kernel.pdf.canvas.PdfCanvas;
-import com.itextpdf.kernel.pdf.canvas.draw.SolidLine;
-import com.itextpdf.layout.Canvas;
 import com.itextpdf.layout.Document;
 import com.itextpdf.layout.borders.Border;
 import com.itextpdf.layout.element.Image;
@@ -62,7 +60,7 @@ public class PdfGenerator {
         // --- Contenido Principal ---
         agregarEncabezado(document);
         agregarInformacionOrden(document, data);
-        document.add(new LineSeparator(new SolidLine(1)).setMarginTop(5).setMarginBottom(5));
+        document.add(new LineSeparator(new com.itextpdf.kernel.pdf.canvas.draw.SolidLine(1)).setMarginTop(5).setMarginBottom(5));
         agregarSeccionesDeDatos(document, data, headerColor);
         agregarMarcaDeAgua(pdf);
 
@@ -74,51 +72,41 @@ public class PdfGenerator {
     }
 
     private void agregarFirmaYPieDePagina(PdfDocument pdf, Document doc, String clienteNombre) {
-        // Obtener la última página del documento
         PdfPage lastPage = pdf.getLastPage();
         Rectangle pageSize = lastPage.getPageSize();
-
-        // Definir el área para la firma y el pie de página en la parte inferior
-        float footerAreaHeight = 140; // Altura total para firma y texto
-        float x = pageSize.getLeft() + doc.getLeftMargin();
-        float y = pageSize.getBottom(); // Empezar desde el borde inferior del margen
-        float width = pageSize.getWidth() - doc.getLeftMargin() - doc.getRightMargin();
-        Rectangle footerArea = new Rectangle(x, y, width, footerAreaHeight);
-
         PdfCanvas pdfCanvas = new PdfCanvas(lastPage);
-        Canvas canvas = new Canvas(pdfCanvas, footerArea);
 
-        // --- Sección de Firma (se dibujará más arriba) ---
-        float firmaY = 80; // Posición Y relativa dentro del área del pie de página
-        LineSeparator line = new LineSeparator(new SolidLine(1f));
-        line.setWidth(UnitValue.createPercentValue(50));
-        Paragraph centeredLineParagraph = new Paragraph().add(line);
-        centeredLineParagraph.setTextAlignment(TextAlignment.CENTER);
+        float margin = doc.getLeftMargin();
+        float printableWidth = pageSize.getWidth() - (margin * 2);
+        float centerX = pageSize.getWidth() / 2;
+        
+        // --- Bloque de Firma ---
+        float signatureLineY = 80; // Y position for the signature line from page bottom
+        float signatureLineWidth = 140; // Length of the signature line
 
-        Paragraph nombreClienteP = new Paragraph(clienteNombre)
-            .setTextAlignment(TextAlignment.CENTER)
-            .setFontSize(9);
+        // Dibujar la línea de la firma
+        pdfCanvas.moveTo(centerX - (signatureLineWidth / 2), signatureLineY);
+        pdfCanvas.lineTo(centerX + (signatureLineWidth / 2), signatureLineY);
+        pdfCanvas.stroke();
 
-        Paragraph firmaConformidadP = new Paragraph("Firma de Conformidad")
-            .setTextAlignment(TextAlignment.CENTER)
-            .setFontSize(8)
-            .setItalic();
+        // Usar un Canvas temporal para los elementos de texto de la firma para aprovechar showTextAligned
+        try (com.itextpdf.layout.Canvas signatureTextCanvas = new com.itextpdf.layout.Canvas(pdfCanvas, pageSize)) {
+            signatureTextCanvas
+                .showTextAligned(new Paragraph(clienteNombre).setFontSize(9), centerX, signatureLineY - 15, TextAlignment.CENTER)
+                .showTextAligned(new Paragraph("Firma de Conformidad").setFontSize(8).setItalic(), centerX, signatureLineY - 25, TextAlignment.CENTER);
+        }
 
-        // --- Texto del Pie de Página (se dibujará más abajo) ---
-        Paragraph footerTextP = new Paragraph(pdfFooter)
+        // --- Bloque de Texto del Pie de Página (con ajuste de texto) ---
+        float footerTextY = 10; // Y position for the bottom of the footer text block
+        float footerTextHeight = 40; // Height for the footer text block (allows wrapping)
+        Rectangle footerTextRect = new Rectangle(margin, footerTextY, printableWidth, footerTextHeight);
+
+        try (com.itextpdf.layout.Canvas footerCanvas = new com.itextpdf.layout.Canvas(pdfCanvas, footerTextRect)) {
+            footerCanvas.add(new Paragraph(pdfFooter)
                 .setFontSize(6)
                 .setItalic()
-                .setTextAlignment(TextAlignment.CENTER);
-
-        // --- Añadir todo al Canvas con posiciones fijas ---
-        canvas.add(centeredLineParagraph.setFixedPosition(width / 4, firmaY, width / 2));
-        canvas.add(nombreClienteP.setFixedPosition(0, firmaY - 15, width));
-        canvas.add(firmaConformidadP.setFixedPosition(0, firmaY - 25, width));
-        
-        // Añadir el texto del pie de página en la parte inferior del área
-        canvas.add(footerTextP.setFixedPosition(0, 10, width));
-        
-        canvas.close();
+                .setTextAlignment(TextAlignment.CENTER));
+        }
     }
 
     private String crearRutaDestinoPdf(String numeroOrden) {
@@ -199,7 +187,7 @@ public class PdfGenerator {
             document.add(new Paragraph("No se han registrado equipos.").setFontSize(9).setMarginTop(5));
         }
 
-        document.add(new LineSeparator(new SolidLine(0.5f)).setMarginTop(5));
+        document.add(new LineSeparator(new com.itextpdf.kernel.pdf.canvas.draw.SolidLine(0.5f)).setMarginTop(5));
 
         Table totalesTable = new Table(UnitValue.createPercentArray(new float[]{3, 1})).useAllAvailableWidth().setMarginTop(5);
         totalesTable.setBorder(Border.NO_BORDER);
@@ -246,7 +234,7 @@ public class PdfGenerator {
             watermarkImg.scaleToFit(pageSize.getWidth() * 0.9f, pageSize.getHeight() * 0.9f);
             float x = (pageSize.getWidth() - watermarkImg.getImageScaledWidth()) / 2;
             float y = (pageSize.getHeight() - watermarkImg.getImageScaledHeight()) / 2;
-            try (Canvas canvas = new Canvas(pdfCanvas, pageSize)) {
+            try (com.itextpdf.layout.Canvas canvas = new com.itextpdf.layout.Canvas(pdfCanvas, pageSize)) {
                 canvas.add(watermarkImg.setFixedPosition(x, y));
             }
         }
