@@ -17,6 +17,7 @@ import org.controlsfx.control.textfield.TextFields;
 import org.fxmisc.richtext.StyleClassedTextArea;
 import org.languagetool.rules.RuleMatch;
 
+import java.awt.Desktop;
 import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
@@ -440,10 +441,17 @@ public class tecniMusicController {
             HojaServicioData data = createHojaServicioDataFromForm(realOrdenNumero);
             String pdfPath = new PdfGenerator().generatePdf(data);
 
+            // Añadir una pequeña pausa para asegurar que el archivo se ha escrito completamente
+            try {
+                Thread.sleep(200); // 200 milisegundos
+            } catch (InterruptedException e) {
+                Thread.currentThread().interrupt();
+            }
+
             Alert printConfirmAlert = new Alert(Alert.AlertType.CONFIRMATION);
             printConfirmAlert.setTitle("Confirmar Impresión");
             printConfirmAlert.setHeaderText("Hoja de servicio guardada. ¿Desea imprimirla ahora?");
-            printConfirmAlert.setContentText("Se enviará el documento a la impresora predeterminada.");
+            printConfirmAlert.setContentText("Se abrirá el PDF en su visor predeterminado para que pueda imprimirlo.");
             printConfirmAlert.getDialogPane().getStylesheets().add(getClass().getResource("styles.css").toExternalForm());
             ((Stage) printConfirmAlert.getDialogPane().getScene().getWindow()).getIcons().add(new Image(getClass().getResourceAsStream("/logo.png")));
 
@@ -468,6 +476,12 @@ public class tecniMusicController {
             String pdfPath = new PdfGenerator().generatePdf(data);
 
             if (pdfPath != null) {
+                // Añadir una pequeña pausa para asegurar que el archivo se ha escrito completamente
+                try {
+                    Thread.sleep(200); // 200 milisegundos
+                } catch (InterruptedException e) {
+                    Thread.currentThread().interrupt();
+                }
                 performPrint(pdfPath);
             } else {
                 showAlert(Alert.AlertType.ERROR, "Error de PDF", "No se pudo generar la ruta del PDF.");
@@ -508,24 +522,17 @@ public class tecniMusicController {
             showAlert(Alert.AlertType.ERROR, "Error de PDF", "No se pudo encontrar la ruta del PDF para imprimir.");
             return;
         }
-        try (PDDocument document = PDDocument.load(new File(pdfPath))) {
-            PrinterJob job = PrinterJob.getPrinterJob();
-            // Forzar el escalado a TAMAÑO REAL en lugar de AJUSTAR
-            job.setPrintable(new PDFPrintable(document, Scaling.ACTUAL_SIZE));
-
-            // Mostrar el diálogo de impresión y proceder solo si el usuario hace clic en "Imprimir"
-            if (job.printDialog()) {
-                job.print();
-                showAlert(Alert.AlertType.INFORMATION, "Impresión", "El documento ha sido enviado a la impresora.");
-            } else {
-                showAlert(Alert.AlertType.INFORMATION, "Impresión Cancelada", "La impresión fue cancelada por el usuario.");
+        
+        File pdfFile = new File(pdfPath);
+        if (Desktop.isDesktopSupported()) {
+            try {
+                Desktop.getDesktop().open(pdfFile);
+            } catch (IOException e) {
+                showAlert(Alert.AlertType.ERROR, "Error al Abrir", "No se pudo abrir el archivo PDF con el visor predeterminado.");
+                e.printStackTrace();
             }
-        } catch (PrinterException e) {
-            showAlert(Alert.AlertType.ERROR, "Error de Impresión", "No se pudo imprimir el documento: " + e.getMessage());
-            e.printStackTrace();
-        } catch (IOException e) {
-            showAlert(Alert.AlertType.ERROR, "Error de Archivo", "No se pudo cargar el PDF para imprimir: " + e.getMessage());
-            e.printStackTrace();
+        } else {
+            showAlert(Alert.AlertType.WARNING, "Función no Soportada", "La apertura automática de archivos no es soportada en este sistema.");
         }
     }
 

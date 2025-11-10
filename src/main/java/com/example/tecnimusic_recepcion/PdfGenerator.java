@@ -59,12 +59,10 @@ public class PdfGenerator {
 
         // El margen inferior debe ser suficiente para el pie de página
         Document document = new Document(pdf);
-        document.setMargins(20, 20, 80, 20); // Aumentar el margen inferior
+        document.setMargins(20, 20, 120, 20); // Aumentar aún más el margen inferior para la firma
 
         // Añadir el manejador de eventos para el pie de página
-        if (pdfFooter != null && !pdfFooter.trim().isEmpty()) {
-            pdf.addEventHandler(PdfDocumentEvent.END_PAGE, new FooterEventHandler(pdfFooter, document));
-        }
+        pdf.addEventHandler(PdfDocumentEvent.END_PAGE, new FooterEventHandler(data.getClienteNombre(), pdfFooter, document));
 
         com.itextpdf.kernel.colors.Color headerColor = new DeviceRgb(45, 65, 84);
 
@@ -72,7 +70,7 @@ public class PdfGenerator {
         agregarInformacionOrden(document, data);
         document.add(new LineSeparator(new SolidLine(1)).setMarginTop(5).setMarginBottom(5));
         agregarSeccionesDeDatos(document, data, headerColor);
-        agregarSeccionFirma(document, data);
+        // La sección de firma ya no se agrega aquí
         agregarMarcaDeAgua(pdf);
 
         document.close();
@@ -81,10 +79,12 @@ public class PdfGenerator {
 
     // Clase interna para manejar el evento de pie de página
     protected static class FooterEventHandler implements IEventHandler {
+        private final String clienteNombre;
         private final String footerText;
         private final Document doc;
 
-        public FooterEventHandler(String footerText, Document doc) {
+        public FooterEventHandler(String clienteNombre, String footerText, Document doc) {
+            this.clienteNombre = clienteNombre;
             this.footerText = footerText;
             this.doc = doc;
         }
@@ -95,22 +95,46 @@ public class PdfGenerator {
             PdfPage page = docEvent.getPage();
             Rectangle pageSize = page.getPageSize();
 
-            // Define el área rectangular para el pie de página.
-            float footerAreaHeight = 75; 
+            // Define el área rectangular para todo el pie de página (firma + texto)
+            float footerAreaHeight = 110; // Altura suficiente para firma y texto
             float x = pageSize.getLeft() + doc.getLeftMargin();
-            float y = pageSize.getBottom() + 35; // Subir más el pie de página
+            float y = pageSize.getBottom() + 10; // Margen desde el borde inferior
             float width = pageSize.getWidth() - doc.getLeftMargin() - doc.getRightMargin();
             Rectangle footerArea = new Rectangle(x, y, width, footerAreaHeight);
 
             PdfCanvas pdfCanvas = new PdfCanvas(page.newContentStreamBefore(), page.getResources(), docEvent.getDocument());
             Canvas canvas = new Canvas(pdfCanvas, footerArea);
 
+            // --- Sección de Firma ---
+            LineSeparator line = new LineSeparator(new SolidLine(1f));
+            line.setWidth(UnitValue.createPercentValue(50));
+            Paragraph centeredLineParagraph = new Paragraph().add(line);
+            centeredLineParagraph.setTextAlignment(TextAlignment.CENTER);
+            
+            Paragraph nombreCliente = new Paragraph(clienteNombre)
+                .setTextAlignment(TextAlignment.CENTER)
+                .setFontSize(9);
+                
+            Paragraph firmaConformidad = new Paragraph("Firma de Conformidad")
+                .setTextAlignment(TextAlignment.CENTER)
+                .setFontSize(8)
+                .setItalic();
+
+            // --- Texto del Pie de Página ---
             Paragraph footer = new Paragraph(footerText)
-                    .setFontSize(6) // Reducir más el tamaño de la fuente
+                    .setFontSize(6)
                     .setItalic()
                     .setTextAlignment(TextAlignment.CENTER);
 
+            // --- Añadir todo al Canvas ---
+            // Añadir la firma en la parte superior del área del pie de página
+            canvas.add(centeredLineParagraph.setMarginBottom(0));
+            canvas.add(nombreCliente.setMarginTop(0).setMarginBottom(0).setPadding(0));
+            canvas.add(firmaConformidad.setMarginTop(0).setMarginBottom(10)); // Espacio entre firma y texto
+            
+            // Añadir el texto del pie de página debajo
             canvas.add(footer);
+            
             canvas.close();
         }
     }
@@ -225,18 +249,6 @@ public class PdfGenerator {
             document.add(new Paragraph("Aclaraciones Adicionales:").setBold().setFontSize(9).setMarginTop(5));
             document.add(new Paragraph(aclaraciones).setFontSize(9));
         }
-    }
-
-    private void agregarSeccionFirma(Document document, HojaServicioData data) {
-        document.add(new Paragraph("\n\n"));
-        LineSeparator line = new LineSeparator(new SolidLine(1f));
-        line.setWidth(UnitValue.createPercentValue(50));
-        Paragraph centeredLineParagraph = new Paragraph().add(line);
-        centeredLineParagraph.setTextAlignment(TextAlignment.CENTER);
-        document.add(centeredLineParagraph);
-
-        document.add(new Paragraph(data.getClienteNombre()).setTextAlignment(TextAlignment.CENTER).setFontSize(9));
-        document.add(new Paragraph("Firma de Conformidad").setTextAlignment(TextAlignment.CENTER).setFontSize(8).setItalic());
     }
 
     private void agregarMarcaDeAgua(PdfDocument pdf) throws IOException {
