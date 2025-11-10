@@ -211,7 +211,7 @@
                      </font>
                   </Button>
                   <Button fx:id="limpiarButton" mnemonicParsing="false" onAction="#onLimpiarClicked" text="Limpiar Formulario" />
-                  <Button fx:id="testPdfButton" mnemonicParsing="false" onAction="#onTestPdfClicked" text="Generar PDF de Prueba" />
+                  <!-- <Button fx:id="testPdfButton" mnemonicParsing="false" onAction="#onTestPdfClicked" text="Generar PDF de Prueba" /> -->
                   <Button fx:id="salirButton" mnemonicParsing="false" onAction="#onSalirClicked" text="Salir" />
                </children>
                <padding>

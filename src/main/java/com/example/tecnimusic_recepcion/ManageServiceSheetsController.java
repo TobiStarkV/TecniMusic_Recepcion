@@ -277,6 +277,9 @@ public class ManageServiceSheetsController {
         alert.setTitle(title);
         alert.setHeaderText(null);
         alert.setContentText(message);
+        // Añadir estilos y icono a todos los diálogos
+        alert.getDialogPane().getStylesheets().add(getClass().getResource("styles.css").toExternalForm());
+        ((Stage) alert.getDialogPane().getScene().getWindow()).getIcons().add(new Image(getClass().getResourceAsStream("/logo.png")));
         alert.showAndWait();
     }
 

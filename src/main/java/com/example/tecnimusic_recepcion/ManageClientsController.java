@@ -279,6 +279,9 @@ public class ManageClientsController {
         alert.setTitle(titulo);
         alert.setHeaderText(null);
         alert.setContentText(contenido);
+        // Añadir estilos y icono
+        alert.getDialogPane().getStylesheets().add(getClass().getResource("styles.css").toExternalForm());
+        ((Stage) alert.getDialogPane().getScene().getWindow()).getIcons().add(new Image(getClass().getResourceAsStream("/logo.png")));
         alert.showAndWait();
     }
 
@@ -287,6 +290,9 @@ public class ManageClientsController {
         confirmationAlert.setTitle(title);
         confirmationAlert.setHeaderText(header);
         confirmationAlert.setContentText("Esta acción no se puede deshacer.");
+        // Añadir estilos y icono
+        confirmationAlert.getDialogPane().getStylesheets().add(getClass().getResource("styles.css").toExternalForm());
+        ((Stage) confirmationAlert.getDialogPane().getScene().getWindow()).getIcons().add(new Image(getClass().getResourceAsStream("/logo.png")));
         return confirmationAlert.showAndWait();
     }
 }
