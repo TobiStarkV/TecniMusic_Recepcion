@@ -38,6 +38,9 @@ import java.util.stream.Collectors;
 // Importaciones para la impresión de PDF
 import org.apache.pdfbox.pdmodel.PDDocument;
 import org.apache.pdfbox.printing.PDFPageable;
+import org.apache.pdfbox.printing.PDFPrintable;
+import org.apache.pdfbox.printing.Scaling;
+
 import java.awt.print.PrinterJob;
 import java.awt.print.PrinterException;
 
@@ -465,17 +468,7 @@ public class tecniMusicController {
             String pdfPath = new PdfGenerator().generatePdf(data);
 
             if (pdfPath != null) {
-                Alert confirmationAlert = new Alert(Alert.AlertType.CONFIRMATION);
-                confirmationAlert.setTitle("Confirmar Impresión");
-                confirmationAlert.setHeaderText("¿Desea imprimir la hoja de servicio actual?");
-                confirmationAlert.setContentText("Se enviará el documento a la impresora predeterminada.");
-                confirmationAlert.getDialogPane().getStylesheets().add(getClass().getResource("styles.css").toExternalForm());
-                ((Stage) confirmationAlert.getDialogPane().getScene().getWindow()).getIcons().add(new Image(getClass().getResourceAsStream("/logo.png")));
-
-                Optional<ButtonType> result = confirmationAlert.showAndWait();
-                if (result.isPresent() && result.get() == ButtonType.OK) {
-                    performPrint(pdfPath);
-                }
+                performPrint(pdfPath);
             } else {
                 showAlert(Alert.AlertType.ERROR, "Error de PDF", "No se pudo generar la ruta del PDF.");
             }
@@ -517,11 +510,13 @@ public class tecniMusicController {
         }
         try (PDDocument document = PDDocument.load(new File(pdfPath))) {
             PrinterJob job = PrinterJob.getPrinterJob();
-            job.setPageable(new PDFPageable(document));
+            // Forzar el escalado a TAMAÑO REAL en lugar de AJUSTAR
+            job.setPrintable(new PDFPrintable(document, Scaling.ACTUAL_SIZE));
 
+            // Mostrar el diálogo de impresión y proceder solo si el usuario hace clic en "Imprimir"
             if (job.printDialog()) {
                 job.print();
-                showAlert(Alert.AlertType.INFORMATION, "Impresión", "La hoja de servicio ha sido enviada a la impresora.");
+                showAlert(Alert.AlertType.INFORMATION, "Impresión", "El documento ha sido enviado a la impresora.");
             } else {
                 showAlert(Alert.AlertType.INFORMATION, "Impresión Cancelada", "La impresión fue cancelada por el usuario.");
             }

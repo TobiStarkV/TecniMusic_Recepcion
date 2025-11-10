@@ -96,9 +96,9 @@ public class PdfGenerator {
             Rectangle pageSize = page.getPageSize();
 
             // Define el área rectangular para el pie de página.
-            float footerAreaHeight = 75; // Aumentar la altura del área del pie de página
+            float footerAreaHeight = 75; 
             float x = pageSize.getLeft() + doc.getLeftMargin();
-            float y = pageSize.getBottom() + 5; // Un pequeño margen desde el borde inferior
+            float y = pageSize.getBottom() + 35; // Subir más el pie de página
             float width = pageSize.getWidth() - doc.getLeftMargin() - doc.getRightMargin();
             Rectangle footerArea = new Rectangle(x, y, width, footerAreaHeight);
 
@@ -106,7 +106,7 @@ public class PdfGenerator {
             Canvas canvas = new Canvas(pdfCanvas, footerArea);
 
             Paragraph footer = new Paragraph(footerText)
-                    .setFontSize(8)
+                    .setFontSize(6) // Reducir más el tamaño de la fuente
                     .setItalic()
                     .setTextAlignment(TextAlignment.CENTER);
 
