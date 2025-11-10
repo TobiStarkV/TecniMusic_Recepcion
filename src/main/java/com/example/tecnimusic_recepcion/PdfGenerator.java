@@ -87,12 +87,13 @@ public class PdfGenerator {
 
             String pageText = "Página " + i + " de " + totalPages;
             
-            float x = pageSize.getRight() - doc.getRightMargin();
-            float y = pageSize.getBottom() + 15;
+            // Posición: Centro superior de la página
+            float x = pageSize.getWidth() / 2;
+            float y = pageSize.getTop() - 20; // 20 puntos desde el borde superior
 
             new Canvas(pdfCanvas, pageSize)
                 .setFontSize(8)
-                .showTextAligned(pageText, x, y, TextAlignment.RIGHT)
+                .showTextAligned(pageText, x, y, TextAlignment.CENTER)
                 .close();
         }
     }
