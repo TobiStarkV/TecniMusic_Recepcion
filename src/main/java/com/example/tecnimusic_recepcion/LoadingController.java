@@ -18,9 +18,9 @@ import javafx.util.Duration;
 
 import java.io.IOException;
 import java.sql.SQLException;
-import java.util.ArrayList;
-import java.util.List;
 import java.util.Optional;
+import java.util.concurrent.BlockingQueue;
+import java.util.concurrent.LinkedBlockingQueue;
 
 public class LoadingController {
 
@@ -30,10 +30,12 @@ public class LoadingController {
     private static final int TOTAL_FRAMES = 271;
     private static final String IMAGE_PREFIX = "/com/example/tecnimusic_recepcion/images/TecniMusic Intro_";
     private static final String IMAGE_SUFFIX = ".png";
+    private static final int CACHE_SIZE = 30; // Número de imágenes a mantener en memoria
 
-    private List<Image> animationFrames;
-    private int currentFrame = 0;
+    private final BlockingQueue<Image> frameCache = new LinkedBlockingQueue<>(CACHE_SIZE);
+    private int currentFrameIndex = 0;
     private Timeline timeline;
+    private Thread imageLoaderThread;
 
     private volatile boolean isDatabaseReady = false;
     private volatile boolean isAnimationCycleComplete = false;
@@ -46,17 +48,18 @@ public class LoadingController {
             }
         });
 
-        loadAnimationFrames();
+        startImageLoader();
 
         timeline = new Timeline();
         timeline.setCycleCount(Timeline.INDEFINITE);
         timeline.getKeyFrames().add(
                 new KeyFrame(Duration.millis(33), event -> {
-                    if (!animationFrames.isEmpty()) {
-                        loadingImageView.setImage(animationFrames.get(currentFrame));
-                        currentFrame++;
-                        if (currentFrame >= animationFrames.size()) {
-                            currentFrame = 0;
+                    Image frame = frameCache.poll(); // Tomar una imagen de la caché
+                    if (frame != null) {
+                        loadingImageView.setImage(frame);
+                        currentFrameIndex++;
+                        if (currentFrameIndex >= TOTAL_FRAMES) {
+                            currentFrameIndex = 0;
                             if (!isAnimationCycleComplete) {
                                 isAnimationCycleComplete = true;
                                 trySwitchToMainView();
@@ -68,6 +71,26 @@ public class LoadingController {
         timeline.play();
 
         startDatabaseLoadTask();
+    }
+
+    private void startImageLoader() {
+        imageLoaderThread = new Thread(() -> {
+            try {
+                for (int i = 0; i < TOTAL_FRAMES; i++) {
+                    String frameNumber = String.format("%05d", i);
+                    String imagePath = IMAGE_PREFIX + frameNumber + IMAGE_SUFFIX;
+                    // Cargar la imagen con un tamaño reducido para ahorrar memoria y mejorar rendimiento
+                    Image frame = new Image(getClass().getResourceAsStream(imagePath), 500, 500, true, true);
+                    frameCache.put(frame); // Poner en la caché, esperando si está llena
+                }
+            } catch (InterruptedException e) {
+                Thread.currentThread().interrupt(); // Restaurar el estado de interrupción
+            } catch (Exception e) {
+                System.err.println("Error en el hilo de carga de imágenes: " + e.getMessage());
+            }
+        });
+        imageLoaderThread.setDaemon(true);
+        imageLoaderThread.start();
     }
 
     private void startDatabaseLoadTask() {
@@ -95,6 +118,7 @@ public class LoadingController {
             } else {
                 Platform.runLater(() -> {
                     timeline.stop();
+                    if (imageLoaderThread != null) imageLoaderThread.interrupt();
                     Alert alert = new Alert(Alert.AlertType.ERROR);
                     alert.setTitle("Error de Base de Datos");
                     alert.setHeaderText("No se pudo conectar a la base de datos de Snipe-IT.");
@@ -132,9 +156,14 @@ public class LoadingController {
             stage.initModality(Modality.APPLICATION_MODAL);
             stage.showAndWait();
 
-            // Reiniciar la instancia del DatabaseManager para recargar la configuración
             DatabaseManager.resetInstance();
-
+            
+            // Reiniciar el estado para una nueva verificación
+            isDatabaseReady = false;
+            isAnimationCycleComplete = false;
+            currentFrameIndex = 0;
+            frameCache.clear();
+            startImageLoader();
             timeline.play();
             startDatabaseLoadTask();
 
@@ -151,20 +180,6 @@ public class LoadingController {
         }
     }
 
-    private void loadAnimationFrames() {
-        animationFrames = new ArrayList<>();
-        for (int i = 0; i < TOTAL_FRAMES; i++) {
-            String frameNumber = String.format("%05d", i);
-            String imagePath = IMAGE_PREFIX + frameNumber + IMAGE_SUFFIX;
-            try {
-                Image frame = new Image(getClass().getResourceAsStream(imagePath));
-                animationFrames.add(frame);
-            } catch (Exception e) {
-                System.err.println("No se pudo cargar el frame de animación: " + imagePath);
-            }
-        }
-    }
-
     private synchronized void trySwitchToMainView() {
         if (isDatabaseReady && isAnimationCycleComplete && !isTransitioning) {
             isTransitioning = true;
@@ -173,6 +188,11 @@ public class LoadingController {
     }
 
     private void switchToMainView() {
+        if (imageLoaderThread != null) {
+            imageLoaderThread.interrupt(); // Detener el hilo de carga de imágenes
+        }
+        timeline.stop();
+
         try {
             Parent mainView = FXMLLoader.load(getClass().getResource("main-menu-view.fxml"));
             Scene mainScene = new Scene(mainView);

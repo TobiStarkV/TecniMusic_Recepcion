@@ -435,3 +435,8 @@
 .separator .line {
     -fx-border-color: transparent;
 }
+
+/* Estilo para el panel de la pantalla de carga */
+.transparent-pane {
+    -fx-background-color: transparent;
+}

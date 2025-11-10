@@ -12,9 +12,9 @@
 <!--
   StackPane es el contenedor raíz. Permite apilar nodos uno encima del otro.
   El atributo fx:controller vincula esta vista con su lógica en la clase LoadingController.
-  Se han eliminado prefHeight y prefWidth para que la ventana se ajuste automáticamente al tamaño de su contenido (la imagen).
+  Se ha añadido una clase de estilo "transparent-pane" para asegurar que no tenga color de fondo.
 -->
-<StackPane fx:controller="com.example.tecnimusic_recepcion.LoadingController" xmlns="http://javafx.com/javafx/22" xmlns:fx="http://javafx.com/fxml/1" stylesheets="@styles.css">
+<StackPane fx:controller="com.example.tecnimusic_recepcion.LoadingController" xmlns="http://javafx.com/javafx/22" xmlns:fx="http://javafx.com/fxml/1" stylesheets="@styles.css" styleClass="transparent-pane">
    <children>
       <!--
         ImageView es el único elemento en esta vista.
