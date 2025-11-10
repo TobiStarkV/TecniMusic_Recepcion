@@ -8,6 +8,7 @@ import com.itextpdf.kernel.pdf.PdfDocument;
 import com.itextpdf.kernel.pdf.PdfPage;
 import com.itextpdf.kernel.pdf.PdfWriter;
 import com.itextpdf.kernel.pdf.canvas.PdfCanvas;
+import com.itextpdf.layout.Canvas;
 import com.itextpdf.layout.Document;
 import com.itextpdf.layout.borders.Border;
 import com.itextpdf.layout.element.Image;
@@ -52,7 +53,6 @@ public class PdfGenerator {
         PdfDocument pdf = new PdfDocument(writer);
         Document document = new Document(pdf);
 
-        // Dejar un margen inferior grande en TODAS las páginas para asegurar espacio
         document.setMargins(30, 30, 150, 30);
 
         com.itextpdf.kernel.colors.Color headerColor = new DeviceRgb(45, 65, 84);
@@ -66,9 +66,35 @@ public class PdfGenerator {
 
         // --- Contenido Final (Solo en la última página) ---
         agregarFirmaYPieDePagina(pdf, document, data.getClienteNombre());
+        
+        // --- Numeración de Páginas ---
+        agregarNumerosDePagina(pdf, document);
 
         document.close();
         return dest;
+    }
+
+    private void agregarNumerosDePagina(PdfDocument pdf, Document doc) {
+        int totalPages = pdf.getNumberOfPages();
+        if (totalPages <= 1) {
+            return; // No añadir números si solo hay una página
+        }
+
+        for (int i = 1; i <= totalPages; i++) {
+            PdfPage page = pdf.getPage(i);
+            Rectangle pageSize = page.getPageSize();
+            PdfCanvas pdfCanvas = new PdfCanvas(page);
+
+            String pageText = "Página " + i + " de " + totalPages;
+            
+            float x = pageSize.getRight() - doc.getRightMargin();
+            float y = pageSize.getBottom() + 15;
+
+            new Canvas(pdfCanvas, pageSize)
+                .setFontSize(8)
+                .showTextAligned(pageText, x, y, TextAlignment.RIGHT)
+                .close();
+        }
     }
 
     private void agregarFirmaYPieDePagina(PdfDocument pdf, Document doc, String clienteNombre) {
@@ -80,28 +106,24 @@ public class PdfGenerator {
         float printableWidth = pageSize.getWidth() - (margin * 2);
         float centerX = pageSize.getWidth() / 2;
         
-        // --- Bloque de Firma ---
-        float signatureLineY = 80; // Y position for the signature line from page bottom
-        float signatureLineWidth = 140; // Length of the signature line
+        float signatureLineY = 100;
+        float signatureLineWidth = 140;
 
-        // Dibujar la línea de la firma
         pdfCanvas.moveTo(centerX - (signatureLineWidth / 2), signatureLineY);
         pdfCanvas.lineTo(centerX + (signatureLineWidth / 2), signatureLineY);
         pdfCanvas.stroke();
 
-        // Usar un Canvas temporal para los elementos de texto de la firma para aprovechar showTextAligned
-        try (com.itextpdf.layout.Canvas signatureTextCanvas = new com.itextpdf.layout.Canvas(pdfCanvas, pageSize)) {
+        try (Canvas signatureTextCanvas = new Canvas(pdfCanvas, pageSize)) {
             signatureTextCanvas
                 .showTextAligned(new Paragraph(clienteNombre).setFontSize(9), centerX, signatureLineY - 15, TextAlignment.CENTER)
                 .showTextAligned(new Paragraph("Firma de Conformidad").setFontSize(8).setItalic(), centerX, signatureLineY - 25, TextAlignment.CENTER);
         }
 
-        // --- Bloque de Texto del Pie de Página (con ajuste de texto) ---
-        float footerTextY = 10; // Y position for the bottom of the footer text block
-        float footerTextHeight = 40; // Height for the footer text block (allows wrapping)
+        float footerTextY = 30;
+        float footerTextHeight = 40;
         Rectangle footerTextRect = new Rectangle(margin, footerTextY, printableWidth, footerTextHeight);
 
-        try (com.itextpdf.layout.Canvas footerCanvas = new com.itextpdf.layout.Canvas(pdfCanvas, footerTextRect)) {
+        try (Canvas footerCanvas = new Canvas(pdfCanvas, footerTextRect)) {
             footerCanvas.add(new Paragraph(pdfFooter)
                 .setFontSize(6)
                 .setItalic()
