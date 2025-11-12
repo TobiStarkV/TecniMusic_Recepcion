@@ -35,6 +35,19 @@ public class DatabaseService {
             ensureAnticipoColumnExists(conn);
             ensureEquiposTableExists(conn);
             ensureCostoColumnExistsInEquiposTable(conn);
+            ensureEstadoFisicoColumnExists(conn); // Añadir la nueva verificación
+        }
+    }
+
+    private void ensureEstadoFisicoColumnExists(Connection conn) throws SQLException {
+        String checkColumnSql = "SELECT COUNT(*) FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'x_hojas_servicio_equipos' AND COLUMN_NAME = 'estado_fisico'";
+        try (Statement stmt = conn.createStatement(); ResultSet rs = stmt.executeQuery(checkColumnSql)) {
+            if (rs.next() && rs.getInt(1) == 0) {
+                String addColumnSql = "ALTER TABLE x_hojas_servicio_equipos ADD COLUMN estado_fisico TEXT";
+                try (Statement alterStmt = conn.createStatement()) {
+                    alterStmt.execute(addColumnSql);
+                }
+            }
         }
     }
 
@@ -342,7 +355,7 @@ public class DatabaseService {
                             nombreCliente);
 
                     insertarEquipoEnHoja(conn, hojaId, assetId,
-                            equipo.getSerie(), equipo.getTipo(), equipo.getMarca(), equipo.getModelo(), equipo.getFalla(), equipo.getCosto());
+                            equipo.getSerie(), equipo.getTipo(), equipo.getMarca(), equipo.getModelo(), equipo.getFalla(), equipo.getCosto(), equipo.getEstadoFisico());
                 }
             }
 
@@ -399,8 +412,8 @@ public class DatabaseService {
         try (Statement stmt = conn.createStatement()) { stmt.execute(sql); }
     }
 
-    private void insertarEquipoEnHoja(Connection conn, long hojaId, Long assetId, String serie, String tipo, String marca, String modelo, String falla, BigDecimal costo) throws SQLException {
-        String sql = "INSERT INTO x_hojas_servicio_equipos (hoja_id, asset_id, equipo_serie, equipo_tipo, equipo_marca, equipo_modelo, falla_reportada, costo) VALUES (?, ?, ?, ?, ?, ?, ?, ?)";
+    private void insertarEquipoEnHoja(Connection conn, long hojaId, Long assetId, String serie, String tipo, String marca, String modelo, String falla, BigDecimal costo, String estadoFisico) throws SQLException {
+        String sql = "INSERT INTO x_hojas_servicio_equipos (hoja_id, asset_id, equipo_serie, equipo_tipo, equipo_marca, equipo_modelo, falla_reportada, costo, estado_fisico) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)";
         try (PreparedStatement pstmt = conn.prepareStatement(sql)) {
             pstmt.setLong(1, hojaId);
             if (assetId != null) pstmt.setLong(2, assetId); else pstmt.setNull(2, Types.BIGINT);
@@ -410,6 +423,7 @@ public class DatabaseService {
             pstmt.setString(6, modelo);
             pstmt.setString(7, falla);
             if (costo != null) pstmt.setBigDecimal(8, costo); else pstmt.setNull(8, Types.DECIMAL);
+            pstmt.setString(9, estadoFisico);
             pstmt.executeUpdate();
         }
     }
@@ -487,7 +501,8 @@ public class DatabaseService {
                             rsEquipos.getString("equipo_serie"),
                             rsEquipos.getString("equipo_modelo"),
                             rsEquipos.getString("falla_reportada"),
-                            rsEquipos.getBigDecimal("costo")
+                            rsEquipos.getBigDecimal("costo"),
+                            rsEquipos.getString("estado_fisico")
                         );
                         equipos.add(equipo);
                     }

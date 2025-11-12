@@ -109,6 +109,8 @@
                                     <TextField fx:id="equipoModeloField" GridPane.columnIndex="3" GridPane.rowIndex="1" />
                                  </children>
                               </GridPane>
+                              <Label text="Estado Físico (rayones, golpes, etc.):" />
+                              <StyleClassedTextArea fx:id="equipoEstadoFisicoArea" prefHeight="60.0" wrapText="true" styleClass="falla-reportada-text-area" />
                               <Label text="Falla Reportada:" />
                               <StyleClassedTextArea fx:id="equipoFallaArea" prefHeight="80.0" wrapText="true" styleClass="falla-reportada-text-area" />
                               <GridPane hgap="10.0" vgap="5.0">
@@ -138,6 +140,7 @@
                                     <TableColumn fx:id="colMarca" text="Marca" />
                                     <TableColumn fx:id="colModelo" text="Modelo" />
                                     <TableColumn fx:id="colSerie" text="Serie" />
+                                    <TableColumn fx:id="colEstadoFisico" text="Estado Físico" />
                                     <TableColumn fx:id="colFalla" text="Falla" />
                                     <TableColumn fx:id="colCosto" text="Costo" />
                                  </columns>
@@ -211,7 +214,7 @@
                      </font>
                   </Button>
                   <Button fx:id="limpiarButton" mnemonicParsing="false" onAction="#onLimpiarClicked" text="Limpiar Formulario" />
-                  <!-- <Button fx:id="testPdfButton" mnemonicParsing="false" onAction="#onTestPdfClicked" text="Generar PDF de Prueba" /> -->
+                  <Button fx:id="testPdfButton" mnemonicParsing="false" onAction="#onTestPdfClicked" text="Generar PDF de Prueba" />
                   <Button fx:id="salirButton" mnemonicParsing="false" onAction="#onSalirClicked" text="Salir" />
                </children>
                <padding>
