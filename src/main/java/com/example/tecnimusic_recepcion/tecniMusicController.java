@@ -765,6 +765,7 @@ public class tecniMusicController {
         data.setEquipoSerie(equipoSerieField.getText());
         data.setEquipoModelo(equipoModeloField.getText());
         data.setFallaReportada(equipoFallaArea.getText());
+        data.setEstadoFisico(equipoEstadoFisicoArea.getText());
         data.setFechaEntrega(entregaFechaPicker.getValue());
         data.setFirmaAclaracion("");
         data.setAclaraciones(aclaracionesArea.getText());
@@ -786,7 +787,7 @@ public class tecniMusicController {
                 Number number = NumberFormat.getCurrencyInstance(SPANISH_MEXICO_LOCALE).parse(costoStr);
                 costo = BigDecimal.valueOf(number.doubleValue());
             }
-            Equipo single = new Equipo(equipoTipoField.getText(), equipoCompaniaField.getText(), equipoSerieField.getText(), equipoModeloField.getText(), equipoFallaArea.getText(), costo);
+            Equipo single = new Equipo(equipoTipoField.getText(), equipoCompaniaField.getText(), equipoSerieField.getText(), equipoModeloField.getText(), equipoFallaArea.getText(), costo, equipoEstadoFisicoArea.getText());
             data.getEquipos().add(single);
         }
 
@@ -807,6 +808,7 @@ public class tecniMusicController {
         equipoModeloField.clear();
         equipoFallaArea.clear();
         equipoCostoField.clear();
+        equipoEstadoFisicoArea.clear();
     
         // Rellenar tabla de equipos si la data contiene varios
         equiposObservable.clear();
@@ -822,7 +824,8 @@ public class tecniMusicController {
                 data.getEquipoSerie(),
                 data.getEquipoModelo(),
                 data.getFallaReportada(),
-                data.getTotalCostos() // Asumiendo que el costo total era el costo del único equipo
+                data.getTotalCostos(), // Asumiendo que el costo total era el costo del único equipo
+                data.getEstadoFisico()
             );
             equiposObservable.add(equipoLegacy);
             equiposTable.getSelectionModel().selectFirst();
@@ -872,6 +875,7 @@ public class tecniMusicController {
         equipoModeloField.setText(equipo.getModelo());
         equipoSerieField.setText(equipo.getSerie());
         equipoFallaArea.replaceText(equipo.getFalla() != null ? equipo.getFalla() : "");
+        equipoEstadoFisicoArea.replaceText(equipo.getEstadoFisico() != null ? equipo.getEstadoFisico() : "");
         if (equipo.getCosto() != null) {
             equipoCostoField.setText(NumberFormat.getCurrencyInstance(SPANISH_MEXICO_LOCALE).format(equipo.getCosto()));
         } else {
@@ -938,6 +942,8 @@ public class tecniMusicController {
         equipoCompaniaField.clear();
         equipoModeloField.clear();
         equipoCostoField.clear();
+        equipoFallaArea.clear();
+        equipoEstadoFisicoArea.clear();
         equipoTipoField.setEditable(true);
         equipoCompaniaField.setEditable(true);
         equipoModeloField.setEditable(true);
