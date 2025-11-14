@@ -239,6 +239,7 @@ public class ManageServiceSheetsController {
         data.setEquipoMarca(rs.getString("equipo_marca"));
         data.setEquipoModelo(rs.getString("equipo_modelo"));
         data.setFallaReportada(rs.getString("falla_reportada"));
+        data.setEstadoFisico(rs.getString("estado_fisico"));
         data.setInformeCostos(rs.getString("informe_costos"));
         data.setTotalCostos(rs.getBigDecimal("total_costos"));
         data.setAnticipo(rs.getBigDecimal("anticipo"));
@@ -266,7 +267,8 @@ public class ManageServiceSheetsController {
                 String serie = rs.getString("equipo_serie");
                 String falla = rs.getString("falla_reportada");
                 BigDecimal costo = rs.getBigDecimal("costo");
-                equipos.add(new Equipo(tipo, marca, serie, modelo, falla, costo));
+                String estadoFisico = rs.getString("estado_fisico");
+                equipos.add(new Equipo(tipo, marca, serie, modelo, falla, costo, estadoFisico));
             }
         }
         return equipos;
