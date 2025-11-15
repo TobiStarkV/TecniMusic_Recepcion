@@ -239,7 +239,7 @@ public class ManageServiceSheetsController {
         data.setEquipoMarca(rs.getString("equipo_marca"));
         data.setEquipoModelo(rs.getString("equipo_modelo"));
         data.setFallaReportada(rs.getString("falla_reportada"));
-        data.setEstadoFisico(rs.getString("estado_fisico"));
+        //data.setEstadoFisico(rs.getString("estado_fisico")); // This column does not exist in the parent table 'x_hojas_servicio'
         data.setInformeCostos(rs.getString("informe_costos"));
         data.setTotalCostos(rs.getBigDecimal("total_costos"));
         data.setAnticipo(rs.getBigDecimal("anticipo"));

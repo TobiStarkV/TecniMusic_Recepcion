@@ -749,6 +749,7 @@ public class tecniMusicController {
                !totalFinalLabel.getText().equals("$0.00") ||
                !equiposObservable.isEmpty() ||
                !equipoFallaArea.getText().trim().isEmpty() ||
+               !equipoEstadoFisicoArea.getText().trim().isEmpty() ||
                entregaFechaPicker.getValue() != null ||
                !aclaracionesArea.getText().trim().isEmpty();
     }
