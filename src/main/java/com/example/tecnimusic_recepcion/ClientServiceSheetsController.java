@@ -73,8 +73,16 @@ public class ClientServiceSheetsController {
 
     private void loadServiceSheets(int clientId) {
         serviceSheetList.clear();
-        String sql = "SELECT hs.numero_orden, hs.fecha_orden, hs.equipo_tipo, hs.equipo_marca, hs.equipo_modelo, hs.equipo_serie " +
-                     "FROM x_hojas_servicio hs WHERE hs.cliente_id = ? ORDER BY hs.fecha_orden DESC";
+        String sql = "SELECT hs.id, hs.numero_orden, hs.fecha_orden, " +
+                     "IFNULL( " +
+                     "    GROUP_CONCAT(DISTINCT CONCAT_WS(' ', hse.equipo_tipo, hse.equipo_marca, hse.equipo_modelo) SEPARATOR '; '), " +
+                     "    CONCAT_WS(' ', hs.equipo_tipo, hs.equipo_marca, hs.equipo_modelo) " +
+                     ") as equipment_summary " +
+                     "FROM x_hojas_servicio hs " +
+                     "LEFT JOIN x_hojas_servicio_equipos hse ON hs.id = hse.hoja_id " +
+                     "WHERE hs.cliente_id = ? " +
+                     "GROUP BY hs.id, hs.numero_orden, hs.fecha_orden " +
+                     "ORDER BY hs.id DESC";
 
         try (Connection conn = DatabaseManager.getInstance().getConnection();
              PreparedStatement pstmt = conn.prepareStatement(sql)) {
@@ -83,16 +91,15 @@ public class ClientServiceSheetsController {
             ResultSet rs = pstmt.executeQuery();
 
             while (rs.next()) {
-                StringJoiner equipmentJoiner = new StringJoiner(" - ");
-                addIfNotNull(equipmentJoiner, rs.getString("equipo_tipo"));
-                addIfNotNull(equipmentJoiner, rs.getString("equipo_marca"));
-                addIfNotNull(equipmentJoiner, rs.getString("equipo_modelo"));
-                addIfNotNull(equipmentJoiner, rs.getString("equipo_serie"));
+                String equipmentSummary = rs.getString("equipment_summary");
+                if (equipmentSummary == null || equipmentSummary.trim().isEmpty()) {
+                    equipmentSummary = "(No hay equipos detallados)";
+                }
 
                 serviceSheetList.add(new ServiceSheetSummary(
                         rs.getString("numero_orden"),
                         rs.getDate("fecha_orden").toLocalDate(),
-                        equipmentJoiner.toString()
+                        equipmentSummary.trim()
                 ));
             }
         } catch (SQLException e) {
