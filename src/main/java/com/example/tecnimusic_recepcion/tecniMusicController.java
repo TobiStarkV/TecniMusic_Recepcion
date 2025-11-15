@@ -603,20 +603,28 @@ public class tecniMusicController {
         clienteNombreField.textProperty().addListener((observable, oldValue, newV) -> {
             if (isAutoCompleting) return;
             if (nombreClienteSeleccionado != null && !newV.equals(nombreClienteSeleccionado)) {
-                Platform.runLater(clienteNombreField::clear);
-            }
-            if (idClienteSeleccionado != null && (newV == null || newV.trim().isEmpty())) {
-                resetCamposCliente();
+                Platform.runLater(this::resetCamposCliente);
             }
         });
 
-        equipoSerieField.textProperty().addListener((observable, oldValue, newV) -> {
-            if (isAutoCompleting) return;
-            if (serieEquipoSeleccionado != null && !newV.equals(serieEquipoSeleccionado)) {
-                Platform.runLater(equipoSerieField::clear);
+        equipoSerieField.textProperty().addListener((observable, oldValue, newValue) -> {
+            if (isAutoCompleting) {
+                return;
             }
-            if (idAssetSeleccionado != null && (newV == null || newV.trim().isEmpty())) {
-                resetCamposEquipo();
+
+            Equipo selectedEquipo = equiposTable.getSelectionModel().getSelectedItem();
+            if (selectedEquipo != null) {
+                equiposTable.getSelectionModel().clearSelection();
+                resetOtherEquipoFields();
+                return;
+            }
+
+            if (idAssetSeleccionado != null && !newValue.equals(serieEquipoSeleccionado)) {
+                idAssetSeleccionado = null;
+                serieEquipoSeleccionado = null;
+                equipoTipoField.setEditable(true);
+                equipoCompaniaField.setEditable(true);
+                equipoModeloField.setEditable(true);
             }
         });
     }
@@ -910,18 +918,26 @@ public class tecniMusicController {
     }
 
     private void populateEquipoFields(Equipo equipo) {
+        isAutoCompleting = true;
         equipoTipoField.setText(equipo.getTipo());
         equipoCompaniaField.setText(equipo.getMarca());
         equipoModeloField.setText(equipo.getModelo());
         equipoSerieField.setText(equipo.getSerie());
         equipoFallaArea.replaceText(equipo.getFalla() != null ? equipo.getFalla() : "");
         equipoEstadoFisicoArea.replaceText(equipo.getEstadoFisico() != null ? equipo.getEstadoFisico() : "");
-        accesoriosList.setAll(Arrays.asList((equipo.getAccesorios() != null ? equipo.getAccesorios() : "").split(", ")));
+
+        accesoriosList.clear();
+        String acc = equipo.getAccesorios();
+        if (acc != null && !acc.trim().isEmpty()) {
+            accesoriosList.setAll(Arrays.asList(acc.split("\\s*,\\s*")));
+        }
+
         if (equipo.getCosto() != null) {
             equipoCostoField.setText(NumberFormat.getCurrencyInstance(SPANISH_MEXICO_LOCALE).format(equipo.getCosto()));
         } else {
             equipoCostoField.clear();
         }
+        isAutoCompleting = false;
     }
 
     private boolean showConfirmationDialog(String title, String header) {
@@ -968,6 +984,7 @@ public class tecniMusicController {
     private void resetCamposCliente() {
         idClienteSeleccionado = null;
         nombreClienteSeleccionado = null;
+        clienteNombreField.clear();
         clienteDireccionField.clear();
         clienteTelefonoField.clear();
         clienteDireccionField.setEditable(true);
@@ -975,20 +992,24 @@ public class tecniMusicController {
         resetCamposEquipo();
     }
 
+    private void resetOtherEquipoFields() {
+        equipoTipoField.clear();
+        equipoCompaniaField.clear();
+        equipoModeloField.clear();
+        equipoFallaArea.clear();
+        equipoEstadoFisicoArea.clear();
+        accesoriosList.clear();
+        equipoCostoField.clear();
+        equipoTipoField.setEditable(true);
+        equipoCompaniaField.setEditable(true);
+        equipoModeloField.setEditable(true);
+    }
+
     private void resetCamposEquipo() {
         idAssetSeleccionado = null;
         serieEquipoSeleccionado = null;
         equipoSerieField.clear();
-        equipoTipoField.clear();
-        equipoCompaniaField.clear();
-        equipoModeloField.clear();
-        equipoCostoField.clear();
-        equipoFallaArea.clear();
-        equipoEstadoFisicoArea.clear();
-        accesoriosList.clear();
-        equipoTipoField.setEditable(true);
-        equipoCompaniaField.setEditable(true);
-        equipoModeloField.setEditable(true);
+        resetOtherEquipoFields();
     }
 
     private void predecirYAsignarNumeroDeOrden() {
