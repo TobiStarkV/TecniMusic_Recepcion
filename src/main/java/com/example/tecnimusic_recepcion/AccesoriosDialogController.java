@@ -1,18 +1,33 @@
 package com.example.tecnimusic_recepcion;
 
+import javafx.animation.PauseTransition;
+import javafx.application.Platform;
 import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
 import javafx.fxml.FXML;
+import javafx.geometry.Point2D;
+import javafx.scene.control.ContextMenu;
 import javafx.scene.control.ListView;
-import javafx.scene.control.TextField;
+import javafx.scene.control.MenuItem;
+import javafx.scene.control.SeparatorMenuItem;
+import javafx.scene.input.KeyCode;
 import javafx.stage.Stage;
+import javafx.util.Duration;
+import org.fxmisc.richtext.StyleClassedTextArea;
+import org.fxmisc.richtext.model.StyleSpans;
+import org.fxmisc.richtext.model.StyleSpansBuilder;
+import org.languagetool.rules.RuleMatch;
 
+import java.io.IOException;
+import java.util.Collection;
+import java.util.Collections;
 import java.util.List;
+import java.util.Optional;
 
 public class AccesoriosDialogController {
 
     @FXML
-    private TextField accesorioField;
+    private StyleClassedTextArea accesorioField;
     @FXML
     private ListView<String> accesoriosListView;
 
@@ -24,6 +39,101 @@ public class AccesoriosDialogController {
     private void initialize() {
         accesorios = FXCollections.observableArrayList();
         accesoriosListView.setItems(accesorios);
+        setupSpellChecking();
+
+        accesorioField.setOnKeyPressed(event -> {
+            if (event.getCode() == KeyCode.ENTER) {
+                onAddAccesorio();
+                event.consume(); 
+            }
+        });
+    }
+
+    private void setupSpellChecking() {
+        PauseTransition pause = new PauseTransition(Duration.seconds(0.5));
+        accesorioField.textProperty().addListener((observable, oldValue, newValue) -> {
+            pause.setOnFinished(event -> {
+                Platform.runLater(() -> {
+                    try {
+                        List<RuleMatch> matches = CorrectorOrtografico.verificar(newValue);
+                        applyHighlighting(matches);
+                    } catch (IOException e) {
+                        // ignore
+                    }
+                });
+            });
+            pause.playFromStart();
+        });
+
+        final ContextMenu contextMenu = new ContextMenu();
+        accesorioField.setContextMenu(contextMenu);
+
+        accesorioField.setOnContextMenuRequested(event -> {
+            contextMenu.hide();
+            
+            // Mover el cursor a la posición del clic
+            Point2D click = new Point2D(event.getX(), event.getY());
+            int characterIndex = accesorioField.hit(click.getX(), click.getY()).getCharacterIndex().orElse(-1);
+            if (characterIndex != -1) {
+                accesorioField.moveTo(characterIndex);
+            }
+
+            contextMenu.getItems().clear();
+            String text = accesorioField.getText();
+            if (text == null || text.trim().isEmpty()) {
+                event.consume();
+                return;
+            }
+
+            int caretPosition = accesorioField.getCaretPosition();
+
+            try {
+                List<RuleMatch> allMatches = CorrectorOrtografico.verificar(text);
+                Optional<RuleMatch> matchAtCaret = allMatches.stream()
+                        .filter(m -> caretPosition >= m.getFromPos() && caretPosition <= m.getToPos())
+                        .findFirst();
+
+                if (matchAtCaret.isPresent()) {
+                    RuleMatch currentMatch = matchAtCaret.get();
+                    List<String> suggestions = currentMatch.getSuggestedReplacements();
+
+                    if (!suggestions.isEmpty()) {
+                        for (String suggestion : suggestions) {
+                            MenuItem item = new MenuItem(suggestion);
+                            item.setOnAction(evt -> {
+                                accesorioField.replaceText(currentMatch.getFromPos(), currentMatch.getToPos(), suggestion);
+                            });
+                            contextMenu.getItems().add(item);
+                        }
+                        contextMenu.getItems().add(new SeparatorMenuItem());
+                    }
+                }
+
+            } catch (IOException ex) {
+                // Ignorar error de corrector
+            }
+
+            if (!contextMenu.getItems().isEmpty()) {
+                contextMenu.show(accesorioField, event.getScreenX(), event.getScreenY());
+            }
+            event.consume();
+        });
+    }
+
+    private void applyHighlighting(List<RuleMatch> matches) {
+        accesorioField.setStyleSpans(0, computeHighlighting(accesorioField.getText(), matches));
+    }
+
+    private static StyleSpans<Collection<String>> computeHighlighting(String text, List<RuleMatch> matches) {
+        int lastKwEnd = 0;
+        StyleSpansBuilder<Collection<String>> spansBuilder = new StyleSpansBuilder<>();
+        for (RuleMatch match : matches) {
+            spansBuilder.add(Collections.emptyList(), match.getFromPos() - lastKwEnd);
+            spansBuilder.add(Collections.singleton("spell-error"), match.getToPos() - match.getFromPos());
+            lastKwEnd = match.getToPos();
+        }
+        spansBuilder.add(Collections.emptyList(), text.length() - lastKwEnd);
+        return spansBuilder.create();
     }
 
     public void setDialogStage(Stage dialogStage) {

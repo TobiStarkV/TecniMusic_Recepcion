@@ -239,7 +239,6 @@ public class ManageServiceSheetsController {
         data.setEquipoMarca(rs.getString("equipo_marca"));
         data.setEquipoModelo(rs.getString("equipo_modelo"));
         data.setFallaReportada(rs.getString("falla_reportada"));
-        //data.setEstadoFisico(rs.getString("estado_fisico")); // This column does not exist in the parent table 'x_hojas_servicio'
         data.setInformeCostos(rs.getString("informe_costos"));
         data.setTotalCostos(rs.getBigDecimal("total_costos"));
         data.setAnticipo(rs.getBigDecimal("anticipo"));
@@ -268,7 +267,8 @@ public class ManageServiceSheetsController {
                 String falla = rs.getString("falla_reportada");
                 BigDecimal costo = rs.getBigDecimal("costo");
                 String estadoFisico = rs.getString("estado_fisico");
-                equipos.add(new Equipo(tipo, marca, serie, modelo, falla, costo, estadoFisico));
+                String accesorios = rs.getString("accesorios");
+                equipos.add(new Equipo(tipo, marca, serie, modelo, falla, costo, estadoFisico, accesorios));
             }
         }
         return equipos;
