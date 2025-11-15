@@ -216,6 +216,26 @@
      -fx-fill: white ;
 }
 
+/* ListView */
+.list-view {
+    -fx-background-color: #0A192F;
+    -fx-border-color: #303E4D;
+}
+
+.list-view .list-cell {
+    -fx-background-color: #0A192F;
+    -fx-text-fill: white;
+}
+
+.list-view .list-cell:odd {
+    -fx-background-color: #102A43;
+}
+
+.list-view .list-cell:selected {
+    -fx-background-color: #A11A1A;
+    -fx-text-fill: white;
+}
+
 /* ScrollBar */
 .scroll-bar:horizontal .track,
 .scroll-bar:vertical .track{
