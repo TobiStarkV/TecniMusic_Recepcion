@@ -185,13 +185,14 @@ public class PdfGenerator {
 
         List<Equipo> equipos = data.getEquipos();
         if (equipos != null && !equipos.isEmpty()) {
-            Table equiposCostosTable = new Table(UnitValue.createPercentArray(new float[]{1.5f, 1.5f, 1.5f, 1.5f, 2, 3, 1.5f})).useAllAvailableWidth().setMarginTop(5);
+            Table equiposCostosTable = new Table(UnitValue.createPercentArray(new float[]{1.5f, 1.5f, 1.5f, 1.5f, 2, 2, 3, 1.5f})).useAllAvailableWidth().setMarginTop(5);
 
             equiposCostosTable.addHeaderCell(new com.itextpdf.layout.element.Cell().add(new Paragraph("Tipo").setBold().setFontSize(9)).setBorder(Border.NO_BORDER));
             equiposCostosTable.addHeaderCell(new com.itextpdf.layout.element.Cell().add(new Paragraph("Marca").setBold().setFontSize(9)).setBorder(Border.NO_BORDER));
             equiposCostosTable.addHeaderCell(new com.itextpdf.layout.element.Cell().add(new Paragraph("Modelo").setBold().setFontSize(9)).setBorder(Border.NO_BORDER));
             equiposCostosTable.addHeaderCell(new com.itextpdf.layout.element.Cell().add(new Paragraph("Serie").setBold().setFontSize(9)).setBorder(Border.NO_BORDER));
             equiposCostosTable.addHeaderCell(new com.itextpdf.layout.element.Cell().add(new Paragraph("Estado Físico").setBold().setFontSize(9)).setBorder(Border.NO_BORDER));
+            equiposCostosTable.addHeaderCell(new com.itextpdf.layout.element.Cell().add(new Paragraph("Accesorios").setBold().setFontSize(9)).setBorder(Border.NO_BORDER));
             equiposCostosTable.addHeaderCell(new com.itextpdf.layout.element.Cell().add(new Paragraph("Falla Reportada").setBold().setFontSize(9)).setBorder(Border.NO_BORDER));
             equiposCostosTable.addHeaderCell(new com.itextpdf.layout.element.Cell().add(new Paragraph("Costo").setBold().setFontSize(9).setTextAlignment(TextAlignment.RIGHT)).setBorder(Border.NO_BORDER));
 
@@ -203,6 +204,7 @@ public class PdfGenerator {
                 equiposCostosTable.addCell(new com.itextpdf.layout.element.Cell().add(new Paragraph(nullToEmpty(eq.getModelo())).setFontSize(8)).setBorder(Border.NO_BORDER));
                 equiposCostosTable.addCell(new com.itextpdf.layout.element.Cell().add(new Paragraph(nullToEmpty(eq.getSerie())).setFontSize(8)).setBorder(Border.NO_BORDER));
                 equiposCostosTable.addCell(new com.itextpdf.layout.element.Cell().add(new Paragraph(nullToEmpty(eq.getEstadoFisico())).setFontSize(8)).setBorder(Border.NO_BORDER));
+                equiposCostosTable.addCell(new com.itextpdf.layout.element.Cell().add(new Paragraph(nullToEmpty(eq.getAccesorios())).setFontSize(8)).setBorder(Border.NO_BORDER));
                 equiposCostosTable.addCell(new com.itextpdf.layout.element.Cell().add(new Paragraph(nullToEmpty(eq.getFalla())).setFontSize(8)).setBorder(Border.NO_BORDER));
                 String costoFormateado = eq.getCosto() != null ? currencyFormat.format(eq.getCosto()) : currencyFormat.format(0);
                 equiposCostosTable.addCell(new com.itextpdf.layout.element.Cell().add(new Paragraph(costoFormateado).setFontSize(8).setTextAlignment(TextAlignment.RIGHT)).setBorder(Border.NO_BORDER));

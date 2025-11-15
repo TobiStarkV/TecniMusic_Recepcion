@@ -6,11 +6,14 @@ import javafx.collections.FXCollections;
 import javafx.collections.ListChangeListener;
 import javafx.collections.ObservableList;
 import javafx.fxml.FXML;
+import javafx.fxml.FXMLLoader;
 import javafx.geometry.Point2D;
 import javafx.scene.Node;
+import javafx.scene.Scene;
 import javafx.scene.control.*;
 import javafx.scene.image.Image;
 import javafx.scene.layout.HBox;
+import javafx.stage.Modality;
 import javafx.stage.Stage;
 import javafx.util.Duration;
 import org.controlsfx.control.textfield.TextFields;
@@ -28,6 +31,7 @@ import java.text.NumberFormat;
 import java.text.ParseException;
 import java.time.LocalDate;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
@@ -53,14 +57,15 @@ public class tecniMusicController {
     @FXML private DatePicker ordenFechaPicker, entregaFechaPicker;
     @FXML private StyleClassedTextArea equipoFallaArea, aclaracionesArea, equipoEstadoFisicoArea;
     @FXML private HBox actionButtonsBox;
-    @FXML private Button guardarButton, limpiarButton, salirButton, printButton, testPdfButton;
+    @FXML private Button guardarButton, limpiarButton, salirButton, printButton, testPdfButton, accesoriosButton;
 
     // Nuevos campos para múltiples equipos
     @FXML private TableView<Equipo> equiposTable;
-    @FXML private TableColumn<Equipo, String> colTipo, colMarca, colModelo, colSerie, colFalla, colCosto, colEstadoFisico;
+    @FXML private TableColumn<Equipo, String> colTipo, colMarca, colModelo, colSerie, colFalla, colCosto, colEstadoFisico, colAccesorios;
     @FXML private Button addEquipoButton, removeEquipoButton;
 
     private final ObservableList<Equipo> equiposObservable = FXCollections.observableArrayList();
+    private final ObservableList<String> accesoriosList = FXCollections.observableArrayList();
 
     private long predictedHojaId;
     private Long idClienteSeleccionado = null;
@@ -104,6 +109,7 @@ public class tecniMusicController {
             if (colModelo != null) colModelo.setCellValueFactory(cell -> javafx.beans.property.SimpleStringProperty.stringExpression(cell.getValue().getModelo() == null ? new javafx.beans.property.SimpleStringProperty("") : new javafx.beans.property.SimpleStringProperty(cell.getValue().getModelo())));
             if (colSerie != null) colSerie.setCellValueFactory(cell -> javafx.beans.property.SimpleStringProperty.stringExpression(cell.getValue().getSerie() == null ? new javafx.beans.property.SimpleStringProperty("") : new javafx.beans.property.SimpleStringProperty(cell.getValue().getSerie())));
             if (colEstadoFisico != null) colEstadoFisico.setCellValueFactory(cell -> javafx.beans.property.SimpleStringProperty.stringExpression(cell.getValue().getEstadoFisico() == null ? new javafx.beans.property.SimpleStringProperty("") : new javafx.beans.property.SimpleStringProperty(cell.getValue().getEstadoFisico())));
+            if (colAccesorios != null) colAccesorios.setCellValueFactory(cell -> javafx.beans.property.SimpleStringProperty.stringExpression(cell.getValue().getAccesorios() == null ? new javafx.beans.property.SimpleStringProperty("") : new javafx.beans.property.SimpleStringProperty(cell.getValue().getAccesorios())));
             if (colFalla != null) colFalla.setCellValueFactory(cell -> javafx.beans.property.SimpleStringProperty.stringExpression(cell.getValue().getFalla() == null ? new javafx.beans.property.SimpleStringProperty("") : new javafx.beans.property.SimpleStringProperty(cell.getValue().getFalla())));
             if (colCosto != null) colCosto.setCellValueFactory(cell -> {
                 BigDecimal costo = cell.getValue().getCosto();
@@ -302,6 +308,31 @@ public class tecniMusicController {
         }
     }
 
+    @FXML
+    private void onAccesoriosClicked() {
+        try {
+            FXMLLoader loader = new FXMLLoader(getClass().getResource("AccesoriosDialog.fxml"));
+            Scene scene = new Scene(loader.load());
+            Stage dialogStage = new Stage();
+            dialogStage.setTitle("Gestionar Accesorios");
+            dialogStage.initModality(Modality.WINDOW_MODAL);
+            dialogStage.initOwner(accesoriosButton.getScene().getWindow());
+            dialogStage.setScene(scene);
+
+            AccesoriosDialogController controller = loader.getController();
+            controller.setDialogStage(dialogStage);
+            controller.setAccesorios(accesoriosList);
+
+            dialogStage.showAndWait();
+
+            if (controller.isAceptado()) {
+                accesoriosList.setAll(controller.getAccesorios());
+            }
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+    }
+
     private void onAddEquipo() {
         String tipo = equipoTipoField.getText() == null ? "" : equipoTipoField.getText().trim();
         String marca = equipoCompaniaField.getText() == null ? "" : equipoCompaniaField.getText().trim();
@@ -309,6 +340,7 @@ public class tecniMusicController {
         String serie = equipoSerieField.getText() == null ? "" : equipoSerieField.getText().trim();
         String falla = equipoFallaArea.getText() == null ? "" : equipoFallaArea.getText().trim();
         String estadoFisico = equipoEstadoFisicoArea.getText() == null ? "" : equipoEstadoFisicoArea.getText().trim();
+        String accesorios = String.join(", ", accesoriosList);
         String costoStr = equipoCostoField.getText() == null ? "" : equipoCostoField.getText().trim();
 
         if (tipo.isEmpty() && marca.isEmpty() && modelo.isEmpty() && serie.isEmpty()) {
@@ -327,7 +359,7 @@ public class tecniMusicController {
             }
         }
 
-        Equipo equipo = new Equipo(tipo, marca, serie, modelo, falla, costo, estadoFisico);
+        Equipo equipo = new Equipo(tipo, marca, serie, modelo, falla, costo, estadoFisico, accesorios);
         equiposObservable.add(equipo);
 
         // Limpiar campos para añadir siguiente equipo
@@ -337,6 +369,7 @@ public class tecniMusicController {
         equipoSerieField.clear();
         equipoFallaArea.clear();
         equipoEstadoFisicoArea.clear();
+        accesoriosList.clear();
         equipoCostoField.clear();
     }
 
@@ -381,7 +414,7 @@ public class tecniMusicController {
         this.isViewOnlyMode = true;
         populateFormWithData(data);
 
-        for (Node node : List.of(clienteNombreField, clienteDireccionField, clienteTelefonoField, equipoSerieField, equipoTipoField, equipoCompaniaField, equipoModeloField, equipoCostoField, anticipoField, ordenFechaPicker, entregaFechaPicker, equipoFallaArea, equipoEstadoFisicoArea, aclaracionesArea)) {
+        for (Node node : List.of(clienteNombreField, clienteDireccionField, clienteTelefonoField, equipoSerieField, equipoTipoField, equipoCompaniaField, equipoModeloField, equipoCostoField, anticipoField, ordenFechaPicker, entregaFechaPicker, equipoFallaArea, equipoEstadoFisicoArea, aclaracionesArea, accesoriosButton)) {
             if (node instanceof TextInputControl) {
                 ((TextInputControl) node).setEditable(false);
             } else if (node instanceof StyleClassedTextArea) {
@@ -389,6 +422,8 @@ public class tecniMusicController {
             } else if (node instanceof DatePicker) {
                 ((DatePicker) node).setEditable(false);
                 ((DatePicker) node).setDisable(true);
+            } else if (node instanceof Button) {
+                ((Button) node).setDisable(true);
             }
         }
 
@@ -750,6 +785,7 @@ public class tecniMusicController {
                !equiposObservable.isEmpty() ||
                !equipoFallaArea.getText().trim().isEmpty() ||
                !equipoEstadoFisicoArea.getText().trim().isEmpty() ||
+               !accesoriosList.isEmpty() ||
                entregaFechaPicker.getValue() != null ||
                !aclaracionesArea.getText().trim().isEmpty();
     }
@@ -788,7 +824,7 @@ public class tecniMusicController {
                 Number number = NumberFormat.getCurrencyInstance(SPANISH_MEXICO_LOCALE).parse(costoStr);
                 costo = BigDecimal.valueOf(number.doubleValue());
             }
-            Equipo single = new Equipo(equipoTipoField.getText(), equipoCompaniaField.getText(), equipoSerieField.getText(), equipoModeloField.getText(), equipoFallaArea.getText(), costo, equipoEstadoFisicoArea.getText());
+            Equipo single = new Equipo(equipoTipoField.getText(), equipoCompaniaField.getText(), equipoSerieField.getText(), equipoModeloField.getText(), equipoFallaArea.getText(), costo, equipoEstadoFisicoArea.getText(), String.join(", ", accesoriosList));
             data.getEquipos().add(single);
         }
 
@@ -810,6 +846,7 @@ public class tecniMusicController {
         equipoFallaArea.clear();
         equipoCostoField.clear();
         equipoEstadoFisicoArea.clear();
+        accesoriosList.clear();
     
         // Rellenar tabla de equipos si la data contiene varios
         equiposObservable.clear();
@@ -826,7 +863,8 @@ public class tecniMusicController {
                 data.getEquipoModelo(),
                 data.getFallaReportada(),
                 data.getTotalCostos(), // Asumiendo que el costo total era el costo del único equipo
-                data.getEstadoFisico()
+                data.getEstadoFisico(),
+                data.getAccesorios()
             );
             equiposObservable.add(equipoLegacy);
             equiposTable.getSelectionModel().selectFirst();
@@ -877,6 +915,7 @@ public class tecniMusicController {
         equipoSerieField.setText(equipo.getSerie());
         equipoFallaArea.replaceText(equipo.getFalla() != null ? equipo.getFalla() : "");
         equipoEstadoFisicoArea.replaceText(equipo.getEstadoFisico() != null ? equipo.getEstadoFisico() : "");
+        accesoriosList.setAll(Arrays.asList((equipo.getAccesorios() != null ? equipo.getAccesorios() : "").split(", ")));
         if (equipo.getCosto() != null) {
             equipoCostoField.setText(NumberFormat.getCurrencyInstance(SPANISH_MEXICO_LOCALE).format(equipo.getCosto()));
         } else {
@@ -945,6 +984,7 @@ public class tecniMusicController {
         equipoCostoField.clear();
         equipoFallaArea.clear();
         equipoEstadoFisicoArea.clear();
+        accesoriosList.clear();
         equipoTipoField.setEditable(true);
         equipoCompaniaField.setEditable(true);
         equipoModeloField.setEditable(true);

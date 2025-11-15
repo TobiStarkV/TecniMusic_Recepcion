@@ -111,6 +111,8 @@
                               </GridPane>
                               <Label text="Estado Físico (rayones, golpes, etc.):" />
                               <StyleClassedTextArea fx:id="equipoEstadoFisicoArea" prefHeight="60.0" wrapText="true" styleClass="falla-reportada-text-area" />
+                              <Label text="Accesorios (cargador, funda, etc.):" />
+                              <Button fx:id="accesoriosButton" mnemonicParsing="false" onAction="#onAccesoriosClicked" text="Gestionar Accesorios" />
                               <Label text="Falla Reportada:" />
                               <StyleClassedTextArea fx:id="equipoFallaArea" prefHeight="80.0" wrapText="true" styleClass="falla-reportada-text-area" />
                               <GridPane hgap="10.0" vgap="5.0">
@@ -141,6 +143,7 @@
                                     <TableColumn fx:id="colModelo" text="Modelo" />
                                     <TableColumn fx:id="colSerie" text="Serie" />
                                     <TableColumn fx:id="colEstadoFisico" text="Estado Físico" />
+                                    <TableColumn fx:id="colAccesorios" text="Accesorios" />
                                     <TableColumn fx:id="colFalla" text="Falla" />
                                     <TableColumn fx:id="colCosto" text="Costo" />
                                  </columns>

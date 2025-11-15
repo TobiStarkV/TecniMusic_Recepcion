@@ -23,6 +23,7 @@ public class HojaServicioData {
     private String equipoModelo;
     private String fallaReportada;
     private String estadoFisico;
+    private String accesorios;
     private String informeCostos;
     private BigDecimal totalCostos;
     private BigDecimal anticipo; // Nuevo campo para el anticipo
@@ -178,6 +179,7 @@ public class HojaServicioData {
             this.equipoSerie = primero.getSerie();
             this.fallaReportada = primero.getFalla();
             this.estadoFisico = primero.getEstadoFisico();
+            this.accesorios = primero.getAccesorios();
         }
     }
 
@@ -187,5 +189,13 @@ public class HojaServicioData {
 
     public void setEstadoFisico(String estadoFisico) {
         this.estadoFisico = estadoFisico;
+    }
+
+    public String getAccesorios() {
+        return accesorios;
+    }
+
+    public void setAccesorios(String accesorios) {
+        this.accesorios = accesorios;
     }
 }

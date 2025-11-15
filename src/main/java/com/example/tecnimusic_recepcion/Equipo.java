@@ -9,11 +9,12 @@ public class Equipo {
     private String modelo;
     private String falla;
     private BigDecimal costo;
-    private String estadoFisico; // Nuevo campo
+    private String estadoFisico;
+    private String accesorios; // Nuevo campo
 
     public Equipo() {}
 
-    public Equipo(String tipo, String marca, String serie, String modelo, String falla, BigDecimal costo, String estadoFisico) {
+    public Equipo(String tipo, String marca, String serie, String modelo, String falla, BigDecimal costo, String estadoFisico, String accesorios) {
         this.tipo = tipo;
         this.marca = marca;
         this.serie = serie;
@@ -21,11 +22,12 @@ public class Equipo {
         this.falla = falla;
         this.costo = costo;
         this.estadoFisico = estadoFisico;
+        this.accesorios = accesorios;
     }
 
     // Constructor anterior para mantener compatibilidad
-    public Equipo(String tipo, String marca, String serie, String modelo, String falla, BigDecimal costo) {
-        this(tipo, marca, serie, modelo, falla, costo, "");
+    public Equipo(String tipo, String marca, String serie, String modelo, String falla, BigDecimal costo, String estadoFisico) {
+        this(tipo, marca, serie, modelo, falla, costo, estadoFisico, "");
     }
     
     public String getTipo() {
@@ -82,5 +84,13 @@ public class Equipo {
 
     public void setEstadoFisico(String estadoFisico) {
         this.estadoFisico = estadoFisico;
+    }
+
+    public String getAccesorios() {
+        return accesorios;
+    }
+
+    public void setAccesorios(String accesorios) {
+        this.accesorios = accesorios;
     }
 }
