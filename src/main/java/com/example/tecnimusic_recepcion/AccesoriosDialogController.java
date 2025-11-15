@@ -42,6 +42,10 @@ public class AccesoriosDialogController {
         return aceptado;
     }
 
+    public void setStylesheet(String stylesheet) {
+        dialogStage.getScene().getStylesheets().add(stylesheet);
+    }
+
     @FXML
     private void onAddAccesorio() {
         String accesorio = accesorioField.getText();

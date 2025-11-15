@@ -322,6 +322,7 @@ public class tecniMusicController {
             AccesoriosDialogController controller = loader.getController();
             controller.setDialogStage(dialogStage);
             controller.setAccesorios(accesoriosList);
+            controller.setStylesheet(getClass().getResource("styles.css").toExternalForm());
 
             dialogStage.showAndWait();
 
