@@ -109,9 +109,9 @@
                                     <TextField fx:id="equipoModeloField" GridPane.columnIndex="3" GridPane.rowIndex="1" />
                                  </children>
                               </GridPane>
-                              <Label text="Estado Físico (rayones, golpes, etc.):" />
+                              <Label text="Estado Físico:" />
                               <StyleClassedTextArea fx:id="equipoEstadoFisicoArea" prefHeight="60.0" wrapText="true" styleClass="falla-reportada-text-area" />
-                              <Label text="Accesorios (cargador, funda, etc.):" />
+                              <Label text="Accesorios:" />
                               <Button fx:id="accesoriosButton" mnemonicParsing="false" onAction="#onAccesoriosClicked" text="Gestionar Accesorios" />
                               <Label text="Falla Reportada:" />
                               <StyleClassedTextArea fx:id="equipoFallaArea" prefHeight="80.0" wrapText="true" styleClass="falla-reportada-text-area" />
