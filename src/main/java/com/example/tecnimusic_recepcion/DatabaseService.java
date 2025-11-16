@@ -29,14 +29,64 @@ public class DatabaseService {
         if (instance == null) instance = new DatabaseService();
         return instance;
     }
-    
+
     public void checkAndUpgradeSchema() throws SQLException {
         try (Connection conn = DatabaseManager.getInstance().getConnection()) {
             ensureAnticipoColumnExists(conn);
             ensureEquiposTableExists(conn);
             ensureCostoColumnExistsInEquiposTable(conn);
             ensureEstadoFisicoColumnExists(conn);
-            ensureAccesoriosColumnExists(conn); // Añadir la nueva verificación
+            ensureAccesoriosColumnExists(conn);
+            ensureAccesoriosSugerenciasTableExists(conn); // Añadir la nueva verificación
+        }
+    }
+
+    private void ensureAccesoriosSugerenciasTableExists(Connection conn) throws SQLException {
+        String sql = "CREATE TABLE IF NOT EXISTS x_accesorios_sugerencias (" +
+                "id INT AUTO_INCREMENT PRIMARY KEY, " +
+                "nombre VARCHAR(255) NOT NULL UNIQUE" +
+                ")";
+        try (Statement stmt = conn.createStatement()) {
+            stmt.execute(sql);
+        }
+    }
+
+    public List<String> getAllAccesorios() throws SQLException {
+        List<String> sugerencias = new ArrayList<>();
+        String sql = "SELECT nombre FROM x_accesorios_sugerencias ORDER BY nombre ASC";
+        try (Connection conn = DatabaseManager.getInstance().getConnection();
+             Statement stmt = conn.createStatement();
+             ResultSet rs = stmt.executeQuery(sql)) {
+            while (rs.next()) {
+                sugerencias.add(rs.getString("nombre"));
+            }
+        }
+        return sugerencias;
+    }
+
+    public boolean accesorioExists(String accesorio) throws SQLException {
+        if (accesorio == null || accesorio.trim().isEmpty()) {
+            return false;
+        }
+        String sql = "SELECT COUNT(*) FROM x_accesorios_sugerencias WHERE nombre = ?";
+        try (Connection conn = DatabaseManager.getInstance().getConnection();
+             PreparedStatement pstmt = conn.prepareStatement(sql)) {
+            pstmt.setString(1, accesorio.trim());
+            ResultSet rs = pstmt.executeQuery();
+            return rs.next() && rs.getInt(1) > 0;
+        }
+    }
+
+    public void addAccesorio(String accesorio) throws SQLException {
+        if (accesorio == null || accesorio.trim().isEmpty()) {
+            return;
+        }
+        String accesorioTrimmed = accesorio.trim();
+        String sql = "INSERT IGNORE INTO x_accesorios_sugerencias (nombre) VALUES (?)";
+        try (Connection conn = DatabaseManager.getInstance().getConnection();
+             PreparedStatement pstmt = conn.prepareStatement(sql)) {
+            pstmt.setString(1, accesorioTrimmed);
+            pstmt.executeUpdate();
         }
     }
 
@@ -318,7 +368,7 @@ public class DatabaseService {
             }
         }
     }
-    
+
     private void ensureCostoColumnExistsInEquiposTable(Connection conn) throws SQLException {
         String checkColumnSql = "SELECT COUNT(*) FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'x_hojas_servicio_equipos' AND COLUMN_NAME = 'costo'";
         try (Statement stmt = conn.createStatement(); ResultSet rs = stmt.executeQuery(checkColumnSql)) {
@@ -497,9 +547,9 @@ public class DatabaseService {
 
                 Date fechaEntrega = rsHoja.getDate("fecha_entrega");
                 if (fechaEntrega != null) data.setFechaEntrega(fechaEntrega.toLocalDate());
-                
+
                 data.setAclaraciones(rsHoja.getString("aclaraciones"));
-                data.setFirmaAclaracion(""); 
+                data.setFirmaAclaracion("");
                 data.setInformeCostos(rsHoja.getString("informe_costos"));
 
                 // Ahora, cargar los equipos asociados

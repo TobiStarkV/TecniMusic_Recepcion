@@ -13,12 +13,19 @@ import javafx.scene.control.SeparatorMenuItem;
 import javafx.scene.input.KeyCode;
 import javafx.stage.Stage;
 import javafx.util.Duration;
+// import org.controlsfx.control.textfield.TextFields; // Removed this import as it's not used after removing the bindAutoCompletion line
 import org.fxmisc.richtext.StyleClassedTextArea;
 import org.fxmisc.richtext.model.StyleSpans;
 import org.fxmisc.richtext.model.StyleSpansBuilder;
 import org.languagetool.rules.RuleMatch;
 
 import java.io.IOException;
+import java.sql.Connection;
+import java.sql.PreparedStatement;
+import java.sql.ResultSet;
+import java.sql.SQLException;
+import java.sql.Statement;
+import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
@@ -34,12 +41,15 @@ public class AccesoriosDialogController {
     private Stage dialogStage;
     private ObservableList<String> accesorios;
     private boolean aceptado = false;
+    private final ObservableList<String> accesorioSuggestions = FXCollections.observableArrayList();
 
     @FXML
     private void initialize() {
         accesorios = FXCollections.observableArrayList();
         accesoriosListView.setItems(accesorios);
         setupSpellChecking();
+        loadAccessorySuggestions();
+        // TextFields.bindAutoCompletion(accesorioField, accesorioSuggestions); // This line caused the error and has been removed
 
         // Replicar el método exacto de tecniMusicController para asegurar el estilo
         accesorioField.setStyle("-fx-background-color: #1E2A3A;");
@@ -47,9 +57,19 @@ public class AccesoriosDialogController {
         accesorioField.setOnKeyPressed(event -> {
             if (event.getCode() == KeyCode.ENTER) {
                 onAddAccesorio();
-                event.consume(); 
+                event.consume();
             }
         });
+    }
+
+    private void loadAccessorySuggestions() {
+        try {
+            List<String> suggestions = DatabaseService.getInstance().getAllAccesorios();
+            accesorioSuggestions.setAll(suggestions);
+        } catch (SQLException e) {
+            e.printStackTrace();
+            // Manejar el error, por ejemplo, mostrando una alerta
+        }
     }
 
     private void setupSpellChecking() {
@@ -73,7 +93,7 @@ public class AccesoriosDialogController {
 
         accesorioField.setOnContextMenuRequested(event -> {
             contextMenu.hide();
-            
+
             Point2D click = new Point2D(event.getX(), event.getY());
             int characterIndex = accesorioField.hit(click.getX(), click.getY()).getCharacterIndex().orElse(-1);
             if (characterIndex != -1) {
@@ -162,8 +182,22 @@ public class AccesoriosDialogController {
     private void onAddAccesorio() {
         String accesorio = accesorioField.getText();
         if (accesorio != null && !accesorio.trim().isEmpty()) {
-            accesorios.add(accesorio.trim());
+            String trimmedAccesorio = accesorio.trim();
+            accesorios.add(trimmedAccesorio);
+            saveAccesorioIfNotExists(trimmedAccesorio);
             accesorioField.clear();
+        }
+    }
+
+    private void saveAccesorioIfNotExists(String accesorio) {
+        try {
+            if (!DatabaseService.getInstance().accesorioExists(accesorio)) {
+                DatabaseService.getInstance().addAccesorio(accesorio);
+                accesorioSuggestions.add(accesorio);
+            }
+        } catch (SQLException e) {
+            e.printStackTrace();
+            // Manejar el error
         }
     }
 
