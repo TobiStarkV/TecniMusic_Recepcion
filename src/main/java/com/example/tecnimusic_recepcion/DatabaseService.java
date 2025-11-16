@@ -90,6 +90,19 @@ public class DatabaseService {
         }
     }
 
+    public void deleteAccesorio(String accesorio) throws SQLException {
+        if (accesorio == null || accesorio.trim().isEmpty()) {
+            return;
+        }
+        String accesorioTrimmed = accesorio.trim();
+        String sql = "DELETE FROM x_accesorios_sugerencias WHERE nombre = ?";
+        try (Connection conn = DatabaseManager.getInstance().getConnection();
+             PreparedStatement pstmt = conn.prepareStatement(sql)) {
+            pstmt.setString(1, accesorioTrimmed);
+            pstmt.executeUpdate();
+        }
+    }
+
     private void ensureAccesoriosColumnExists(Connection conn) throws SQLException {
         String checkColumnSql = "SELECT COUNT(*) FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'x_hojas_servicio_equipos' AND COLUMN_NAME = 'accesorios'";
         try (Statement stmt = conn.createStatement(); ResultSet rs = stmt.executeQuery(checkColumnSql)) {

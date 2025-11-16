@@ -7,6 +7,7 @@ import javafx.collections.ObservableList;
 import javafx.fxml.FXML;
 import javafx.geometry.Bounds;
 import javafx.geometry.Point2D;
+import javafx.scene.Node;
 import javafx.scene.control.ContextMenu;
 import javafx.scene.control.ListCell;
 import javafx.scene.control.ListView;
@@ -14,7 +15,7 @@ import javafx.scene.control.MenuItem;
 import javafx.scene.control.PopupControl;
 import javafx.scene.control.SeparatorMenuItem;
 import javafx.scene.input.KeyCode;
-// import javafx.scene.input.MouseEvent; // Removed unused import
+import javafx.scene.input.MouseButton;
 import javafx.stage.Stage;
 import javafx.util.Duration;
 import org.fxmisc.richtext.StyleClassedTextArea;
@@ -28,6 +29,7 @@ import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
 import java.util.Optional;
+import java.util.stream.Collectors;
 
 public class AccesoriosDialogController {
 
@@ -59,8 +61,13 @@ public class AccesoriosDialogController {
         accesorioField.setOnKeyPressed(event -> {
             if (event.getCode() == KeyCode.ENTER) {
                 if (suggestionPopup.isShowing() && suggestionListView.getSelectionModel().getSelectedItem() != null) {
-                    // Handled by suggestionListView.setOnKeyPressed, so do nothing here
+                    // Apply the selected suggestion directly
+                    String selectedSuggestion = suggestionListView.getSelectionModel().getSelectedItem();
+                    replaceCurrentWord(selectedSuggestion);
+                    suggestionPopup.hide();
+                    accesorioField.requestFocus();
                 } else {
+                    // No suggestion selected or popup not showing, add the current text as a new accessory
                     onAddAccesorio();
                 }
                 event.consume();
@@ -79,28 +86,45 @@ public class AccesoriosDialogController {
     private void setupAutocomplete() {
         suggestionPopup = new PopupControl();
         suggestionListView = new ListView<>();
-        suggestionListView.setPrefHeight(150); // Set a reasonable height
-        suggestionListView.prefWidthProperty().bind(accesorioField.widthProperty()); // Bind width to text area
-        suggestionListView.setItems(accesorioSuggestions); // Bind to the existing suggestions list
+        suggestionListView.setPrefHeight(150);
+        suggestionListView.prefWidthProperty().bind(accesorioField.widthProperty());
 
-        // Custom cell factory (optional, but good for UX)
-        suggestionListView.setCellFactory(lv -> new ListCell<>() { // Use diamond operator
+        // Set a basic cell factory for displaying items
+        suggestionListView.setCellFactory(lv -> new ListCell<>() {
             @Override
             protected void updateItem(String item, boolean empty) {
                 super.updateItem(item, empty);
                 if (empty || item == null) {
                     setText(null);
+                    setGraphic(null);
                 } else {
                     setText(item);
+                    setGraphic(null);
                 }
             }
         });
+
+        // --- START OF NEW CONTEXT MENU IMPLEMENTATION ---
+        suggestionListView.setOnMousePressed(event -> {
+            if (event.getButton() == MouseButton.SECONDARY) { // Right-click
+                ListCell<String> cell = findListCell((Node) event.getTarget(), suggestionListView); // Cast event.getTarget() to Node
+                if (cell != null && !cell.isEmpty() && cell.getItem() != null) {
+                    ContextMenu contextMenu = new ContextMenu();
+                    MenuItem deleteItem = new MenuItem("Eliminar");
+                    deleteItem.setOnAction(e -> deleteSuggestion(cell.getItem()));
+                    contextMenu.getItems().add(deleteItem);
+                    contextMenu.show(cell, event.getScreenX(), event.getScreenY());
+                    event.consume(); // Consume the event to prevent other handlers
+                }
+            }
+        });
+        // --- END OF NEW CONTEXT MENU IMPLEMENTATION ---
+
 
         suggestionPopup.getScene().setRoot(suggestionListView);
         suggestionPopup.setAutoHide(true);
         suggestionPopup.setHideOnEscape(true);
 
-        // Listener for text changes to filter and show/hide suggestions
         accesorioField.textProperty().addListener((obs, oldText, newText) -> {
             if (newText == null || newText.isEmpty()) {
                 suggestionPopup.hide();
@@ -113,55 +137,93 @@ public class AccesoriosDialogController {
                 return;
             }
 
-            ObservableList<String> filteredSuggestions = FXCollections.observableArrayList();
-            for (String suggestion : accesorioSuggestions) {
-                if (suggestion.toLowerCase().startsWith(currentWord.toLowerCase())) {
-                    filteredSuggestions.add(suggestion);
-                }
-            }
+            List<String> filtered = accesorioSuggestions.stream()
+                    .filter(s -> s.toLowerCase().startsWith(currentWord.toLowerCase()))
+                    .collect(Collectors.toList());
 
-            if (filteredSuggestions.isEmpty()) {
+            if (filtered.isEmpty()) {
                 suggestionPopup.hide();
             } else {
-                suggestionListView.setItems(filteredSuggestions);
+                suggestionListView.setItems(FXCollections.observableArrayList(filtered));
                 showSuggestionPopup();
             }
         });
 
-        // Handle selection from the suggestion list
         suggestionListView.setOnMouseClicked(event -> {
-            String selectedSuggestion = suggestionListView.getSelectionModel().getSelectedItem();
-            if (selectedSuggestion != null) {
-                replaceCurrentWord(selectedSuggestion);
-                suggestionPopup.hide();
-                accesorioField.requestFocus(); // Return focus to the text area
+            if (event.getButton() == MouseButton.PRIMARY) { // Only handle left-click for selection
+                String selectedSuggestion = suggestionListView.getSelectionModel().getSelectedItem();
+                if (selectedSuggestion != null) {
+                    replaceCurrentWord(selectedSuggestion);
+                    suggestionPopup.hide();
+                    accesorioField.requestFocus();
+                }
             }
         });
 
-        // Handle keyboard navigation in the suggestion list
         suggestionListView.setOnKeyPressed(event -> {
             if (event.getCode() == KeyCode.ENTER) {
                 String selectedSuggestion = suggestionListView.getSelectionModel().getSelectedItem();
                 if (selectedSuggestion != null) {
                     replaceCurrentWord(selectedSuggestion);
                     suggestionPopup.hide();
-                    accesorioField.requestFocus(); // Return focus to the text area
-                    event.consume(); // Consume to prevent adding a new line in the textarea
+                    accesorioField.requestFocus();
+                    event.consume();
                 }
             } else if (event.getCode() == KeyCode.ESCAPE) {
                 suggestionPopup.hide();
-                accesorioField.requestFocus(); // Return focus to the text area
+                accesorioField.requestFocus();
                 event.consume();
             }
         });
 
-        // Hide popup if text area loses focus
         accesorioField.focusedProperty().addListener((obs, oldVal, newVal) -> {
             if (!newVal) {
                 suggestionPopup.hide();
             }
         });
     }
+
+    // Helper method to find the ListCell from a mouse event target
+    private ListCell<String> findListCell(Node node, ListView<String> listView) {
+        if (node == listView) {
+            return null; // Clicked on the ListView itself, not a cell
+        }
+        while (node != null && !(node instanceof ListCell)) {
+            node = node.getParent();
+        }
+        return (ListCell<String>) node;
+    }
+
+
+    private void deleteSuggestion(String suggestion) {
+        try {
+            DatabaseService.getInstance().deleteAccesorio(suggestion);
+            accesorioSuggestions.remove(suggestion); // Remove from the master list
+
+            // Manually re-filter and update the suggestionListView
+            String currentText = accesorioField.getText();
+            String currentWord = getCurrentWord(currentText, accesorioField.getCaretPosition());
+
+            if (!currentWord.isEmpty()) {
+                ObservableList<String> filteredSuggestions = FXCollections.observableArrayList();
+                for (String s : accesorioSuggestions) {
+                    if (s.toLowerCase().startsWith(currentWord.toLowerCase())) {
+                        filteredSuggestions.add(s);
+                    }
+                }
+                suggestionListView.setItems(filteredSuggestions);
+                if (filteredSuggestions.isEmpty()) {
+                    suggestionPopup.hide();
+                }
+            } else {
+                suggestionPopup.hide();
+            }
+
+        } catch (SQLException e) {
+            System.err.println("Error deleting accessory suggestion: " + e.getMessage());
+        }
+    }
+
 
     private void showSuggestionPopup() {
         if (!suggestionPopup.isShowing()) {
@@ -171,21 +233,21 @@ public class AccesoriosDialogController {
     }
 
     private String getCurrentWord(String text, int caretPosition) {
+        if (text == null || text.isEmpty() || caretPosition < 0 || caretPosition > text.length()) {
+            return "";
+        }
         int start = caretPosition - 1;
         while (start >= 0 && !Character.isWhitespace(text.charAt(start))) {
             start--;
         }
-        start++; // Move past the whitespace or to the beginning of the string
+        start++;
 
         int end = caretPosition;
         while (end < text.length() && !Character.isWhitespace(text.charAt(end))) {
             end++;
         }
 
-        if (start >= 0 && start < end && end <= text.length()) {
-            return text.substring(start, end);
-        }
-        return "";
+        return text.substring(start, end);
     }
 
     private void replaceCurrentWord(String replacement) {
@@ -203,7 +265,9 @@ public class AccesoriosDialogController {
             end++;
         }
 
-        accesorioField.replaceText(start, end, replacement);
+        if (start <= end) {
+            accesorioField.replaceText(start, end, replacement);
+        }
     }
 
     private void loadAccessorySuggestions() {
@@ -211,23 +275,23 @@ public class AccesoriosDialogController {
             List<String> suggestions = DatabaseService.getInstance().getAllAccesorios();
             accesorioSuggestions.setAll(suggestions);
         } catch (SQLException e) {
-            System.err.println("Error loading accessory suggestions: " + e.getMessage()); // Replaced printStackTrace
+            System.err.println("Error loading accessory suggestions: " + e.getMessage());
         }
     }
 
     private void setupSpellChecking() {
         PauseTransition pause = new PauseTransition(Duration.seconds(0.5));
-        accesorioField.textProperty().addListener((observable, oldValue, newValue) ->
-            pause.setOnFinished(event -> Platform.runLater(() -> { // Converted to expression lambda
+        accesorioField.textProperty().addListener((observable, oldValue, newValue) -> {
+            pause.setOnFinished(event -> Platform.runLater(() -> {
                 try {
                     List<RuleMatch> matches = CorrectorOrtografico.verificar(newValue);
                     applyHighlighting(matches);
                 } catch (IOException e) {
                     // ignore
                 }
-            }))
-        );
-        pause.playFromStart();
+            }));
+            pause.playFromStart();
+        });
 
 
         final ContextMenu contextMenu = new ContextMenu();
@@ -264,8 +328,8 @@ public class AccesoriosDialogController {
                     if (!suggestions.isEmpty()) {
                         for (String suggestion : suggestions) {
                             MenuItem item = new MenuItem(suggestion);
-                            item.setOnAction(evt -> // Converted to expression lambda
-                                accesorioField.replaceText(currentMatch.getFromPos(), currentMatch.getToPos(), suggestion)
+                            item.setOnAction(evt ->
+                                    accesorioField.replaceText(currentMatch.getFromPos(), currentMatch.getToPos(), suggestion)
                             );
                             contextMenu.getItems().add(item);
                         }
@@ -335,10 +399,10 @@ public class AccesoriosDialogController {
         try {
             if (!DatabaseService.getInstance().accesorioExists(accesorio)) {
                 DatabaseService.getInstance().addAccesorio(accesorio);
-                accesorioSuggestions.add(accesorio); // Add to suggestions list for immediate use
+                accesorioSuggestions.add(accesorio);
             }
         } catch (SQLException e) {
-            System.err.println("Error saving accessory: " + e.getMessage()); // Replaced printStackTrace
+            System.err.println("Error saving accessory: " + e.getMessage());
         }
     }
 
