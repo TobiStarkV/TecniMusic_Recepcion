@@ -141,6 +141,12 @@ public class tecniMusicController {
             printButton.setVisible(false);
             printButton.setManaged(false);
         }
+        
+        // Hide testPdfButton
+        if (testPdfButton != null) {
+            testPdfButton.setVisible(false);
+            testPdfButton.setManaged(false);
+        }
 
         // Corrector ortográfico
         if (equipoFallaArea != null) {
