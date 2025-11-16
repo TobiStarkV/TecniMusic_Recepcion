@@ -18,7 +18,7 @@
                 <HBox spacing="10" alignment="CENTER_LEFT">
                     <children>
                         <StyleClassedTextArea fx:id="accesorioField" styleClass="accesorios-text-area" HBox.hgrow="ALWAYS" />
-                        <Button onAction="#onAddAccesorio" text="Añadir" />
+                        <Button onAction="#onAddAccesorio" text="Añadir" styleClass="add-accessory-button" />
                     </children>
                 </HBox>
                 <ListView fx:id="accesoriosListView" VBox.vgrow="ALWAYS" />

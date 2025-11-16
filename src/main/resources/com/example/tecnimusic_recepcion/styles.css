@@ -167,6 +167,12 @@
     -fx-padding: 3px 5px; /* Padding ajustado para centrar texto */
 }
 
+.add-accessory-button {
+    -fx-min-height: 24px;
+    -fx-max-height: 24px;
+    -fx-padding: 0 15px; /* Ajustar padding horizontal */
+}
+
 
 /* --- Estado :focus --- */
 .text-area:focused, .style-classed-text-area:focused {
