@@ -41,8 +41,8 @@ public class AccesoriosDialogController {
         accesoriosListView.setItems(accesorios);
         setupSpellChecking();
 
-        // Aplicar el mismo estilo que los otros campos
-        accesorioField.setStyle("-fx-background-color: #1E2A3A; -fx-text-fill: white;");
+        // Replicar el método exacto de tecniMusicController para asegurar el estilo
+        accesorioField.setStyle("-fx-background-color: #1E2A3A;");
 
         accesorioField.setOnKeyPressed(event -> {
             if (event.getCode() == KeyCode.ENTER) {
@@ -74,7 +74,6 @@ public class AccesoriosDialogController {
         accesorioField.setOnContextMenuRequested(event -> {
             contextMenu.hide();
             
-            // Mover el cursor a la posición del clic
             Point2D click = new Point2D(event.getX(), event.getY());
             int characterIndex = accesorioField.hit(click.getX(), click.getY()).getCharacterIndex().orElse(-1);
             if (characterIndex != -1) {

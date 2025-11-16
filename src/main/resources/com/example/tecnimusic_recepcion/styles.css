@@ -148,11 +148,13 @@
 }
 
 .style-classed-text-area .text {
-    -fx-fill: #E0E0E0; /* Color del texto */
+    -fx-fill: #E0E0E0; /* Color del texto por defecto */
 }
 
-.falla-reportada-text-area .text {
-    -fx-fill: #FFFFFF; /* Forzar texto a blanco */
+/* Forzar texto a blanco en áreas de texto específicas */
+.falla-reportada-text-area .text,
+.accesorios-text-area .text {
+    -fx-fill: #FFFFFF;
 }
 
 

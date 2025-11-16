@@ -17,7 +17,7 @@
             <children>
                 <HBox spacing="10" alignment="CENTER_LEFT">
                     <children>
-                        <StyleClassedTextArea fx:id="accesorioField" prefHeight="40" HBox.hgrow="ALWAYS" />
+                        <StyleClassedTextArea fx:id="accesorioField" prefHeight="40" styleClass="accesorios-text-area" HBox.hgrow="ALWAYS" />
                         <Button onAction="#onAddAccesorio" text="Añadir" />
                     </children>
                 </HBox>
