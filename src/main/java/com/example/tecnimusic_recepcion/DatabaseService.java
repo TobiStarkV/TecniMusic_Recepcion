@@ -36,7 +36,42 @@ public class DatabaseService {
             ensureEquiposTableExists(conn);
             ensureCostoColumnExistsInEquiposTable(conn);
             ensureEstadoFisicoColumnExists(conn);
-            ensureAccesoriosColumnExists(conn); // Añadir la nueva verificación
+            ensureAccesoriosColumnExists(conn);
+            ensureAccesoriosSugerenciasTableExists(conn); // Añadir la nueva verificación
+        }
+    }
+
+    private void ensureAccesoriosSugerenciasTableExists(Connection conn) throws SQLException {
+        String sql = "CREATE TABLE IF NOT EXISTS x_accesorios_sugerencias (" +
+                     "id INT AUTO_INCREMENT PRIMARY KEY," +
+                     "nombre VARCHAR(255) NOT NULL UNIQUE" +
+                     ")";
+        try (Statement stmt = conn.createStatement()) {
+            stmt.execute(sql);
+        }
+    }
+
+    public List<String> getAccesoriosSugerencias() throws SQLException {
+        List<String> sugerencias = new ArrayList<>();
+        String sql = "SELECT nombre FROM x_accesorios_sugerencias ORDER BY nombre ASC";
+        try (Connection conn = DatabaseManager.getInstance().getConnection();
+             Statement stmt = conn.createStatement();
+             ResultSet rs = stmt.executeQuery(sql)) {
+            while (rs.next()) {
+                sugerencias.add(rs.getString("nombre"));
+            }
+        }
+        return sugerencias;
+    }
+
+    public void guardarSugerenciaAccesorio(String nombre) {
+        String sql = "INSERT INTO x_accesorios_sugerencias (nombre) VALUES (?) ON DUPLICATE KEY UPDATE nombre = nombre";
+        try (Connection conn = DatabaseManager.getInstance().getConnection();
+             PreparedStatement pstmt = conn.prepareStatement(sql)) {
+            pstmt.setString(1, nombre);
+            pstmt.executeUpdate();
+        } catch (SQLException e) {
+            // Ignorar errores de duplicados, etc.
         }
     }
 

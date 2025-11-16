@@ -6,6 +6,7 @@ import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
 import javafx.fxml.FXML;
 import javafx.geometry.Point2D;
+import javafx.geometry.Side;
 import javafx.scene.control.ContextMenu;
 import javafx.scene.control.ListView;
 import javafx.scene.control.MenuItem;
@@ -19,10 +20,12 @@ import org.fxmisc.richtext.model.StyleSpansBuilder;
 import org.languagetool.rules.RuleMatch;
 
 import java.io.IOException;
+import java.sql.SQLException;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
 import java.util.Optional;
+import java.util.stream.Collectors;
 
 public class AccesoriosDialogController {
 
@@ -33,38 +36,101 @@ public class AccesoriosDialogController {
 
     private Stage dialogStage;
     private ObservableList<String> accesorios;
+    private final ObservableList<String> sugerenciasAccesorios = FXCollections.observableArrayList();
+    private final ContextMenu autoCompletePopup = new ContextMenu();
     private boolean aceptado = false;
 
     @FXML
     private void initialize() {
         accesorios = FXCollections.observableArrayList();
         accesoriosListView.setItems(accesorios);
-        setupSpellChecking();
 
-        // Replicar el método exacto de tecniMusicController para asegurar el estilo
-        accesorioField.setStyle("-fx-background-color: #1E2A3A;");
+        cargarSugerencias();
+        setupCustomAutocomplete();
+        setupSpellChecking();
 
         accesorioField.setOnKeyPressed(event -> {
             if (event.getCode() == KeyCode.ENTER) {
-                onAddAccesorio();
-                event.consume(); 
+                // Si el popup está visible, el Enter es manejado por el ContextMenu.
+                // Si no, lo usamos para añadir el accesorio.
+                if (!autoCompletePopup.isShowing()) {
+                    onAddAccesorio();
+                    event.consume();
+                }
             }
         });
+    }
+
+    private void cargarSugerencias() {
+        try {
+            sugerenciasAccesorios.setAll(DatabaseService.getInstance().getAccesoriosSugerencias());
+        } catch (SQLException e) {
+            e.printStackTrace(); // Opcional: Mostrar alerta al usuario
+        }
+    }
+
+    private void setupCustomAutocomplete() {
+        PauseTransition pause = new PauseTransition(Duration.millis(300));
+        accesorioField.textProperty().addListener((observable, oldValue, newValue) -> {
+            if (newValue == null || newValue.isEmpty()) {
+                autoCompletePopup.hide();
+            } else {
+                pause.setOnFinished(event -> Platform.runLater(this::showAutocompletePopup));
+                pause.playFromStart();
+            }
+        });
+
+        accesorioField.focusedProperty().addListener((observable, oldValue, isNowFocused) -> {
+            if (!isNowFocused) {
+                autoCompletePopup.hide();
+            }
+        });
+    }
+
+    private void showAutocompletePopup() {
+        String text = accesorioField.getText();
+        if (text.isEmpty()) {
+            autoCompletePopup.hide();
+            return;
+        }
+
+        List<String> filteredSuggestions = sugerenciasAccesorios.stream()
+                .filter(s -> s.toLowerCase().contains(text.toLowerCase()))
+                .limit(10)
+                .collect(Collectors.toList());
+
+        if (filteredSuggestions.isEmpty()) {
+            autoCompletePopup.hide();
+        } else {
+            autoCompletePopup.getItems().clear();
+            for (String suggestion : filteredSuggestions) {
+                MenuItem item = new MenuItem(suggestion);
+                item.setOnAction(e -> {
+                    accesorioField.replaceText(suggestion);
+                    autoCompletePopup.hide();
+                    accesorioField.requestFocus();
+                    accesorioField.moveTo(suggestion.length());
+                });
+                autoCompletePopup.getItems().add(item);
+            }
+
+            if (!autoCompletePopup.isShowing()) {
+                autoCompletePopup.show(accesorioField, Side.BOTTOM, 0, 0);
+            }
+        }
     }
 
     private void setupSpellChecking() {
         PauseTransition pause = new PauseTransition(Duration.seconds(0.5));
         accesorioField.textProperty().addListener((observable, oldValue, newValue) -> {
-            pause.setOnFinished(event -> {
-                Platform.runLater(() -> {
-                    try {
-                        List<RuleMatch> matches = CorrectorOrtografico.verificar(newValue);
-                        applyHighlighting(matches);
-                    } catch (IOException e) {
-                        // ignore
-                    }
-                });
-            });
+            pause.setOnFinished(event -> Platform.runLater(() -> {
+                try {
+                    List<RuleMatch> matches = CorrectorOrtografico.verificar(newValue);
+                    applyHighlighting(matches);
+                } catch (IOException e) {
+                    // ignore
+                }
+            }));
             pause.playFromStart();
         });
 
@@ -72,8 +138,8 @@ public class AccesoriosDialogController {
         accesorioField.setContextMenu(contextMenu);
 
         accesorioField.setOnContextMenuRequested(event -> {
-            contextMenu.hide();
-            
+            autoCompletePopup.hide(); // Ocultar autocompletado al pedir menú contextual
+
             Point2D click = new Point2D(event.getX(), event.getY());
             int characterIndex = accesorioField.hit(click.getX(), click.getY()).getCharacterIndex().orElse(-1);
             if (characterIndex != -1) {
@@ -162,7 +228,18 @@ public class AccesoriosDialogController {
     private void onAddAccesorio() {
         String accesorio = accesorioField.getText();
         if (accesorio != null && !accesorio.trim().isEmpty()) {
-            accesorios.add(accesorio.trim());
+            String accesorioTrimmed = accesorio.trim();
+            if (!accesorios.contains(accesorioTrimmed)) {
+                accesorios.add(accesorioTrimmed);
+            }
+
+            // Guardar para futuras sugerencias en un hilo separado
+            new Thread(() -> DatabaseService.getInstance().guardarSugerenciaAccesorio(accesorioTrimmed)).start();
+            
+            if (!sugerenciasAccesorios.contains(accesorioTrimmed)) {
+                sugerenciasAccesorios.add(accesorioTrimmed);
+            }
+
             accesorioField.clear();
         }
     }
