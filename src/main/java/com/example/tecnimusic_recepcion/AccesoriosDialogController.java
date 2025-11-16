@@ -41,6 +41,9 @@ public class AccesoriosDialogController {
         accesoriosListView.setItems(accesorios);
         setupSpellChecking();
 
+        // Aplicar el mismo estilo que los otros campos
+        accesorioField.setStyle("-fx-background-color: #1E2A3A; -fx-text-fill: white;");
+
         accesorioField.setOnKeyPressed(event -> {
             if (event.getCode() == KeyCode.ENTER) {
                 onAddAccesorio();
