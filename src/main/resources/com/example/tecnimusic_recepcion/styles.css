@@ -157,6 +157,16 @@
     -fx-fill: #FFFFFF;
 }
 
+/* Ajuste de altura para el campo de accesorios */
+.accesorios-text-area {
+    -fx-min-height: 24px; /* Altura reducida */
+    -fx-max-height: 24px;
+}
+
+.accesorios-text-area .paragraph-box {
+    -fx-padding: 3px 5px; /* Padding ajustado para centrar texto */
+}
+
 
 /* --- Estado :focus --- */
 .text-area:focused, .style-classed-text-area:focused {
