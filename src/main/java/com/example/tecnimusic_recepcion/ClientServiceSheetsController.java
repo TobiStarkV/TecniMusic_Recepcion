@@ -182,6 +182,8 @@ public class ClientServiceSheetsController {
         data.setClienteNombre(rs.getString("cliente_nombre"));
         data.setClienteDireccion(rs.getString("cliente_direccion"));
         data.setClienteTelefono(rs.getString("cliente_telefono"));
+        // Estos campos individuales de equipo ya no son la fuente principal si hay múltiples equipos
+        // Se mantienen para compatibilidad con hojas de servicio antiguas o si solo hay un equipo
         data.setEquipoSerie(rs.getString("equipo_serie"));
         data.setEquipoTipo(rs.getString("equipo_tipo"));
         data.setEquipoMarca(rs.getString("equipo_marca"));
@@ -194,6 +196,9 @@ public class ClientServiceSheetsController {
         if (fechaEntrega != null) data.setFechaEntrega(fechaEntrega.toLocalDate());
         data.setFirmaAclaracion(rs.getString("firma_aclaracion"));
         data.setAclaraciones(rs.getString("aclaraciones"));
+        // Accesorios del equipo principal (para compatibilidad)
+        // REMOVED: data.setAccesorios(rs.getString("accesorios"));
+
 
         // Cargar equipos asociados
         data.setEquipos(loadEquiposForHojaServicio(hojaServicioId, conn));
@@ -203,7 +208,7 @@ public class ClientServiceSheetsController {
 
     private List<Equipo> loadEquiposForHojaServicio(long hojaServicioId, Connection conn) throws SQLException {
         List<Equipo> equipos = new ArrayList<>();
-        String sql = "SELECT * FROM x_hojas_servicio_equipos WHERE hoja_id = ?";
+        String sql = "SELECT equipo_tipo, equipo_marca, equipo_modelo, equipo_serie, falla_reportada, costo, estado_fisico, accesorios FROM x_hojas_servicio_equipos WHERE hoja_id = ?";
         try (PreparedStatement pstmt = conn.prepareStatement(sql)) {
             pstmt.setLong(1, hojaServicioId);
             ResultSet rs = pstmt.executeQuery();
@@ -215,7 +220,8 @@ public class ClientServiceSheetsController {
                 String falla = rs.getString("falla_reportada");
                 BigDecimal costo = rs.getBigDecimal("costo");
                 String estadoFisico = rs.getString("estado_fisico");
-                equipos.add(new Equipo(tipo, marca, serie, modelo, falla, costo, estadoFisico));
+                String accesorios = rs.getString("accesorios"); // <-- ¡Aquí se recupera la columna de accesorios!
+                equipos.add(new Equipo(tipo, marca, serie, modelo, falla, costo, estadoFisico, accesorios)); // <-- ¡Aquí se pasa al constructor!
             }
         }
         return equipos;

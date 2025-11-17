@@ -56,6 +56,7 @@ public class tecniMusicController {
     @FXML private TextField equipoSerieField, equipoTipoField, equipoCompaniaField, equipoModeloField, equipoCostoField, anticipoField;
     @FXML private DatePicker ordenFechaPicker, entregaFechaPicker;
     @FXML private StyleClassedTextArea equipoFallaArea, aclaracionesArea, equipoEstadoFisicoArea;
+    @FXML private StyleClassedTextArea equipoAccesoriosArea; // Añadido: Declaración de equipoAccesoriosArea
     @FXML private HBox actionButtonsBox;
     @FXML private Button guardarButton, limpiarButton, salirButton, printButton, testPdfButton, accesoriosButton;
 
@@ -160,6 +161,10 @@ public class tecniMusicController {
         if (aclaracionesArea != null) {
             setupSpellChecking(aclaracionesArea);
             aclaracionesArea.setStyle("-fx-background-color: #1E2A3A; -fx-text-fill: white;");
+        }
+        // Configurar estilo para equipoAccesoriosArea
+        if (equipoAccesoriosArea != null) {
+            equipoAccesoriosArea.setStyle("-fx-background-color: #1E2A3A; -fx-text-fill: white;");
         }
     }
 
@@ -334,6 +339,10 @@ public class tecniMusicController {
 
             if (controller.isAceptado()) {
                 accesoriosList.setAll(controller.getAccesorios());
+                // Actualizar el StyleClassedTextArea con los accesorios seleccionados
+                if (equipoAccesoriosArea != null) {
+                    equipoAccesoriosArea.replaceText(String.join(", ", accesoriosList));
+                }
             }
         } catch (IOException e) {
             e.printStackTrace();
@@ -377,6 +386,9 @@ public class tecniMusicController {
         equipoFallaArea.clear();
         equipoEstadoFisicoArea.clear();
         accesoriosList.clear();
+        if (equipoAccesoriosArea != null) { // Limpiar también el área de texto de accesorios
+            equipoAccesoriosArea.clear();
+        }
         equipoCostoField.clear();
     }
 
@@ -433,13 +445,17 @@ public class tecniMusicController {
                 ((Button) node).setDisable(true);
             }
         }
+        // Deshabilitar equipoAccesoriosArea en modo solo lectura
+        if (equipoAccesoriosArea != null) {
+            equipoAccesoriosArea.setEditable(false);
+        }
 
         // Deshabilitar gestión de equipos en vista sólo lectura
         if (addEquipoButton != null) addEquipoButton.setDisable(true);
         if (removeEquipoButton != null) removeEquipoButton.setDisable(true);
 
         guardarButton.setVisible(false);
-        limpiarButton.setVisible(false);
+    limpiarButton.setVisible(false);
         guardarButton.setManaged(false);
         limpiarButton.setManaged(false);
         salirButton.setText("Cerrar Vista");
@@ -780,6 +796,9 @@ public class tecniMusicController {
         aclaracionesArea.clear();
         ordenFechaPicker.setValue(LocalDate.now());
         equiposObservable.clear();
+        if (equipoAccesoriosArea != null) { // Limpiar también el área de texto de accesorios
+            equipoAccesoriosArea.clear();
+        }
         isAutoCompleting = false;
         predecirYAsignarNumeroDeOrden();
     }
@@ -801,6 +820,7 @@ public class tecniMusicController {
                !equipoFallaArea.getText().trim().isEmpty() ||
                !equipoEstadoFisicoArea.getText().trim().isEmpty() ||
                !accesoriosList.isEmpty() ||
+               (equipoAccesoriosArea != null && !equipoAccesoriosArea.getText().trim().isEmpty()) || // Comprobar también el área de texto
                entregaFechaPicker.getValue() != null ||
                !aclaracionesArea.getText().trim().isEmpty();
     }
@@ -839,7 +859,9 @@ public class tecniMusicController {
                 Number number = NumberFormat.getCurrencyInstance(SPANISH_MEXICO_LOCALE).parse(costoStr);
                 costo = BigDecimal.valueOf(number.doubleValue());
             }
-            Equipo single = new Equipo(equipoTipoField.getText(), equipoCompaniaField.getText(), equipoSerieField.getText(), equipoModeloField.getText(), equipoFallaArea.getText(), costo, equipoEstadoFisicoArea.getText(), String.join(", ", accesoriosList));
+            // Usar el contenido de equipoAccesoriosArea si está disponible, de lo contrario, la lista
+            String accesoriosParaGuardar = (equipoAccesoriosArea != null && !equipoAccesoriosArea.getText().trim().isEmpty()) ? equipoAccesoriosArea.getText().trim() : String.join(", ", accesoriosList);
+            Equipo single = new Equipo(equipoTipoField.getText(), equipoCompaniaField.getText(), equipoSerieField.getText(), equipoModeloField.getText(), equipoFallaArea.getText(), costo, equipoEstadoFisicoArea.getText(), accesoriosParaGuardar);
             data.getEquipos().add(single);
         }
 
@@ -862,6 +884,9 @@ public class tecniMusicController {
         equipoCostoField.clear();
         equipoEstadoFisicoArea.clear();
         accesoriosList.clear();
+        if (equipoAccesoriosArea != null) {
+            equipoAccesoriosArea.clear();
+        }
     
         // Rellenar tabla de equipos si la data contiene varios
         equiposObservable.clear();
@@ -936,6 +961,13 @@ public class tecniMusicController {
         String acc = equipo.getAccesorios();
         if (acc != null && !acc.trim().isEmpty()) {
             accesoriosList.setAll(Arrays.asList(acc.split("\\s*,\\s*")));
+            if (equipoAccesoriosArea != null) {
+                equipoAccesoriosArea.replaceText(acc); // Actualizar el área de texto con los accesorios
+            }
+        } else {
+            if (equipoAccesoriosArea != null) {
+                equipoAccesoriosArea.clear(); // Limpiar si no hay accesorios
+            }
         }
 
         if (equipo.getCosto() != null) {
@@ -1005,6 +1037,9 @@ public class tecniMusicController {
         equipoFallaArea.clear();
         equipoEstadoFisicoArea.clear();
         accesoriosList.clear();
+        if (equipoAccesoriosArea != null) {
+            equipoAccesoriosArea.clear();
+        }
         equipoCostoField.clear();
         equipoTipoField.setEditable(true);
         equipoCompaniaField.setEditable(true);
