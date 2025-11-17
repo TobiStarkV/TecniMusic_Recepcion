@@ -113,8 +113,6 @@
                               <StyleClassedTextArea fx:id="equipoEstadoFisicoArea" prefHeight="60.0" wrapText="true" styleClass="falla-reportada-text-area" />
                               <Label text="Accesorios:" />
                               <Button fx:id="accesoriosButton" mnemonicParsing="false" onAction="#onAccesoriosClicked" text="Gestionar Accesorios" />
-                              <!-- Nuevo campo para mostrar accesorios -->
-                              <StyleClassedTextArea fx:id="equipoAccesoriosArea" prefHeight="60.0" wrapText="true" editable="false" styleClass="falla-reportada-text-area" />
                               <Label text="Falla Reportada:" />
                               <StyleClassedTextArea fx:id="equipoFallaArea" prefHeight="80.0" wrapText="true" styleClass="falla-reportada-text-area" />
                               <GridPane hgap="10.0" vgap="5.0">
