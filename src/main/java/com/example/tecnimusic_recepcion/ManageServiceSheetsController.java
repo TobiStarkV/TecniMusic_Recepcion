@@ -73,18 +73,31 @@ public class ManageServiceSheetsController {
     private void searchAndLoadServiceSheets(String searchTerm) {
         serviceSheets.clear();
 
-        String baseSql = "SELECT hs.numero_orden, hs.fecha_orden, c.nombre as cliente_nombre, hs.equipo_tipo, hs.equipo_marca, hs.equipo_modelo, hs.equipo_serie " +
+        String baseSql = "SELECT hs.numero_orden, hs.fecha_orden, c.nombre as cliente_nombre, " +
+                         "GROUP_CONCAT( " +
+                         "    TRIM(CONCAT_WS(' ', " +
+                         "        hse.equipo_tipo, " +
+                         "        hse.equipo_marca, " +
+                         "        hse.equipo_modelo, " +
+                         "        CASE WHEN hse.equipo_serie IS NOT NULL AND hse.equipo_serie != '' THEN CONCAT('(Serie: ', hse.equipo_serie, ')') ELSE NULL END " +
+                         "    )) " +
+                         "    SEPARATOR '; ' " +
+                         ") AS equipment_summary " +
                          "FROM x_hojas_servicio hs " +
-                         "JOIN x_clientes c ON hs.cliente_id = c.id ";
+                         "JOIN x_clientes c ON hs.cliente_id = c.id " +
+                         "LEFT JOIN x_hojas_servicio_equipos hse ON hs.id = hse.hoja_id ";
 
         String sql;
         boolean hasSearchTerm = searchTerm != null && !searchTerm.trim().isEmpty();
 
         if (hasSearchTerm) {
-            sql = baseSql + "WHERE hs.numero_orden LIKE ? OR c.nombre LIKE ? OR hs.equipo_serie LIKE ? OR hs.equipo_marca LIKE ? OR hs.equipo_modelo LIKE ? " +
+            sql = baseSql + "WHERE hs.numero_orden LIKE ? OR c.nombre LIKE ? OR " +
+                          "hse.equipo_serie LIKE ? OR hse.equipo_marca LIKE ? OR hse.equipo_modelo LIKE ? " +
+                          "GROUP BY hs.id, hs.numero_orden, hs.fecha_orden, c.nombre " +
                           "ORDER BY hs.id DESC";
         } else {
-            sql = baseSql + "ORDER BY hs.id DESC";
+            sql = baseSql + "GROUP BY hs.id, hs.numero_orden, hs.fecha_orden, c.nombre " +
+                          "ORDER BY hs.id DESC";
         }
 
         try (Connection conn = DatabaseManager.getInstance().getConnection();
@@ -105,19 +118,9 @@ public class ManageServiceSheetsController {
                 String orderNumber = rs.getString("numero_orden");
                 LocalDate date = rs.getDate("fecha_orden").toLocalDate();
                 String clientName = rs.getString("cliente_nombre");
+                String equipmentSummary = rs.getString("equipment_summary");
 
-                String equipment = String.join(" ",
-                        rs.getString("equipo_tipo") != null ? rs.getString("equipo_tipo") : "",
-                        rs.getString("equipo_marca") != null ? rs.getString("equipo_marca") : "",
-                        rs.getString("equipo_modelo") != null ? rs.getString("equipo_modelo") : ""
-                ).trim().replaceAll(" +", " ");
-
-                String serie = rs.getString("equipo_serie");
-                if (serie != null && !serie.isEmpty()) {
-                    equipment += " (Serie: " + serie + ")";
-                }
-
-                serviceSheets.add(new ServiceSheetSummary(orderNumber, date, clientName, equipment));
+                serviceSheets.add(new ServiceSheetSummary(orderNumber, date, clientName, equipmentSummary != null ? equipmentSummary : ""));
             }
 
         } catch (SQLException e) {
@@ -231,21 +234,20 @@ public class ManageServiceSheetsController {
         data.setNumeroOrden(rs.getString("numero_orden"));
         Date fechaOrden = rs.getDate("fecha_orden");
         if (fechaOrden != null) data.setFechaOrden(fechaOrden.toLocalDate());
+
         data.setClienteNombre(rs.getString("cliente_nombre"));
         data.setClienteDireccion(rs.getString("cliente_direccion"));
         data.setClienteTelefono(rs.getString("cliente_telefono"));
-        data.setEquipoSerie(rs.getString("equipo_serie"));
-        data.setEquipoTipo(rs.getString("equipo_tipo"));
-        data.setEquipoMarca(rs.getString("equipo_marca"));
-        data.setEquipoModelo(rs.getString("equipo_modelo"));
-        data.setFallaReportada(rs.getString("falla_reportada"));
-        data.setInformeCostos(rs.getString("informe_costos"));
+
         data.setTotalCostos(rs.getBigDecimal("total_costos"));
         data.setAnticipo(rs.getBigDecimal("anticipo"));
+
         Date fechaEntrega = rs.getDate("fecha_entrega");
         if (fechaEntrega != null) data.setFechaEntrega(fechaEntrega.toLocalDate());
-        data.setFirmaAclaracion(rs.getString("firma_aclaracion"));
+
         data.setAclaraciones(rs.getString("aclaraciones"));
+        data.setFirmaAclaracion("");
+        data.setInformeCostos(rs.getString("informe_costos"));
 
         // Cargar equipos asociados
         data.setEquipos(loadEquiposForHojaServicio(hojaServicioId, conn));
