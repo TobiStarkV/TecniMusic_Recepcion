@@ -210,9 +210,12 @@
 }
 
 .table-view .table-cell {
-    -fx-text-fill: #E0E0E0;
+    -fx-text-fill: white !important; /* Ensure default text is white */
     -fx-border-color: transparent #303E4D transparent transparent;
     -fx-padding: 5 10;
+}
+.table-view .table-cell .text {
+    -fx-fill: white !important; /* Ensure any Text nodes are white */
 }
 
 .table-row-cell {
@@ -226,13 +229,54 @@
 }
 
 .table-row-cell:selected {
-    -fx-background-color: #A11A1A; /* selección un poco más clara */
-    -fx-text-fill: white;
+    -fx-background-color: #A11A1A !important; /* selección un poco más clara */
+    -fx-text-fill: white !important;
 }
 
 .table-row-cell:selected .text {
-     -fx-fill: white ;
+     -fx-fill: white !important;
 }
+.table-row-cell:selected .label { /* Ensure label text is white when selected */
+    -fx-text-fill: white !important;
+}
+
+/* Ensure text in table cells is white when the row is selected/hovered/focused */
+.table-row-cell:selected .table-cell {
+    -fx-text-fill: white !important;
+}
+.table-row-cell:selected .table-cell .text {
+    -fx-fill: white !important;
+}
+.table-row-cell:selected .table-cell .label {
+    -fx-text-fill: white !important;
+}
+
+.table-row-cell:hover { /* Added explicit background for hover */
+    -fx-background-color: #BC2323 !important;
+}
+.table-row-cell:hover .table-cell {
+    -fx-text-fill: white !important;
+}
+.table-row-cell:hover .table-cell .text {
+    -fx-fill: white !important;
+}
+.table-row-cell:hover .table-cell .label {
+    -fx-text-fill: white !important;
+}
+
+.table-row-cell:focused { /* Added explicit background for focused */
+    -fx-background-color: #A11A1A !important;
+}
+.table-row-cell:focused .table-cell {
+    -fx-text-fill: white !important;
+}
+.table-row-cell:focused .table-cell .text {
+    -fx-fill: white !important;
+}
+.table-row-cell:focused .table-cell .label {
+    -fx-text-fill: white !important;
+}
+
 
 /* ListView */
 .list-view {
@@ -242,7 +286,10 @@
 
 .list-view .list-cell {
     -fx-background-color: #0A192F;
-    -fx-text-fill: white; /* Default text color for list cells */
+    -fx-text-fill: white !important; /* Default text color for list cells */
+}
+.list-view .list-cell .text {
+    -fx-fill: white !important; /* Ensure any Text nodes are white */
 }
 
 .list-view .list-cell:odd {
@@ -257,6 +304,9 @@
 .list-view .list-cell:selected .label { /* Ensure label text is white when selected */
     -fx-text-fill: white !important;
 }
+.list-view .list-cell:selected .text {
+    -fx-fill: white !important;
+}
 
 .list-view .list-cell:hover {
     -fx-background-color: #BC2323 !important; /* Red for hover */
@@ -266,6 +316,9 @@
 .list-view .list-cell:hover .label { /* Ensure label text is white on hover */
     -fx-text-fill: white !important;
 }
+.list-view .list-cell:hover .text {
+    -fx-fill: white !important;
+}
 
 .list-view .list-cell:focused { /* Add focused state */
     -fx-background-color: #A11A1A !important; /* Red for focused, similar to selected */
@@ -274,6 +327,9 @@
 
 .list-view .list-cell:focused .label { /* Ensure label text is white when focused */
     -fx-text-fill: white !important;
+}
+.list-view .list-cell:focused .text {
+    -fx-fill: white !important;
 }
 
 
@@ -466,9 +522,12 @@
     -fx-padding: 5 10;
 }
 
-.context-menu .label {
-    -fx-text-fill: #E0E0E0; /* text-light */
+.context-menu .menu-item .label { /* Ensure default text is white */
+    -fx-text-fill: white !important;
     -fx-font-size: 14px;
+}
+.context-menu .menu-item .text { /* Ensure any Text nodes are white */
+    -fx-fill: white !important;
 }
 
 .context-menu .menu-item:focused {
@@ -479,6 +538,9 @@
 .context-menu .menu-item:focused .label {
     -fx-text-fill: white !important;
 }
+.context-menu .menu-item:focused .text {
+    -fx-fill: white !important;
+}
 
 .context-menu .menu-item:hover {
     -fx-background-color: #BC2323 !important; /* A slightly lighter red for hover */
@@ -487,7 +549,10 @@
 }
 
 .context-menu .menu-item:hover .label {
-    -fx-text-fill: white !important; /* Ensure label text is white on hover */
+    -fx-text-fill: white !important;
+}
+.context-menu .menu-item:hover .text {
+    -fx-fill: white !important;
 }
 
 /* Separator in context menu */
@@ -511,8 +576,11 @@
 
 .combo-box-popup .list-view .list-cell {
     -fx-background-color: transparent;
-    -fx-text-fill: #E0E0E0; /* Color de texto por defecto */
+    -fx-text-fill: white !important; /* Color de texto por defecto */
     -fx-padding: 5 10;
+}
+.combo-box-popup .list-view .list-cell .text {
+    -fx-fill: white !important; /* Ensure any Text nodes are white */
 }
 
 .combo-box-popup .list-view .list-cell:hover {
@@ -523,6 +591,9 @@
 .combo-box-popup .list-view .list-cell:hover .label {
     -fx-text-fill: white !important;
 }
+.combo-box-popup .list-view .list-cell:hover .text {
+    -fx-fill: white !important;
+}
 
 .combo-box-popup .list-view .list-cell:focused {
     -fx-background-color: #A11A1A !important; /* Rojo para el focused */
@@ -532,6 +603,9 @@
 .combo-box-popup .list-view .list-cell:focused .label {
     -fx-text-fill: white !important;
 }
+.combo-box-popup .list-view .list-cell:focused .text {
+    -fx-fill: white !important;
+}
 
 .combo-box-popup .list-view .list-cell:selected {
     -fx-background-color: #A11A1A !important; /* Rojo para el selected */
@@ -540,6 +614,55 @@
 
 .combo-box-popup .list-view .list-cell:selected .label {
     -fx-text-fill: white !important;
+}
+.combo-box-popup .list-view .list-cell:selected .text {
+    -fx-fill: white !important;
+}
+
+/* Intento de apuntar a cualquier celda de lista dentro de un popup */
+.popup .list-view .list-cell:hover {
+    -fx-background-color: #BC2323 !important;
+    -fx-text-fill: white !important;
+}
+.popup .list-view .list-cell:focused {
+    -fx-background-color: #A11A1A !important;
+    -fx-text-fill: white !important;
+}
+.popup .list-view .list-cell:selected {
+    -fx-background-color: #A11A1A !important;
+    -fx-text-fill: white !important;
+}
+
+
+.popup .list-view .list-cell:hover .text,
+.popup .list-view .list-cell:focused .text,
+.popup .list-view .list-cell:selected .text {
+    -fx-fill: white !important;
+}
+
+.popup .list-view .list-cell:hover .label,
+.popup .list-view .list-cell:focused .label,
+.popup .list-view .list-cell:selected .label {
+    -fx-text-fill: white !important;
+}
+
+/* Regla universal para forzar texto blanco en elementos seleccionados/hovered/focused */
+.table-row-cell:selected *,
+.table-row-cell:hover *,
+.table-row-cell:focused *,
+.list-cell:selected *,
+.list-cell:hover *,
+.list-cell:focused *,
+.menu-item:focused *,
+.menu-item:hover *,
+.combo-box-popup .list-view .list-cell:selected *,
+.combo-box-popup .list-view .list-cell:hover *,
+.combo-box-popup .list-view .list-cell:focused *,
+.popup .list-view .list-cell:selected *,
+.popup .list-view .list-cell:hover *,
+.popup .list-view .list-cell:focused * {
+    -fx-text-fill: white !important;
+    -fx-fill: white !important;
 }
 
 
