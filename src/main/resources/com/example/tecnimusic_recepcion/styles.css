@@ -242,7 +242,7 @@
 
 .list-view .list-cell {
     -fx-background-color: #0A192F;
-    -fx-text-fill: white;
+    -fx-text-fill: white; /* Default text color for list cells */
 }
 
 .list-view .list-cell:odd {
@@ -250,9 +250,32 @@
 }
 
 .list-view .list-cell:selected {
-    -fx-background-color: #A11A1A;
-    -fx-text-fill: white;
+    -fx-background-color: #A11A1A !important; /* Red for selected */
+    -fx-text-fill: white !important;
 }
+
+.list-view .list-cell:selected .label { /* Ensure label text is white when selected */
+    -fx-text-fill: white !important;
+}
+
+.list-view .list-cell:hover {
+    -fx-background-color: #BC2323 !important; /* Red for hover */
+    -fx-text-fill: white !important;
+}
+
+.list-view .list-cell:hover .label { /* Ensure label text is white on hover */
+    -fx-text-fill: white !important;
+}
+
+.list-view .list-cell:focused { /* Add focused state */
+    -fx-background-color: #A11A1A !important; /* Red for focused, similar to selected */
+    -fx-text-fill: white !important;
+}
+
+.list-view .list-cell:focused .label { /* Ensure label text is white when focused */
+    -fx-text-fill: white !important;
+}
+
 
 /* ScrollBar */
 .scroll-bar:horizontal .track,
@@ -449,12 +472,22 @@
 }
 
 .context-menu .menu-item:focused {
-    -fx-background-color: #A11A1A; /* Red accent for selection */
+    -fx-background-color: #A11A1A !important; /* Red accent for selection */
     -fx-background-radius: 4;
 }
 
 .context-menu .menu-item:focused .label {
-    -fx-text-fill: white;
+    -fx-text-fill: white !important;
+}
+
+.context-menu .menu-item:hover {
+    -fx-background-color: #BC2323 !important; /* A slightly lighter red for hover */
+    -fx-background-radius: 4;
+    -fx-text-fill: white !important; /* Explicitly set text color on hover */
+}
+
+.context-menu .menu-item:hover .label {
+    -fx-text-fill: white !important; /* Ensure label text is white on hover */
 }
 
 /* Separator in context menu */
@@ -463,6 +496,52 @@
     -fx-border-insets: 0;
     -fx-border-width: 1;
 }
+
+/* ======================================================= */
+/* === Estilos para ComboBox Popup (Autocompletado)    === */
+/* ======================================================= */
+
+.combo-box-popup .list-view {
+    -fx-background-color: #1E2A3A; /* Fondo del popup */
+    -fx-border-color: #303E4D;
+    -fx-border-width: 1px;
+    -fx-background-radius: 6;
+    -fx-border-radius: 6;
+}
+
+.combo-box-popup .list-view .list-cell {
+    -fx-background-color: transparent;
+    -fx-text-fill: #E0E0E0; /* Color de texto por defecto */
+    -fx-padding: 5 10;
+}
+
+.combo-box-popup .list-view .list-cell:hover {
+    -fx-background-color: #BC2323 !important; /* Rojo para el hover */
+    -fx-text-fill: white !important;
+}
+
+.combo-box-popup .list-view .list-cell:hover .label {
+    -fx-text-fill: white !important;
+}
+
+.combo-box-popup .list-view .list-cell:focused {
+    -fx-background-color: #A11A1A !important; /* Rojo para el focused */
+    -fx-text-fill: white !important;
+}
+
+.combo-box-popup .list-view .list-cell:focused .label {
+    -fx-text-fill: white !important;
+}
+
+.combo-box-popup .list-view .list-cell:selected {
+    -fx-background-color: #A11A1A !important; /* Rojo para el selected */
+    -fx-text-fill: white !important;
+}
+
+.combo-box-popup .list-view .list-cell:selected .label {
+    -fx-text-fill: white !important;
+}
+
 
 .separator {
     -fx-background-color: #303E4D;
