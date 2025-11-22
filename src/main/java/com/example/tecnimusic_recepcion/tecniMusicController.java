@@ -60,7 +60,7 @@ public class tecniMusicController {
     @FXML private DatePicker ordenFechaPicker, entregaFechaPicker;
     @FXML private StyleClassedTextArea equipoFallaArea, aclaracionesArea, equipoEstadoFisicoArea, equipoInformeTecnicoArea;
     @FXML private HBox actionButtonsBox;
-    @FXML private Button guardarButton, limpiarButton, salirButton, printButton, testPdfButton, accesoriosButton;
+    @FXML private Button guardarButton, limpiarButton, salirButton, printReceptionButton, printClosureButton, testPdfButton, accesoriosButton;
 
     // Nuevos campos para múltiples equipos
     @FXML private TableView<Equipo> equiposTable;
@@ -84,6 +84,7 @@ public class tecniMusicController {
     private String serieEquipoSeleccionado = null;
     private boolean isAutoCompleting = false;
     private boolean isViewOnlyMode = false;
+    private HojaServicioData currentHojaServicioData; // Campo para almacenar la HojaServicioData
     private static final Locale SPANISH_MEXICO_LOCALE = new Locale("es", "MX");
 
     private final ObservableList<String> clienteSuggestions = FXCollections.observableArrayList();
@@ -143,9 +144,13 @@ public class tecniMusicController {
         if (updateEquipoButton != null) updateEquipoButton.setOnAction(e -> onUpdateEquipo());
 
 
-        if (printButton != null) {
-            printButton.setVisible(false);
-            printButton.setManaged(false);
+        if (printReceptionButton != null) {
+            printReceptionButton.setVisible(false);
+            printReceptionButton.setManaged(false);
+        }
+        if (printClosureButton != null) {
+            printClosureButton.setVisible(false);
+            printClosureButton.setManaged(false);
         }
         
         if (testPdfButton != null) {
@@ -402,6 +407,7 @@ public class tecniMusicController {
 
     public void loadForViewing(HojaServicioData data) {
         this.isViewOnlyMode = true;
+        this.currentHojaServicioData = data; // Guardar la HojaServicioData original
         populateFormWithData(data);
 
         setNodesDisabled(true, clienteNombreField, clienteDireccionField, clienteTelefonoField, equipoSerieField, equipoTipoField, equipoCompaniaField, equipoModeloField, anticipoField, ordenFechaPicker, entregaFechaPicker, equipoFallaArea, equipoEstadoFisicoArea, aclaracionesArea, accesoriosButton);
@@ -412,8 +418,11 @@ public class tecniMusicController {
         limpiarButton.setManaged(false);
         salirButton.setText("Cerrar Vista");
 
-        printButton.setVisible(true);
-        printButton.setManaged(true);
+        printReceptionButton.setVisible(true);
+        printReceptionButton.setManaged(true);
+        printClosureButton.setVisible(true);
+        printClosureButton.setManaged(true);
+
 
         // Configurar modo cierre
         cierreBox.setVisible(true);
@@ -436,8 +445,10 @@ public class tecniMusicController {
         if ("CERRADA".equals(data.getEstado())) {
             setNodesDisabled(true, cierreButton, updateEquipoButton, equipoCostoField, equipoInformeTecnicoArea);
             cierreButton.setText("Hoja Cerrada");
+            printClosureButton.setDisable(false);
         } else {
             setNodesDisabled(false, cierreButton, updateEquipoButton, equipoCostoField, equipoInformeTecnicoArea);
+            printClosureButton.setDisable(true);
         }
     }
 
@@ -494,10 +505,12 @@ public class tecniMusicController {
             
             DatabaseService.getInstance().cerrarHojaServicio(hojaId, "", new ArrayList<>(equiposObservable), totalCostos);
 
-            HojaServicioData data = createHojaServicioDataFromForm(ordenNumeroField.getText());
-            data.setEstado("CERRADA");
+            // Actualizar el estado en currentHojaServicioData después de cerrar
+            currentHojaServicioData.setEstado("CERRADA");
+            currentHojaServicioData.setEquipos(new ArrayList<>(equiposObservable)); // Asegurarse de que los equipos actualizados estén en el objeto
+            currentHojaServicioData.setTotalCostos(totalCostos); // Actualizar el total de costos
 
-            String pdfPath = new PdfGenerator().generatePdf(data);
+            String pdfPath = new PdfGenerator().generatePdf(currentHojaServicioData, false); // Usar el objeto actualizado
 
             showAlert(Alert.AlertType.INFORMATION, "Hoja Cerrada", "La hoja de servicio ha sido cerrada y el PDF de cierre ha sido generado.");
 
@@ -514,16 +527,33 @@ public class tecniMusicController {
 
 
     @FXML
-    protected void onPrintClicked() {
+    protected void onPrintReceptionClicked() {
         try {
-            HojaServicioData data = createHojaServicioDataFromForm(ordenNumeroField.getText());
-            String pdfPath = new PdfGenerator().generatePdf(data);
+            // Usar currentHojaServicioData para la impresión de recepción
+            String pdfPath = new PdfGenerator().generatePdf(currentHojaServicioData, true); // Forzar recepción
             performPrint(pdfPath);
-        } catch (IOException | ParseException e) {
+        } catch (IOException e) {
             showAlert(Alert.AlertType.ERROR, "Error de PDF", "No se pudo generar el PDF. Error: " + e.getMessage());
             e.printStackTrace();
         }
     }
+
+    @FXML
+    protected void onPrintClosureClicked() {
+        try {
+            if (!"CERRADA".equals(currentHojaServicioData.getEstado())) {
+                showAlert(Alert.AlertType.WARNING, "Hoja no Cerrada", "La hoja de servicio debe estar cerrada para poder imprimir el informe de cierre.");
+                return;
+            }
+            // Usar currentHojaServicioData para la impresión de cierre
+            String pdfPath = new PdfGenerator().generatePdf(currentHojaServicioData, false); // No forzar recepción, usar estado real
+            performPrint(pdfPath);
+        } catch (IOException e) {
+            showAlert(Alert.AlertType.ERROR, "Error de PDF", "No se pudo generar el PDF. Error: " + e.getMessage());
+            e.printStackTrace();
+        }
+    }
+
 
     @FXML
     protected void onTestPdfClicked() {
@@ -746,7 +776,7 @@ public class tecniMusicController {
         isAutoCompleting = true;
         isViewOnlyMode = false;
 
-        setNodesVisible(false, cierreBox, subtotalBox, totalBox, updateEquipoButton, cierreButton, printButton);
+        setNodesVisible(false, cierreBox, subtotalBox, totalBox, updateEquipoButton, cierreButton, printReceptionButton, printClosureButton);
         setNodesVisible(true, addEquipoButton, removeEquipoButton, guardarButton, limpiarButton);
         colCosto.setVisible(false);
         colInforme.setVisible(false);

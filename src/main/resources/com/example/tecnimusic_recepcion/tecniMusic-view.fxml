@@ -219,7 +219,12 @@
                         <Font name="System Bold" size="14.0" />
                      </font>
                   </Button>
-                  <Button fx:id="printButton" mnemonicParsing="false" onAction="#onPrintClicked" text="Imprimir Hoja de Servicio">
+                  <Button fx:id="printReceptionButton" mnemonicParsing="false" onAction="#onPrintReceptionClicked" text="Imprimir Recepción">
+                     <font>
+                        <Font name="System Bold" size="14.0" />
+                     </font>
+                  </Button>
+                  <Button fx:id="printClosureButton" mnemonicParsing="false" onAction="#onPrintClosureClicked" text="Imprimir Cierre" visible="false" managed="false">
                      <font>
                         <Font name="System Bold" size="14.0" />
                      </font>
