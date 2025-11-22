@@ -37,9 +37,35 @@ public class DatabaseService {
             ensureCostoColumnExistsInEquiposTable(conn);
             ensureEstadoFisicoColumnExists(conn);
             ensureAccesoriosColumnExists(conn);
-            ensureAccesoriosSugerenciasTableExists(conn); // Añadir la nueva verificación
+            ensureAccesoriosSugerenciasTableExists(conn);
+            ensureEstadoAndInformeTecnicoColumnsExist(conn); // Añadir la nueva verificación
         }
     }
+
+    private void ensureEstadoAndInformeTecnicoColumnsExist(Connection conn) throws SQLException {
+        // Verificar y añadir columna 'estado'
+        String checkEstadoSql = "SELECT COUNT(*) FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'x_hojas_servicio' AND COLUMN_NAME = 'estado'";
+        try (Statement stmt = conn.createStatement(); ResultSet rs = stmt.executeQuery(checkEstadoSql)) {
+            if (rs.next() && rs.getInt(1) == 0) {
+                String addEstadoSql = "ALTER TABLE x_hojas_servicio ADD COLUMN estado VARCHAR(50) DEFAULT 'ABIERTA'";
+                try (Statement alterStmt = conn.createStatement()) {
+                    alterStmt.execute(addEstadoSql);
+                }
+            }
+        }
+
+        // Verificar y añadir columna 'informe_tecnico'
+        String checkInformeSql = "SELECT COUNT(*) FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'x_hojas_servicio' AND COLUMN_NAME = 'informe_tecnico'";
+        try (Statement stmt = conn.createStatement(); ResultSet rs = stmt.executeQuery(checkInformeSql)) {
+            if (rs.next() && rs.getInt(1) == 0) {
+                String addInformeSql = "ALTER TABLE x_hojas_servicio ADD COLUMN informe_tecnico TEXT";
+                try (Statement alterStmt = conn.createStatement()) {
+                    alterStmt.execute(addInformeSql);
+                }
+            }
+        }
+    }
+
 
     private void ensureAccesoriosSugerenciasTableExists(Connection conn) throws SQLException {
         String sql = "CREATE TABLE IF NOT EXISTS x_accesorios_sugerencias (" +
@@ -447,7 +473,7 @@ public class DatabaseService {
     }
 
     private long insertarHojaServicioMaestra(Connection conn, long clienteId, LocalDate fechaOrden, String informeDiagnostico, BigDecimal subtotal, BigDecimal anticipo, LocalDate fechaEntrega, String firmaAclaracion, String aclaraciones) throws SQLException {
-        String sql = "INSERT INTO x_hojas_servicio (fecha_orden, cliente_id, asset_id, equipo_serie, equipo_tipo, equipo_marca, equipo_modelo, falla_reportada, informe_costos, total_costos, anticipo, fecha_entrega, firma_aclaracion, aclaraciones) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
+        String sql = "INSERT INTO x_hojas_servicio (fecha_orden, cliente_id, asset_id, equipo_serie, equipo_tipo, equipo_marca, equipo_modelo, falla_reportada, informe_costos, total_costos, anticipo, fecha_entrega, firma_aclaracion, aclaraciones, estado) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'ABIERTA')";
         try (PreparedStatement pstmt = conn.prepareStatement(sql, Statement.RETURN_GENERATED_KEYS)) {
             pstmt.setDate(1, fechaOrden != null ? Date.valueOf(fechaOrden) : null);
             pstmt.setLong(2, clienteId);
@@ -526,6 +552,17 @@ public class DatabaseService {
         return -1; // No records found
     }
 
+    public void cerrarHojaServicio(long hojaId, String informeTecnico) throws SQLException {
+        String sql = "UPDATE x_hojas_servicio SET estado = 'CERRADA', informe_tecnico = ?, fecha_entrega = ? WHERE id = ?";
+        try (Connection conn = DatabaseManager.getInstance().getConnection();
+             PreparedStatement pstmt = conn.prepareStatement(sql)) {
+            pstmt.setString(1, informeTecnico);
+            pstmt.setDate(2, Date.valueOf(LocalDate.now())); // Establece la fecha de entrega al día actual
+            pstmt.setLong(3, hojaId);
+            pstmt.executeUpdate();
+        }
+    }
+
     /**
      * Obtiene todos los datos de una hoja de servicio, incluyendo sus equipos, para reconstruirla.
      * @param hojaId El ID de la hoja de servicio a obtener.
@@ -564,6 +601,11 @@ public class DatabaseService {
                 data.setAclaraciones(rsHoja.getString("aclaraciones"));
                 data.setFirmaAclaracion("");
                 data.setInformeCostos(rsHoja.getString("informe_costos"));
+
+                // Nuevos campos
+                data.setEstado(rsHoja.getString("estado"));
+                data.setInformeTecnico(rsHoja.getString("informe_tecnico"));
+
 
                 // Ahora, cargar los equipos asociados
                 String sqlEquipos = "SELECT * FROM x_hojas_servicio_equipos WHERE hoja_id = ?";

@@ -65,6 +65,12 @@ public class tecniMusicController {
     @FXML private TableColumn<Equipo, String> colTipo, colMarca, colModelo, colSerie, colFalla, colCosto, colEstadoFisico, colAccesorios;
     @FXML private Button addEquipoButton, removeEquipoButton;
 
+    // Componentes para el cierre de la hoja
+    @FXML private TitledPane cierrePane;
+    @FXML private StyleClassedTextArea informeTecnicoArea;
+    @FXML private Button cierreButton;
+
+
     private final ObservableList<Equipo> equiposObservable = FXCollections.observableArrayList();
     private final ObservableList<String> accesoriosList = FXCollections.observableArrayList();
 
@@ -161,6 +167,10 @@ public class tecniMusicController {
         if (aclaracionesArea != null) {
             setupSpellChecking(aclaracionesArea);
             aclaracionesArea.setStyle("-fx-background-color: #1E2A3A; -fx-text-fill: white;");
+        }
+        if (informeTecnicoArea != null) {
+            setupSpellChecking(informeTecnicoArea);
+            informeTecnicoArea.setStyle("-fx-background-color: #1E2A3A; -fx-text-fill: white;");
         }
         // Configurar estilo para equipoAccesoriosArea
         if (equipoAccesoriosArea != null) {
@@ -433,36 +443,46 @@ public class tecniMusicController {
         this.isViewOnlyMode = true;
         populateFormWithData(data);
 
-        for (Node node : List.of(clienteNombreField, clienteDireccionField, clienteTelefonoField, equipoSerieField, equipoTipoField, equipoCompaniaField, equipoModeloField, equipoCostoField, anticipoField, ordenFechaPicker, entregaFechaPicker, equipoFallaArea, equipoEstadoFisicoArea, aclaracionesArea, accesoriosButton)) {
-            if (node instanceof TextInputControl) {
-                ((TextInputControl) node).setEditable(false);
-            } else if (node instanceof StyleClassedTextArea) {
-                ((StyleClassedTextArea) node).setEditable(false);
-            } else if (node instanceof DatePicker) {
-                ((DatePicker) node).setEditable(false);
-                ((DatePicker) node).setDisable(true);
-            } else if (node instanceof Button) {
-                ((Button) node).setDisable(true);
-            }
+        // Deshabilitar todos los campos por defecto
+        for (Node node : List.of(clienteNombreField, clienteDireccionField, clienteTelefonoField, equipoSerieField, equipoTipoField, equipoCompaniaField, equipoModeloField, equipoCostoField, anticipoField, ordenFechaPicker, entregaFechaPicker, equipoFallaArea, equipoEstadoFisicoArea, aclaracionesArea, accesoriosButton, addEquipoButton, removeEquipoButton)) {
+            node.setDisable(true);
         }
-        // Deshabilitar equipoAccesoriosArea en modo solo lectura
         if (equipoAccesoriosArea != null) {
             equipoAccesoriosArea.setEditable(false);
         }
 
-        // Deshabilitar gestión de equipos en vista sólo lectura
-        if (addEquipoButton != null) addEquipoButton.setDisable(true);
-        if (removeEquipoButton != null) removeEquipoButton.setDisable(true);
-
+        // Ocultar botones de acción principal
         guardarButton.setVisible(false);
-    limpiarButton.setVisible(false);
         guardarButton.setManaged(false);
+        limpiarButton.setVisible(false);
         limpiarButton.setManaged(false);
         salirButton.setText("Cerrar Vista");
 
+        // Mostrar botón de impresión
         if (printButton != null) {
             printButton.setVisible(true);
             printButton.setManaged(true);
+        }
+
+        // Lógica para el panel de cierre
+        if (cierrePane != null) {
+            cierrePane.setVisible(true);
+            cierrePane.setManaged(true);
+            cierreButton.setVisible(true);
+            cierreButton.setManaged(true);
+
+            if (data.getInformeTecnico() != null) {
+                informeTecnicoArea.replaceText(data.getInformeTecnico());
+            }
+
+            if ("CERRADA".equals(data.getEstado())) {
+                informeTecnicoArea.setEditable(false);
+                cierreButton.setDisable(true);
+                cierreButton.setText("Hoja Cerrada");
+            } else {
+                informeTecnicoArea.setEditable(true);
+                cierreButton.setDisable(false);
+            }
         }
     }
 
@@ -532,6 +552,51 @@ public class tecniMusicController {
             showAlert(Alert.AlertType.ERROR, "Error de PDF", "No se pudo generar el PDF. Error: " + e.getMessage());
         }
     }
+
+    @FXML
+    protected void onCierreClicked() {
+        String informe = informeTecnicoArea.getText();
+        if (informe == null || informe.trim().isEmpty()) {
+            showAlert(Alert.AlertType.WARNING, "Campo Requerido", "El informe técnico no puede estar vacío para cerrar la hoja.");
+            return;
+        }
+
+        if (!showConfirmationDialog("Confirmar Cierre", "¿Está seguro de que desea cerrar esta hoja de servicio? Una vez cerrada, no podrá ser modificada.")) {
+            return;
+        }
+
+        try {
+            long hojaId = Long.parseLong(ordenNumeroField.getText().split("-")[2]);
+            DatabaseService.getInstance().cerrarHojaServicio(hojaId, informe);
+
+            HojaServicioData data = createHojaServicioDataFromForm(ordenNumeroField.getText());
+            data.setInformeTecnico(informe); // Asegurarse de que el informe esté en los datos para el PDF
+            data.setEstado("CERRADA");
+
+            String pdfPath = new PdfGenerator().generatePdf(data);
+
+            showAlert(Alert.AlertType.INFORMATION, "Hoja Cerrada", "La hoja de servicio ha sido cerrada y el PDF de cierre ha sido generado.");
+
+            if (Desktop.isDesktopSupported()) {
+                try {
+                    Desktop.getDesktop().open(new File(pdfPath));
+                } catch (IOException e) {
+                    showAlert(Alert.AlertType.ERROR, "Error al Abrir PDF", "No se pudo abrir el PDF automáticamente.");
+                }
+            }
+            
+            Stage stage = (Stage) cierreButton.getScene().getWindow();
+            stage.close();
+
+        } catch (SQLException e) {
+            showAlert(Alert.AlertType.ERROR, "Error de Base de Datos", "No se pudo cerrar la hoja de servicio. Error: " + e.getMessage());
+        } catch (IOException | ParseException e) {
+            showAlert(Alert.AlertType.ERROR, "Error de PDF", "No se pudo generar el PDF de cierre. Error: " + e.getMessage());
+        } catch (NumberFormatException e) {
+            showAlert(Alert.AlertType.ERROR, "Error de Formato", "El número de orden no tiene el formato esperado.");
+        }
+    }
+
 
     @FXML
     protected void onPrintClicked() {
@@ -801,6 +866,16 @@ public class tecniMusicController {
         }
         isAutoCompleting = false;
         predecirYAsignarNumeroDeOrden();
+
+        // Ocultar panel de cierre en modo creación
+        if (cierrePane != null) {
+            cierrePane.setVisible(false);
+            cierrePane.setManaged(false);
+        }
+        if (cierreButton != null) {
+            cierreButton.setVisible(false);
+            cierreButton.setManaged(false);
+        }
     }
 
     private boolean isFormDirty() {
@@ -841,6 +916,10 @@ public class tecniMusicController {
         data.setFechaEntrega(entregaFechaPicker.getValue());
         data.setFirmaAclaracion("");
         data.setAclaraciones(aclaracionesArea.getText());
+        if (informeTecnicoArea != null) {
+            data.setInformeTecnico(informeTecnicoArea.getText());
+        }
+
 
         // Subtotal de costos
         data.setTotalCostos(parseCurrency(subtotalLabel.getText())); // totalCostos en HojaServicioData ahora es el subtotal

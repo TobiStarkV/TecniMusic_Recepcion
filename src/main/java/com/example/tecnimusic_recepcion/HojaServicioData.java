@@ -31,6 +31,11 @@ public class HojaServicioData {
     private String firmaAclaracion;
     private String aclaraciones;
 
+    // Nuevos campos para el cierre
+    private String informeTecnico;
+    private String estado;
+
+
     // Nueva lista de equipos para soportar múltiples equipos en la misma hoja
     private List<Equipo> equipos = new ArrayList<>();
 
@@ -197,5 +202,21 @@ public class HojaServicioData {
 
     public void setAccesorios(String accesorios) {
         this.accesorios = accesorios;
+    }
+
+    public String getInformeTecnico() {
+        return informeTecnico;
+    }
+
+    public void setInformeTecnico(String informeTecnico) {
+        this.informeTecnico = informeTecnico;
+    }
+
+    public String getEstado() {
+        return estado;
+    }
+
+    public void setEstado(String estado) {
+        this.estado = estado;
     }
 }

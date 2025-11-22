@@ -46,7 +46,8 @@ public class PdfGenerator {
     }
 
     public String generatePdf(HojaServicioData data) throws IOException {
-        String dest = crearRutaDestinoPdf(data.getNumeroOrden());
+        boolean isCierre = data.getInformeTecnico() != null && !data.getInformeTecnico().trim().isEmpty();
+        String dest = crearRutaDestinoPdf(data.getNumeroOrden() + (isCierre ? "_CIERRE" : ""));
         if (dest == null) return null;
 
         PdfWriter writer = new PdfWriter(dest);
@@ -59,13 +60,13 @@ public class PdfGenerator {
 
         // --- Contenido Principal ---
         agregarEncabezado(document);
-        agregarInformacionOrden(document, data);
+        agregarInformacionOrden(document, data, isCierre);
         document.add(new LineSeparator(new com.itextpdf.kernel.pdf.canvas.draw.SolidLine(1)).setMarginTop(5).setMarginBottom(5));
-        agregarSeccionesDeDatos(document, data, headerColor);
+        agregarSeccionesDeDatos(document, data, headerColor, isCierre);
         agregarMarcaDeAgua(pdf);
 
         // --- Contenido Final (Solo en la última página) ---
-        agregarFirmaYPieDePagina(pdf, document, data.getClienteNombre());
+        agregarFirmaYPieDePagina(pdf, document, data.getClienteNombre(), isCierre);
         
         // --- Numeración de Páginas ---
         agregarNumerosDePagina(pdf, document);
@@ -98,7 +99,7 @@ public class PdfGenerator {
         }
     }
 
-    private void agregarFirmaYPieDePagina(PdfDocument pdf, Document doc, String clienteNombre) {
+    private void agregarFirmaYPieDePagina(PdfDocument pdf, Document doc, String clienteNombre, boolean isCierre) {
         PdfPage lastPage = pdf.getLastPage();
         Rectangle pageSize = lastPage.getPageSize();
         PdfCanvas pdfCanvas = new PdfCanvas(lastPage);
@@ -114,10 +115,12 @@ public class PdfGenerator {
         pdfCanvas.lineTo(centerX + (signatureLineWidth / 2), signatureLineY);
         pdfCanvas.stroke();
 
+        String firmaTitle = isCierre ? "Recibido y de Conformidad" : "Firma de Conformidad";
+
         try (Canvas signatureTextCanvas = new Canvas(pdfCanvas, pageSize)) {
             signatureTextCanvas
                 .showTextAligned(new Paragraph(clienteNombre).setFontSize(9), centerX, signatureLineY - 15, TextAlignment.CENTER)
-                .showTextAligned(new Paragraph("Firma de Conformidad").setFontSize(8).setItalic(), centerX, signatureLineY - 25, TextAlignment.CENTER);
+                .showTextAligned(new Paragraph(firmaTitle).setFontSize(8).setItalic(), centerX, signatureLineY - 25, TextAlignment.CENTER);
         }
 
         float footerTextY = 30;
@@ -164,8 +167,9 @@ public class PdfGenerator {
         document.add(headerTable);
     }
 
-    private void agregarInformacionOrden(Document document, HojaServicioData data) {
-        document.add(new Paragraph("Hoja de Servicio de Recepción").setTextAlignment(TextAlignment.CENTER).setFontSize(16).setBold().setMarginTop(10));
+    private void agregarInformacionOrden(Document document, HojaServicioData data, boolean isCierre) {
+        String title = isCierre ? "Hoja de Cierre de Servicio" : "Hoja de Servicio de Recepción";
+        document.add(new Paragraph(title).setTextAlignment(TextAlignment.CENTER).setFontSize(16).setBold().setMarginTop(10));
         Table orderInfoTable = new Table(UnitValue.createPercentArray(new float[]{1, 1})).useAllAvailableWidth().setMarginTop(5);
         addInfoRow(orderInfoTable, "No. de Orden:", data.getNumeroOrden(), true);
         LocalDate fechaOrden = data.getFechaOrden();
@@ -173,7 +177,7 @@ public class PdfGenerator {
         document.add(orderInfoTable);
     }
 
-    private void agregarSeccionesDeDatos(Document document, HojaServicioData data, com.itextpdf.kernel.colors.Color headerColor) {
+    private void agregarSeccionesDeDatos(Document document, HojaServicioData data, com.itextpdf.kernel.colors.Color headerColor, boolean isCierre) {
         document.add(createSectionHeader("Datos del Cliente", headerColor));
         Table clienteTable = new Table(UnitValue.createPercentArray(new float[]{1, 4})).useAllAvailableWidth().setMarginTop(5);
         addInfoRow(clienteTable, "Nombre:", data.getClienteNombre(), false);
@@ -234,6 +238,11 @@ public class PdfGenerator {
         totalesTable.addCell(new com.itextpdf.layout.element.Cell().add(new Paragraph(currencyFormat.format(totalFinal))).setTextAlignment(TextAlignment.RIGHT).setBorder(Border.NO_BORDER).setBold().setFontSize(12));
 
         document.add(totalesTable);
+
+        if (isCierre) {
+            document.add(createSectionHeader("Informe Técnico de Reparación", headerColor));
+            document.add(new Paragraph(data.getInformeTecnico()).setFontSize(9).setMarginTop(5));
+        }
 
         document.add(createSectionHeader("Entrega y Cierre", headerColor));
         LocalDate fechaEntrega = data.getFechaEntrega();

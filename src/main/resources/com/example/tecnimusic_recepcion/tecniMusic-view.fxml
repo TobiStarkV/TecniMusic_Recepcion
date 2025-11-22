@@ -193,6 +193,18 @@
                      </content>
                   </TitledPane>
 
+                  <!-- Panel de Cierre de Servicio -->
+                  <TitledPane fx:id="cierrePane" animated="false" text="Informe Técnico de Cierre" visible="false" managed="false">
+                     <content>
+                        <VBox spacing="10.0">
+                           <children>
+                              <Label text="Describa la reparación o servicio realizado:" />
+                              <StyleClassedTextArea fx:id="informeTecnicoArea" prefHeight="120.0" wrapText="true" styleClass="falla-reportada-text-area" />
+                           </children>
+                        </VBox>
+                     </content>
+                  </TitledPane>
+
                </children>
                <padding>
                   <Insets right="5.0" />
@@ -212,6 +224,11 @@
                      </font>
                   </Button>
                   <Button fx:id="printButton" mnemonicParsing="false" onAction="#onPrintClicked" text="Imprimir Hoja de Servicio">
+                     <font>
+                        <Font name="System Bold" size="14.0" />
+                     </font>
+                  </Button>
+                  <Button fx:id="cierreButton" mnemonicParsing="false" onAction="#onCierreClicked" text="Finalizar y Generar Cierre" visible="false" managed="false">
                      <font>
                         <Font name="System Bold" size="14.0" />
                      </font>

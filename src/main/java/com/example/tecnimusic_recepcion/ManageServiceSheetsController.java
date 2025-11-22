@@ -1,5 +1,6 @@
 package com.example.tecnimusic_recepcion;
 
+import javafx.beans.property.SimpleStringProperty;
 import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
 import javafx.fxml.FXML;
@@ -37,6 +38,8 @@ public class ManageServiceSheetsController {
     @FXML
     private TableColumn<ServiceSheetSummary, String> equipmentCol;
     @FXML
+    private TableColumn<ServiceSheetSummary, String> statusCol;
+    @FXML
     private Button salirButton;
 
     private final ObservableList<ServiceSheetSummary> serviceSheets = FXCollections.observableArrayList();
@@ -54,6 +57,8 @@ public class ManageServiceSheetsController {
         dateCol.setCellValueFactory(new PropertyValueFactory<>("date"));
         clientNameCol.setCellValueFactory(new PropertyValueFactory<>("clientName"));
         equipmentCol.setCellValueFactory(new PropertyValueFactory<>("equipment"));
+        statusCol.setCellValueFactory(new PropertyValueFactory<>("status"));
+
 
         serviceSheetsTable.setItems(serviceSheets);
 
@@ -73,7 +78,7 @@ public class ManageServiceSheetsController {
     private void searchAndLoadServiceSheets(String searchTerm) {
         serviceSheets.clear();
 
-        String baseSql = "SELECT hs.numero_orden, hs.fecha_orden, c.nombre as cliente_nombre, " +
+        String baseSql = "SELECT hs.numero_orden, hs.fecha_orden, c.nombre as cliente_nombre, hs.estado, " +
                          "GROUP_CONCAT( " +
                          "    TRIM(CONCAT_WS(' ', " +
                          "        hse.equipo_tipo, " +
@@ -93,10 +98,10 @@ public class ManageServiceSheetsController {
         if (hasSearchTerm) {
             sql = baseSql + "WHERE hs.numero_orden LIKE ? OR c.nombre LIKE ? OR " +
                           "hse.equipo_serie LIKE ? OR hse.equipo_marca LIKE ? OR hse.equipo_modelo LIKE ? " +
-                          "GROUP BY hs.id, hs.numero_orden, hs.fecha_orden, c.nombre " +
+                          "GROUP BY hs.id, hs.numero_orden, hs.fecha_orden, c.nombre, hs.estado " +
                           "ORDER BY hs.id DESC";
         } else {
-            sql = baseSql + "GROUP BY hs.id, hs.numero_orden, hs.fecha_orden, c.nombre " +
+            sql = baseSql + "GROUP BY hs.id, hs.numero_orden, hs.fecha_orden, c.nombre, hs.estado " +
                           "ORDER BY hs.id DESC";
         }
 
@@ -119,8 +124,9 @@ public class ManageServiceSheetsController {
                 LocalDate date = rs.getDate("fecha_orden").toLocalDate();
                 String clientName = rs.getString("cliente_nombre");
                 String equipmentSummary = rs.getString("equipment_summary");
+                String status = rs.getString("estado");
 
-                serviceSheets.add(new ServiceSheetSummary(orderNumber, date, clientName, equipmentSummary != null ? equipmentSummary : ""));
+                serviceSheets.add(new ServiceSheetSummary(orderNumber, date, clientName, equipmentSummary != null ? equipmentSummary : "", status));
             }
 
         } catch (SQLException e) {
@@ -192,6 +198,10 @@ public class ManageServiceSheetsController {
                 stage.setScene(scene);
                 stage.initModality(Modality.APPLICATION_MODAL);
                 stage.showAndWait();
+                
+                // Después de cerrar la ventana de detalles, refrescar la tabla
+                searchAndLoadServiceSheets(searchField.getText());
+
             } catch (IOException e) {
                 showAlert(Alert.AlertType.ERROR, "Error de Carga", "No se pudo abrir la ventana de detalles.");
                 e.printStackTrace();
@@ -206,8 +216,7 @@ public class ManageServiceSheetsController {
     }
 
     private void fetchAndProcessServiceSheet(String orderNumber, java.util.function.Consumer<HojaServicioData> dataConsumer) {
-        String sql = "SELECT hs.*, c.nombre as cliente_nombre, c.direccion as cliente_direccion, c.telefono as cliente_telefono " +
-                     "FROM x_hojas_servicio hs JOIN x_clientes c ON hs.cliente_id = c.id WHERE hs.numero_orden = ?";
+        String sql = "SELECT hs.id FROM x_hojas_servicio hs WHERE hs.numero_orden = ?";
 
         try (Connection conn = DatabaseManager.getInstance().getConnection();
              PreparedStatement pstmt = conn.prepareStatement(sql)) {
@@ -216,8 +225,13 @@ public class ManageServiceSheetsController {
             ResultSet rs = pstmt.executeQuery();
 
             if (rs.next()) {
-                HojaServicioData data = createHojaServicioDataFromResultSet(rs, conn);
-                dataConsumer.accept(data);
+                long hojaId = rs.getLong("id");
+                HojaServicioData data = DatabaseService.getInstance().getHojaServicioCompleta(hojaId);
+                if (data != null) {
+                    dataConsumer.accept(data);
+                } else {
+                    showAlert(Alert.AlertType.ERROR, "Error", "No se pudieron obtener los detalles completos para la hoja de servicio seleccionada.");
+                }
             } else {
                 showAlert(Alert.AlertType.ERROR, "Error", "No se encontraron los detalles para la hoja de servicio seleccionada.");
             }
@@ -248,6 +262,9 @@ public class ManageServiceSheetsController {
         data.setAclaraciones(rs.getString("aclaraciones"));
         data.setFirmaAclaracion("");
         data.setInformeCostos(rs.getString("informe_costos"));
+        data.setEstado(rs.getString("estado"));
+        data.setInformeTecnico(rs.getString("informe_tecnico"));
+
 
         // Cargar equipos asociados
         data.setEquipos(loadEquiposForHojaServicio(hojaServicioId, conn));
@@ -288,21 +305,24 @@ public class ManageServiceSheetsController {
     }
 
     public static class ServiceSheetSummary {
-        private final String orderNumber;
+        private final SimpleStringProperty orderNumber;
         private final LocalDate date;
-        private final String clientName;
-        private final String equipment;
+        private final SimpleStringProperty clientName;
+        private final SimpleStringProperty equipment;
+        private final SimpleStringProperty status;
 
-        public ServiceSheetSummary(String orderNumber, LocalDate date, String clientName, String equipment) {
-            this.orderNumber = orderNumber;
+        public ServiceSheetSummary(String orderNumber, LocalDate date, String clientName, String equipment, String status) {
+            this.orderNumber = new SimpleStringProperty(orderNumber);
             this.date = date;
-            this.clientName = clientName;
-            this.equipment = equipment;
+            this.clientName = new SimpleStringProperty(clientName);
+            this.equipment = new SimpleStringProperty(equipment);
+            this.status = new SimpleStringProperty(status);
         }
 
-        public String getOrderNumber() { return orderNumber; }
+        public String getOrderNumber() { return orderNumber.get(); }
         public LocalDate getDate() { return date; }
-        public String getClientName() { return clientName; }
-        public String getEquipment() { return equipment; }
+        public String getClientName() { return clientName.get(); }
+        public String getEquipment() { return equipment.get(); }
+        public String getStatus() { return status.get(); }
     }
 }
