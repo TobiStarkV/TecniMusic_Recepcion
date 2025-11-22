@@ -11,6 +11,7 @@ import com.itextpdf.kernel.pdf.canvas.PdfCanvas;
 import com.itextpdf.layout.Canvas;
 import com.itextpdf.layout.Document;
 import com.itextpdf.layout.borders.Border;
+import com.itextpdf.layout.borders.SolidBorder;
 import com.itextpdf.layout.element.Image;
 import com.itextpdf.layout.element.LineSeparator;
 import com.itextpdf.layout.element.Paragraph;
@@ -46,7 +47,7 @@ public class PdfGenerator {
     }
 
     public String generatePdf(HojaServicioData data) throws IOException {
-        boolean isCierre = data.getInformeTecnico() != null && !data.getInformeTecnico().trim().isEmpty();
+        boolean isCierre = "CERRADA".equals(data.getEstado());
         String dest = crearRutaDestinoPdf(data.getNumeroOrden() + (isCierre ? "_CIERRE" : ""));
         if (dest == null) return null;
 
@@ -58,17 +59,12 @@ public class PdfGenerator {
 
         com.itextpdf.kernel.colors.Color headerColor = new DeviceRgb(45, 65, 84);
 
-        // --- Contenido Principal ---
         agregarEncabezado(document);
         agregarInformacionOrden(document, data, isCierre);
         document.add(new LineSeparator(new com.itextpdf.kernel.pdf.canvas.draw.SolidLine(1)).setMarginTop(5).setMarginBottom(5));
         agregarSeccionesDeDatos(document, data, headerColor, isCierre);
         agregarMarcaDeAgua(pdf);
-
-        // --- Contenido Final (Solo en la última página) ---
         agregarFirmaYPieDePagina(pdf, document, data.getClienteNombre(), isCierre);
-        
-        // --- Numeración de Páginas ---
         agregarNumerosDePagina(pdf, document);
 
         document.close();
@@ -77,24 +73,14 @@ public class PdfGenerator {
 
     private void agregarNumerosDePagina(PdfDocument pdf, Document doc) {
         int totalPages = pdf.getNumberOfPages();
-        if (totalPages <= 1) {
-            return; // No añadir números si solo hay una página
-        }
+        if (totalPages <= 1) return;
 
         for (int i = 1; i <= totalPages; i++) {
             PdfPage page = pdf.getPage(i);
             Rectangle pageSize = page.getPageSize();
-            PdfCanvas pdfCanvas = new PdfCanvas(page);
-
-            String pageText = "Página " + i + " de " + totalPages;
-            
-            // Posición: Centro superior de la página
-            float x = pageSize.getWidth() / 2;
-            float y = pageSize.getTop() - 20; // 20 puntos desde el borde superior
-
-            new Canvas(pdfCanvas, pageSize)
+            new Canvas(new PdfCanvas(page), pageSize)
                 .setFontSize(8)
-                .showTextAligned(pageText, x, y, TextAlignment.CENTER)
+                .showTextAligned("Página " + i + " de " + totalPages, pageSize.getWidth() / 2, pageSize.getTop() - 20, TextAlignment.CENTER)
                 .close();
         }
     }
@@ -105,15 +91,12 @@ public class PdfGenerator {
         PdfCanvas pdfCanvas = new PdfCanvas(lastPage);
 
         float margin = doc.getLeftMargin();
-        float printableWidth = pageSize.getWidth() - (margin * 2);
         float centerX = pageSize.getWidth() / 2;
         
         float signatureLineY = 100;
         float signatureLineWidth = 140;
 
-        pdfCanvas.moveTo(centerX - (signatureLineWidth / 2), signatureLineY);
-        pdfCanvas.lineTo(centerX + (signatureLineWidth / 2), signatureLineY);
-        pdfCanvas.stroke();
+        pdfCanvas.moveTo(centerX - (signatureLineWidth / 2), signatureLineY).lineTo(centerX + (signatureLineWidth / 2), signatureLineY).stroke();
 
         String firmaTitle = isCierre ? "Recibido y de Conformidad" : "Firma de Conformidad";
 
@@ -123,15 +106,9 @@ public class PdfGenerator {
                 .showTextAligned(new Paragraph(firmaTitle).setFontSize(8).setItalic(), centerX, signatureLineY - 25, TextAlignment.CENTER);
         }
 
-        float footerTextY = 30;
-        float footerTextHeight = 40;
-        Rectangle footerTextRect = new Rectangle(margin, footerTextY, printableWidth, footerTextHeight);
-
+        Rectangle footerTextRect = new Rectangle(margin, 30, pageSize.getWidth() - (margin * 2), 40);
         try (Canvas footerCanvas = new Canvas(pdfCanvas, footerTextRect)) {
-            footerCanvas.add(new Paragraph(pdfFooter)
-                .setFontSize(6)
-                .setItalic()
-                .setTextAlignment(TextAlignment.CENTER));
+            footerCanvas.add(new Paragraph(pdfFooter).setFontSize(6).setItalic().setTextAlignment(TextAlignment.CENTER));
         }
     }
 
@@ -152,9 +129,7 @@ public class PdfGenerator {
             return;
         }
 
-        Image logo = new Image(ImageDataFactory.create(logoUrl));
-        logo.setHeight(40);
-
+        Image logo = new Image(ImageDataFactory.create(logoUrl)).setHeight(40);
         Table headerTable = new Table(UnitValue.createPercentArray(new float[]{1, 3})).useAllAvailableWidth();
         headerTable.addCell(new com.itextpdf.layout.element.Cell().add(logo).setBorder(Border.NO_BORDER));
 
@@ -185,40 +160,33 @@ public class PdfGenerator {
         addInfoRow(clienteTable, "Dirección:", data.getClienteDireccion(), false);
         document.add(clienteTable);
 
-        document.add(createSectionHeader("Equipos y Desglose de Costos", headerColor));
+        document.add(createSectionHeader("Equipos y Desglose", headerColor));
 
         List<Equipo> equipos = data.getEquipos();
         if (equipos != null && !equipos.isEmpty()) {
-            Table equiposCostosTable = new Table(UnitValue.createPercentArray(new float[]{1.5f, 1.5f, 1.5f, 1.5f, 2, 2, 3, 1.5f})).useAllAvailableWidth().setMarginTop(5);
-
-            equiposCostosTable.addHeaderCell(new com.itextpdf.layout.element.Cell().add(new Paragraph("Tipo").setBold().setFontSize(9)).setBorder(Border.NO_BORDER));
-            equiposCostosTable.addHeaderCell(new com.itextpdf.layout.element.Cell().add(new Paragraph("Marca").setBold().setFontSize(9)).setBorder(Border.NO_BORDER));
-            equiposCostosTable.addHeaderCell(new com.itextpdf.layout.element.Cell().add(new Paragraph("Modelo").setBold().setFontSize(9)).setBorder(Border.NO_BORDER));
-            equiposCostosTable.addHeaderCell(new com.itextpdf.layout.element.Cell().add(new Paragraph("Serie").setBold().setFontSize(9)).setBorder(Border.NO_BORDER));
-            equiposCostosTable.addHeaderCell(new com.itextpdf.layout.element.Cell().add(new Paragraph("Estado Físico").setBold().setFontSize(9)).setBorder(Border.NO_BORDER));
-            equiposCostosTable.addHeaderCell(new com.itextpdf.layout.element.Cell().add(new Paragraph("Accesorios").setBold().setFontSize(9)).setBorder(Border.NO_BORDER));
-            equiposCostosTable.addHeaderCell(new com.itextpdf.layout.element.Cell().add(new Paragraph("Falla Reportada").setBold().setFontSize(9)).setBorder(Border.NO_BORDER));
-            equiposCostosTable.addHeaderCell(new com.itextpdf.layout.element.Cell().add(new Paragraph("Costo").setBold().setFontSize(9).setTextAlignment(TextAlignment.RIGHT)).setBorder(Border.NO_BORDER));
-
-            NumberFormat currencyFormat = NumberFormat.getCurrencyInstance(SPANISH_MEXICO_LOCALE);
-
             for (Equipo eq : equipos) {
-                equiposCostosTable.addCell(new com.itextpdf.layout.element.Cell().add(new Paragraph(nullToEmpty(eq.getTipo())).setFontSize(8)).setBorder(Border.NO_BORDER));
-                equiposCostosTable.addCell(new com.itextpdf.layout.element.Cell().add(new Paragraph(nullToEmpty(eq.getMarca())).setFontSize(8)).setBorder(Border.NO_BORDER));
-                equiposCostosTable.addCell(new com.itextpdf.layout.element.Cell().add(new Paragraph(nullToEmpty(eq.getModelo())).setFontSize(8)).setBorder(Border.NO_BORDER));
-                equiposCostosTable.addCell(new com.itextpdf.layout.element.Cell().add(new Paragraph(nullToEmpty(eq.getSerie())).setFontSize(8)).setBorder(Border.NO_BORDER));
-                equiposCostosTable.addCell(new com.itextpdf.layout.element.Cell().add(new Paragraph(nullToEmpty(eq.getEstadoFisico())).setFontSize(8)).setBorder(Border.NO_BORDER));
-                equiposCostosTable.addCell(new com.itextpdf.layout.element.Cell().add(new Paragraph(nullToEmpty(eq.getAccesorios())).setFontSize(8)).setBorder(Border.NO_BORDER));
-                equiposCostosTable.addCell(new com.itextpdf.layout.element.Cell().add(new Paragraph(nullToEmpty(eq.getFalla())).setFontSize(8)).setBorder(Border.NO_BORDER));
-                String costoFormateado = eq.getCosto() != null ? currencyFormat.format(eq.getCosto()) : currencyFormat.format(0);
-                equiposCostosTable.addCell(new com.itextpdf.layout.element.Cell().add(new Paragraph(costoFormateado).setFontSize(8).setTextAlignment(TextAlignment.RIGHT)).setBorder(Border.NO_BORDER));
+                Table equipoTable = new Table(UnitValue.createPercentArray(new float[]{1, 2, 1, 2})).useAllAvailableWidth().setMarginTop(10);
+                addInfoRow(equipoTable, "Tipo:", nullToEmpty(eq.getTipo()), false);
+                addInfoRow(equipoTable, "Marca:", nullToEmpty(eq.getMarca()), false);
+                addInfoRow(equipoTable, "Modelo:", nullToEmpty(eq.getModelo()), false);
+                addInfoRow(equipoTable, "Serie:", nullToEmpty(eq.getSerie()), false);
+                document.add(equipoTable);
+
+                Table detallesTable = new Table(UnitValue.createPercentArray(new float[]{1, 1})).useAllAvailableWidth().setMarginTop(2);
+                addDetailCell(detallesTable, "Estado Físico", nullToEmpty(eq.getEstadoFisico()));
+                addDetailCell(detallesTable, "Accesorios", nullToEmpty(eq.getAccesorios()));
+                addDetailCell(detallesTable, "Falla Reportada", nullToEmpty(eq.getFalla()));
+                if (isCierre) {
+                    addDetailCell(detallesTable, "Informe Técnico", nullToEmpty(eq.getInformeTecnico()));
+                }
+                document.add(detallesTable);
+                document.add(new LineSeparator(new com.itextpdf.kernel.pdf.canvas.draw.DashedLine()).setMarginTop(5));
             }
-            document.add(equiposCostosTable);
         } else {
             document.add(new Paragraph("No se han registrado equipos.").setFontSize(9).setMarginTop(5));
         }
 
-        document.add(new LineSeparator(new com.itextpdf.kernel.pdf.canvas.draw.SolidLine(0.5f)).setMarginTop(5));
+        document.add(new LineSeparator(new com.itextpdf.kernel.pdf.canvas.draw.SolidLine(0.5f)).setMarginTop(10));
 
         Table totalesTable = new Table(UnitValue.createPercentArray(new float[]{3, 1})).useAllAvailableWidth().setMarginTop(5);
         totalesTable.setBorder(Border.NO_BORDER);
@@ -239,12 +207,7 @@ public class PdfGenerator {
 
         document.add(totalesTable);
 
-        if (isCierre) {
-            document.add(createSectionHeader("Informe Técnico de Reparación", headerColor));
-            document.add(new Paragraph(data.getInformeTecnico()).setFontSize(9).setMarginTop(5));
-        }
-
-        document.add(createSectionHeader("Entrega y Cierre", headerColor));
+        document.add(createSectionHeader("Entrega y Aclaraciones", headerColor));
         LocalDate fechaEntrega = data.getFechaEntrega();
         Table entregaTable = new Table(UnitValue.createPercentArray(new float[]{1, 4})).useAllAvailableWidth().setMarginTop(5);
         addInfoRow(entregaTable, "Fecha de Entrega:", (fechaEntrega != null ? fechaEntrega.format(DateTimeFormatter.ofPattern("dd/MM/yyyy")) : "Pendiente"), false);
@@ -256,6 +219,15 @@ public class PdfGenerator {
             document.add(new Paragraph(aclaraciones).setFontSize(9));
         }
     }
+
+    private void addDetailCell(Table table, String title, String content) {
+        com.itextpdf.layout.element.Cell cell = new com.itextpdf.layout.element.Cell();
+        cell.setBorder(new SolidBorder(ColorConstants.LIGHT_GRAY, 0.5f));
+        cell.add(new Paragraph(title).setBold().setFontSize(8));
+        cell.add(new Paragraph(content).setFontSize(8));
+        table.addCell(cell);
+    }
+
 
     private void agregarMarcaDeAgua(PdfDocument pdf) throws IOException {
         URL logoUrl = getClass().getClassLoader().getResource("logo.png");

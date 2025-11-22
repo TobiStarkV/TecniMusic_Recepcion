@@ -12,10 +12,11 @@ public class Equipo {
     private BigDecimal costo;
     private String estadoFisico;
     private String accesorios;
+    private String informeTecnico; // Nuevo campo para el informe técnico individual
 
     public Equipo() {}
 
-    public Equipo(Long id, String tipo, String marca, String serie, String modelo, String falla, BigDecimal costo, String estadoFisico, String accesorios) {
+    public Equipo(Long id, String tipo, String marca, String serie, String modelo, String falla, BigDecimal costo, String estadoFisico, String accesorios, String informeTecnico) {
         this.id = id;
         this.tipo = tipo;
         this.marca = marca;
@@ -25,16 +26,17 @@ public class Equipo {
         this.costo = costo;
         this.estadoFisico = estadoFisico;
         this.accesorios = accesorios;
+        this.informeTecnico = informeTecnico;
     }
 
-    // Constructor para la creación inicial (sin ID)
+    // Constructor para la creación inicial (sin ID ni informe)
     public Equipo(String tipo, String marca, String serie, String modelo, String falla, BigDecimal costo, String estadoFisico, String accesorios) {
-        this(null, tipo, marca, serie, modelo, falla, costo, estadoFisico, accesorios);
+        this(null, tipo, marca, serie, modelo, falla, costo, estadoFisico, accesorios, null);
     }
 
     // Constructor anterior para mantener compatibilidad
     public Equipo(String tipo, String marca, String serie, String modelo, String falla, BigDecimal costo, String estadoFisico) {
-        this(null, tipo, marca, serie, modelo, falla, costo, estadoFisico, "");
+        this(null, tipo, marca, serie, modelo, falla, costo, estadoFisico, "", null);
     }
     
     public Long getId() {
@@ -107,5 +109,13 @@ public class Equipo {
 
     public void setAccesorios(String accesorios) {
         this.accesorios = accesorios;
+    }
+
+    public String getInformeTecnico() {
+        return informeTecnico;
+    }
+
+    public void setInformeTecnico(String informeTecnico) {
+        this.informeTecnico = informeTecnico;
     }
 }

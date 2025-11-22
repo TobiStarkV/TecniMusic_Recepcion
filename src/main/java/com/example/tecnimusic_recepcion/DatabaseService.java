@@ -38,7 +38,20 @@ public class DatabaseService {
             ensureEstadoFisicoColumnExists(conn);
             ensureAccesoriosColumnExists(conn);
             ensureAccesoriosSugerenciasTableExists(conn);
-            ensureEstadoAndInformeTecnicoColumnsExist(conn); // Añadir la nueva verificación
+            ensureEstadoAndInformeTecnicoColumnsExist(conn);
+            ensureInformeTecnicoColumnInEquiposTableExists(conn); // Nueva verificación
+        }
+    }
+
+    private void ensureInformeTecnicoColumnInEquiposTableExists(Connection conn) throws SQLException {
+        String checkColumnSql = "SELECT COUNT(*) FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'x_hojas_servicio_equipos' AND COLUMN_NAME = 'informe_tecnico'";
+        try (Statement stmt = conn.createStatement(); ResultSet rs = stmt.executeQuery(checkColumnSql)) {
+            if (rs.next() && rs.getInt(1) == 0) {
+                String addColumnSql = "ALTER TABLE x_hojas_servicio_equipos ADD COLUMN informe_tecnico TEXT";
+                try (Statement alterStmt = conn.createStatement()) {
+                    alterStmt.execute(addColumnSql);
+                }
+            }
         }
     }
 
@@ -54,7 +67,7 @@ public class DatabaseService {
             }
         }
 
-        // Verificar y añadir columna 'informe_tecnico'
+        // Verificar y añadir columna 'informe_tecnico' (en la tabla principal, para mantener compatibilidad o uso general)
         String checkInformeSql = "SELECT COUNT(*) FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'x_hojas_servicio' AND COLUMN_NAME = 'informe_tecnico'";
         try (Statement stmt = conn.createStatement(); ResultSet rs = stmt.executeQuery(checkInformeSql)) {
             if (rs.next() && rs.getInt(1) == 0) {
@@ -157,21 +170,6 @@ public class DatabaseService {
     // Métodos auxiliares (cliente, asset, modelos, etc.)
     // --------------------------------------------------
 
-    /**
-     * Gestiona un cliente en la tabla personalizada {@code x_clientes}.
-     * <p>
-     * Si se proporciona un ID de cliente, lo devuelve directamente.
-     * Si no, busca un cliente por nombre y teléfono. Si lo encuentra, devuelve su ID.
-     * Si no existe, crea un nuevo registro de cliente y devuelve el nuevo ID generado.
-     *
-     * @param conn La conexión a la base de datos.
-     * @param idClienteSeleccionado El ID del cliente si fue seleccionado por autocompletado (puede ser null).
-     * @param nombreCliente El nombre del cliente.
-     * @param telefonoCliente El teléfono del cliente.
-     * @param direccionCliente La dirección del cliente.
-     * @return El ID del cliente (existente o nuevo).
-     * @throws SQLException Si ocurre un error en la base de datos.
-     */
     private long gestionarCliente(Connection conn, Long idClienteSeleccionado, String nombreCliente, String telefonoCliente, String direccionCliente) throws SQLException {
         if (idClienteSeleccionado != null) return idClienteSeleccionado;
 
@@ -199,33 +197,10 @@ public class DatabaseService {
         throw new SQLException("No se pudo crear ni encontrar el cliente.");
     }
 
-    /**
-     * Gestiona un activo (Asset) en la base de datos de Snipe-IT.
-     * <p>
-     * Este método es central para la integración con Snipe-IT. Su lógica es la siguiente:
-     * 1. Busca el activo por su número de serie.
-     * 2. Si no lo encuentra, orquesta la creación de un nuevo activo. Esto implica:
-     *    - Gestionar el modelo, la compañía, el fabricante y la categoría (creándolos si no existen).
-     *    - Asignar un estado "Pendiente" por defecto.
-     *    - Insertar el nuevo activo en la tabla {@code assets}.
-     * 3. Una vez que el activo existe (ya sea porque se encontró o porque se creó), actualiza su campo personalizado
-     *    {@code _snipeit_cliente_2} con el nombre del cliente actual. Esto asegura que el activo siempre esté
-     *    vinculado al último cliente que lo trajo.
-     *
-     * @param conn La conexión a la base de datos.
-     * @param serieEquipo El número de serie del equipo.
-     * @param companiaEquipo El nombre de la compañía (usado como Marca y Compañía en Snipe-IT).
-     * @param modeloEquipo El modelo del equipo.
-     * @param tipoEquipo El tipo/categoría del equipo.
-     * @param nombreCliente El nombre del cliente para vincularlo al activo.
-     * @return El ID del activo (existente o nuevo).
-     * @throws SQLException Si ocurre un error en la base de datos.
-     */
     private Long gestionarAsset(Connection conn, String serieEquipo, String companiaEquipo, String modeloEquipo, String tipoEquipo, String nombreCliente) throws SQLException {
         Long assetId = null;
         String nombreClienteSimple = (nombreCliente == null) ? "" : nombreCliente.split("\\s*\\|\\s*")[0].trim();
 
-        // 1. Buscar el activo por número de serie (si se proporcionó serie)
         String serieEquipoTrimmed = serieEquipo == null ? "" : serieEquipo.trim();
         if (!serieEquipoTrimmed.isEmpty()) {
             String sqlSelect = "SELECT id FROM assets WHERE serial = ?";
@@ -236,9 +211,8 @@ public class DatabaseService {
             }
         }
 
-        // 2. Si el activo no existe, crearlo (si hay serie); si existe, actualizar el cliente asociado.
         if (assetId == null) {
-            if (serieEquipoTrimmed.isEmpty()) return null; // no creamos asset sin serie
+            if (serieEquipoTrimmed.isEmpty()) return null;
 
             long modelId = gestionarModelo(conn, modeloEquipo, companiaEquipo, tipoEquipo);
             long statusId = obtenerIdStatusPendiente(conn);
@@ -247,7 +221,6 @@ public class DatabaseService {
             String sqlInsert = "INSERT INTO assets (asset_tag, serial, model_id, status_id, name, company_id, _snipeit_cliente_2, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, NOW(), NOW())";
             try (PreparedStatement pstmtInsert = conn.prepareStatement(sqlInsert, Statement.RETURN_GENERATED_KEYS)) {
                 String assetTag = "TEC-" + System.currentTimeMillis();
-                // los parámetros se normalizan por los llamadores ("" si no hay valor), así que podemos trimear directamente
                 String marca = companiaEquipo.trim();
                 String modelo = modeloEquipo.trim();
                 String assetName = (marca + " " + modelo).trim();
@@ -279,16 +252,6 @@ public class DatabaseService {
         return assetId;
     }
 
-
-    /**
-     * Actualiza la hoja de servicio recién creada con su número de orden final.
-     * El número de orden se construye usando el ID de la hoja de servicio (ej. "TM-2024-123").
-     *
-     * @param conn La conexión a la base de datos.
-     * @param hojaId El ID de la hoja de servicio a actualizar.
-     * @param numeroOrden El número de orden final a asignar.
-     * @throws SQLException Si la actualización falla.
-     */
     private void actualizarNumeroDeOrden(Connection conn, long hojaId, String numeroOrden) throws SQLException {
         String sql = "UPDATE x_hojas_servicio SET numero_orden = ? WHERE id = ?";
         try (PreparedStatement pstmt = conn.prepareStatement(sql)) {
@@ -298,19 +261,6 @@ public class DatabaseService {
         }
     }
 
-    /**
-     * Gestiona un modelo de equipo en la tabla {@code models} de Snipe-IT.
-     * <p>
-     * Busca un modelo por su nombre, ID de fabricante y ID de categoría. Si no existe, lo crea.
-     * Este método depende de la gestión previa del fabricante (marca) y la categoría (tipo).
-     *
-     * @param conn La conexión a la base de datos.
-     * @param nombreModelo El nombre del modelo a gestionar.
-     * @param nombreMarca El nombre de la marca/fabricante asociado al modelo.
-     * @param nombreCategoria El nombre de la categoría asociada al modelo.
-     * @return El ID del modelo (existente o nuevo).
-     * @throws SQLException Si los datos son inválidos o la operación falla.
-     */
     private long gestionarModelo(Connection conn, String nombreModelo, String nombreMarca, String nombreCategoria) throws SQLException {
         if (nombreModelo == null || nombreModelo.trim().isEmpty()) throw new SQLException("El nombre del modelo no puede estar vacío.");
 
@@ -338,19 +288,6 @@ public class DatabaseService {
         throw new SQLException("No se pudo crear ni encontrar el modelo '" + nombreModelo.trim() + "'.");
     }
 
-    /**
-     * Método genérico para gestionar una entidad simple en una tabla (ej. companies, manufacturers, categories).
-     * <p>
-     * Busca una entidad por su nombre en la tabla especificada. Si no la encuentra, la crea.
-     * Es un método de utilidad para evitar la repetición de código.
-     *
-     * @param conn La conexión a la base de datos.
-     * @param tabla El nombre de la tabla (ej. "companies").
-     * @param nombre El nombre de la entidad a buscar o crear.
-     * @param mensajeError El mensaje de error a lanzar si el nombre está vacío.
-     * @return El ID de la entidad (existente o nueva).
-     * @throws SQLException Si el nombre es inválido o la operación falla.
-     */
     private long gestionarEntidad(Connection conn, String tabla, String nombre, String mensajeError) throws SQLException {
         if (nombre == null || nombre.trim().isEmpty()) throw new SQLException(mensajeError);
         String nombreTrimmed = nombre.trim();
@@ -371,17 +308,6 @@ public class DatabaseService {
         throw new SQLException("No se pudo crear ni encontrar la entidad en la tabla '" + tabla + "' con nombre '" + nombreTrimmed + "'.");
     }
 
-    /**
-     * Obtiene el ID del estado por defecto para los equipos nuevos.
-     * <p>
-     * Busca en la tabla {@code status_labels} un estado que sea de tipo "pendiente".
-     * Primero, intenta encontrarlo por la columna booleana {@code pending = 1}.
-     * Si falla, como respaldo, busca un estado cuyo nombre sea exactamente "Pendiente".
-     *
-     * @param conn La conexión a la base de datos.
-     * @return El ID del estado "pendiente".
-     * @throws SQLException Si no se encuentra un estado apropiado, lo que impediría registrar nuevos equipos.
-     */
     private long obtenerIdStatusPendiente(Connection conn) throws SQLException {
         String sql = "SELECT id FROM status_labels WHERE pending = 1 ORDER BY id LIMIT 1";
         try (Statement stmt = conn.createStatement(); ResultSet rs = stmt.executeQuery(sql)) {
@@ -420,19 +346,10 @@ public class DatabaseService {
         }
     }
 
-    // --------------------------------------------------
-    // API pública: guardar hoja con múltiples equipos
-    // --------------------------------------------------
-
-    /**
-     * Nueva sobrecarga: guarda una hoja de servicio que puede contener múltiples equipos.
-     * Crea una entrada maestra en {@code x_hojas_servicio} y luego inserta las filas de equipos
-     * en {@code x_hojas_servicio_equipos} enlazadas por el id de la hoja.
-     */
     public String guardarHojaServicioCompleta(
             Long idClienteSeleccionado, String nombreCliente, String telefonoCliente, String direccionCliente,
             List<Equipo> equipos,
-            LocalDate fechaOrden, String informeDiagnostico, BigDecimal subtotal, BigDecimal anticipo, // Changed parameters
+            LocalDate fechaOrden, String informeDiagnostico, BigDecimal subtotal, BigDecimal anticipo,
             LocalDate fechaEntrega, String firmaAclaracion, String aclaraciones) throws SQLException {
 
         Connection conn = null;
@@ -442,7 +359,6 @@ public class DatabaseService {
 
             long clienteId = gestionarCliente(conn, idClienteSeleccionado, nombreCliente, telefonoCliente, direccionCliente);
 
-            // Crear la hoja maestra (sin datos de equipo específicos) y obtener su ID
             long hojaId = insertarHojaServicioMaestra(conn, clienteId, fechaOrden, informeDiagnostico, subtotal, anticipo, fechaEntrega, firmaAclaracion, aclaraciones);
             String realOrdenNumero = "TM-" + LocalDate.now().getYear() + "-" + hojaId;
             actualizarNumeroDeOrden(conn, hojaId, realOrdenNumero);
@@ -477,7 +393,7 @@ public class DatabaseService {
         try (PreparedStatement pstmt = conn.prepareStatement(sql, Statement.RETURN_GENERATED_KEYS)) {
             pstmt.setDate(1, fechaOrden != null ? Date.valueOf(fechaOrden) : null);
             pstmt.setLong(2, clienteId);
-            pstmt.setNull(3, Types.INTEGER); // asset_id nulo en la hoja maestra
+            pstmt.setNull(3, Types.INTEGER);
             pstmt.setNull(4, Types.VARCHAR);
             pstmt.setNull(5, Types.VARCHAR);
             pstmt.setNull(6, Types.VARCHAR);
@@ -507,7 +423,7 @@ public class DatabaseService {
                 "equipo_marca VARCHAR(255), " +
                 "equipo_modelo VARCHAR(255), " +
                 "falla_reportada TEXT, " +
-                "costo DECIMAL(10, 2), " + // Añadida la columna costo
+                "costo DECIMAL(10, 2), " +
                 "created_at DATETIME DEFAULT NOW(), " +
                 "updated_at DATETIME DEFAULT NOW()" +
                 ")";
@@ -531,15 +447,6 @@ public class DatabaseService {
         }
     }
 
-    // --------------------------------------------------
-    // API pública: leer hoja para PDF de prueba
-    // --------------------------------------------------
-
-    /**
-     * Obtiene el ID de la última hoja de servicio creada.
-     * @return El ID más alto de la tabla x_hojas_servicio, o -1 si no hay ninguna.
-     * @throws SQLException Si ocurre un error de base de datos.
-     */
     public long getLastHojaServicioId() throws SQLException {
         String sql = "SELECT MAX(id) FROM x_hojas_servicio";
         try (Connection conn = DatabaseManager.getInstance().getConnection();
@@ -549,32 +456,31 @@ public class DatabaseService {
                 return rs.getLong(1);
             }
         }
-        return -1; // No records found
+        return -1;
     }
 
-    public void cerrarHojaServicio(long hojaId, String informeTecnico, List<Equipo> equipos, BigDecimal totalCostos) throws SQLException {
+    public void cerrarHojaServicio(long hojaId, String informeTecnicoGeneral, List<Equipo> equipos, BigDecimal totalCostos) throws SQLException {
         Connection conn = null;
         try {
             conn = DatabaseManager.getInstance().getConnection();
             conn.setAutoCommit(false);
 
-            // 1. Actualizar la hoja de servicio principal
             String sqlHoja = "UPDATE x_hojas_servicio SET estado = 'CERRADA', informe_tecnico = ?, fecha_entrega = ?, total_costos = ? WHERE id = ?";
             try (PreparedStatement pstmt = conn.prepareStatement(sqlHoja)) {
-                pstmt.setString(1, informeTecnico);
+                pstmt.setString(1, informeTecnicoGeneral);
                 pstmt.setDate(2, Date.valueOf(LocalDate.now()));
                 pstmt.setBigDecimal(3, totalCostos);
                 pstmt.setLong(4, hojaId);
                 pstmt.executeUpdate();
             }
 
-            // 2. Actualizar el costo de cada equipo
-            String sqlEquipo = "UPDATE x_hojas_servicio_equipos SET costo = ? WHERE id = ?";
+            String sqlEquipo = "UPDATE x_hojas_servicio_equipos SET costo = ?, informe_tecnico = ? WHERE id = ?";
             try (PreparedStatement pstmt = conn.prepareStatement(sqlEquipo)) {
                 for (Equipo equipo : equipos) {
-                    if (equipo.getId() != null) { // Solo actualizar equipos que ya existen en la BD
+                    if (equipo.getId() != null) {
                         pstmt.setBigDecimal(1, equipo.getCosto());
-                        pstmt.setLong(2, equipo.getId());
+                        pstmt.setString(2, equipo.getInformeTecnico());
+                        pstmt.setLong(3, equipo.getId());
                         pstmt.addBatch();
                     }
                 }
@@ -591,13 +497,6 @@ public class DatabaseService {
         }
     }
 
-
-    /**
-     * Obtiene todos los datos de una hoja de servicio, incluyendo sus equipos, para reconstruirla.
-     * @param hojaId El ID de la hoja de servicio a obtener.
-     * @return Un objeto HojaServicioData completamente poblado, o null si no se encuentra.
-     * @throws SQLException Si ocurre un error de base de datos.
-     */
     public HojaServicioData getHojaServicioCompleta(long hojaId) throws SQLException {
         HojaServicioData data = null;
         String sqlHoja = "SELECT hs.*, c.nombre as cliente_nombre, c.direccion as cliente_direccion, c.telefono as cliente_telefono " +
@@ -631,19 +530,16 @@ public class DatabaseService {
                 data.setFirmaAclaracion("");
                 data.setInformeCostos(rsHoja.getString("informe_costos"));
 
-                // Nuevos campos
                 data.setEstado(rsHoja.getString("estado"));
                 data.setInformeTecnico(rsHoja.getString("informe_tecnico"));
 
-
-                // Ahora, cargar los equipos asociados
                 String sqlEquipos = "SELECT * FROM x_hojas_servicio_equipos WHERE hoja_id = ?";
                 try (PreparedStatement pstmtEquipos = conn.prepareStatement(sqlEquipos)) {
                     pstmtEquipos.setLong(1, hojaId);
                     ResultSet rsEquipos = pstmtEquipos.executeQuery();
                     List<Equipo> equipos = new ArrayList<>();
                     while (rsEquipos.next()) {
-                        Equipo equipo = new Equipo(
+                        equipos.add(new Equipo(
                             rsEquipos.getLong("id"),
                             rsEquipos.getString("equipo_tipo"),
                             rsEquipos.getString("equipo_marca"),
@@ -652,9 +548,9 @@ public class DatabaseService {
                             rsEquipos.getString("falla_reportada"),
                             rsEquipos.getBigDecimal("costo"),
                             rsEquipos.getString("estado_fisico"),
-                            rsEquipos.getString("accesorios")
-                        );
-                        equipos.add(equipo);
+                            rsEquipos.getString("accesorios"),
+                            rsEquipos.getString("informe_tecnico")
+                        ));
                     }
                     data.setEquipos(equipos);
                 }

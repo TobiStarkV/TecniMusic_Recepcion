@@ -2,6 +2,7 @@ package com.example.tecnimusic_recepcion;
 
 import javafx.animation.PauseTransition;
 import javafx.application.Platform;
+import javafx.beans.property.SimpleStringProperty;
 import javafx.collections.FXCollections;
 import javafx.collections.ListChangeListener;
 import javafx.collections.ObservableList;
@@ -14,6 +15,7 @@ import javafx.scene.control.*;
 import javafx.scene.image.Image;
 import javafx.scene.layout.GridPane;
 import javafx.scene.layout.HBox;
+import javafx.scene.layout.VBox;
 import javafx.stage.Modality;
 import javafx.stage.Stage;
 import javafx.util.Duration;
@@ -56,22 +58,19 @@ public class tecniMusicController {
     @FXML private TextField ordenNumeroField, clienteNombreField, clienteDireccionField, clienteTelefonoField;
     @FXML private TextField equipoSerieField, equipoTipoField, equipoCompaniaField, equipoModeloField, equipoCostoField, anticipoField;
     @FXML private DatePicker ordenFechaPicker, entregaFechaPicker;
-    @FXML private StyleClassedTextArea equipoFallaArea, aclaracionesArea, equipoEstadoFisicoArea;
-    @FXML private StyleClassedTextArea equipoAccesoriosArea; // Añadido: Declaración de equipoAccesoriosArea
+    @FXML private StyleClassedTextArea equipoFallaArea, aclaracionesArea, equipoEstadoFisicoArea, equipoInformeTecnicoArea;
     @FXML private HBox actionButtonsBox;
     @FXML private Button guardarButton, limpiarButton, salirButton, printButton, testPdfButton, accesoriosButton;
 
     // Nuevos campos para múltiples equipos
     @FXML private TableView<Equipo> equiposTable;
-    @FXML private TableColumn<Equipo, String> colTipo, colMarca, colModelo, colSerie, colFalla, colCosto, colEstadoFisico, colAccesorios;
-    @FXML private Button addEquipoButton, removeEquipoButton, updateCostoButton;
-    @FXML private HBox equipoActionBox, subtotalBox;
+    @FXML private TableColumn<Equipo, String> colTipo, colMarca, colModelo, colSerie, colFalla, colCosto, colEstadoFisico, colAccesorios, colInforme;
+    @FXML private Button addEquipoButton, removeEquipoButton, updateEquipoButton;
+    @FXML private HBox equipoActionBox, subtotalBox, totalBox;
+    @FXML private VBox cierreBox;
     @FXML private GridPane costoGridPane;
 
-
     // Componentes para el cierre de la hoja
-    @FXML private TitledPane cierrePane;
-    @FXML private StyleClassedTextArea informeTecnicoArea;
     @FXML private Button cierreButton;
 
 
@@ -115,21 +114,18 @@ public class tecniMusicController {
         if (equiposTable != null) {
             equiposTable.setItems(equiposObservable);
             // Configurar las columnas para mostrar propiedades de Equipo usando lambdas simples
-            if (colTipo != null) colTipo.setCellValueFactory(cell -> javafx.beans.property.SimpleStringProperty.stringExpression(cell.getValue().getTipo() == null ? new javafx.beans.property.SimpleStringProperty("") : new javafx.beans.property.SimpleStringProperty(cell.getValue().getTipo())));
-            if (colMarca != null) colMarca.setCellValueFactory(cell -> javafx.beans.property.SimpleStringProperty.stringExpression(cell.getValue().getMarca() == null ? new javafx.beans.property.SimpleStringProperty("") : new javafx.beans.property.SimpleStringProperty(cell.getValue().getMarca())));
-            if (colModelo != null) colModelo.setCellValueFactory(cell -> javafx.beans.property.SimpleStringProperty.stringExpression(cell.getValue().getModelo() == null ? new javafx.beans.property.SimpleStringProperty("") : new javafx.beans.property.SimpleStringProperty(cell.getValue().getModelo())));
-            if (colSerie != null) colSerie.setCellValueFactory(cell -> javafx.beans.property.SimpleStringProperty.stringExpression(cell.getValue().getSerie() == null ? new javafx.beans.property.SimpleStringProperty("") : new javafx.beans.property.SimpleStringProperty(cell.getValue().getSerie())));
-            if (colEstadoFisico != null) colEstadoFisico.setCellValueFactory(cell -> javafx.beans.property.SimpleStringProperty.stringExpression(cell.getValue().getEstadoFisico() == null ? new javafx.beans.property.SimpleStringProperty("") : new javafx.beans.property.SimpleStringProperty(cell.getValue().getEstadoFisico())));
-            if (colAccesorios != null) colAccesorios.setCellValueFactory(cell -> javafx.beans.property.SimpleStringProperty.stringExpression(cell.getValue().getAccesorios() == null ? new javafx.beans.property.SimpleStringProperty("") : new javafx.beans.property.SimpleStringProperty(cell.getValue().getAccesorios())));
-            if (colFalla != null) colFalla.setCellValueFactory(cell -> javafx.beans.property.SimpleStringProperty.stringExpression(cell.getValue().getFalla() == null ? new javafx.beans.property.SimpleStringProperty("") : new javafx.beans.property.SimpleStringProperty(cell.getValue().getFalla())));
-            if (colCosto != null) colCosto.setCellValueFactory(cell -> {
+            colTipo.setCellValueFactory(cell -> new SimpleStringProperty(cell.getValue().getTipo()));
+            colMarca.setCellValueFactory(cell -> new SimpleStringProperty(cell.getValue().getMarca()));
+            colModelo.setCellValueFactory(cell -> new SimpleStringProperty(cell.getValue().getModelo()));
+            colSerie.setCellValueFactory(cell -> new SimpleStringProperty(cell.getValue().getSerie()));
+            colEstadoFisico.setCellValueFactory(cell -> new SimpleStringProperty(cell.getValue().getEstadoFisico()));
+            colAccesorios.setCellValueFactory(cell -> new SimpleStringProperty(cell.getValue().getAccesorios()));
+            colFalla.setCellValueFactory(cell -> new SimpleStringProperty(cell.getValue().getFalla()));
+            colInforme.setCellValueFactory(cell -> new SimpleStringProperty(cell.getValue().getInformeTecnico()));
+            colCosto.setCellValueFactory(cell -> {
                 BigDecimal costo = cell.getValue().getCosto();
-                String formattedCosto = "";
-                if (costo != null) {
-                    NumberFormat currencyFormat = NumberFormat.getCurrencyInstance(SPANISH_MEXICO_LOCALE);
-                    formattedCosto = currencyFormat.format(costo);
-                }
-                return new javafx.beans.property.SimpleStringProperty(formattedCosto);
+                String formattedCosto = (costo != null) ? NumberFormat.getCurrencyInstance(SPANISH_MEXICO_LOCALE).format(costo) : "";
+                return new SimpleStringProperty(formattedCosto);
             });
 
             equiposTable.getSelectionModel().selectedItemProperty().addListener((obs, oldSelection, newSelection) -> {
@@ -139,15 +135,12 @@ public class tecniMusicController {
             });
         }
 
-        equiposObservable.addListener((ListChangeListener.Change<? extends Equipo> c) -> {
-            actualizarCostosTotales();
-        });
-
+        equiposObservable.addListener((ListChangeListener.Change<? extends Equipo> c) -> actualizarCostosTotales());
         anticipoField.textProperty().addListener((observable, oldValue, newValue) -> actualizarCostosTotales());
 
         if (addEquipoButton != null) addEquipoButton.setOnAction(e -> onAddEquipo());
         if (removeEquipoButton != null) removeEquipoButton.setOnAction(e -> onRemoveEquipo());
-        if (updateCostoButton != null) updateCostoButton.setOnAction(e -> onUpdateCosto());
+        if (updateEquipoButton != null) updateEquipoButton.setOnAction(e -> onUpdateEquipo());
 
 
         if (printButton != null) {
@@ -155,37 +148,21 @@ public class tecniMusicController {
             printButton.setManaged(false);
         }
         
-        // Hide testPdfButton
         if (testPdfButton != null) {
             testPdfButton.setVisible(false);
             testPdfButton.setManaged(false);
         }
 
         // Corrector ortográfico
-        if (equipoFallaArea != null) {
-            setupSpellChecking(equipoFallaArea);
-            equipoFallaArea.setStyle("-fx-background-color: #1E2A3A; -fx-text-fill: white;");
-        }
-        if (equipoEstadoFisicoArea != null) {
-            setupSpellChecking(equipoEstadoFisicoArea);
-            equipoEstadoFisicoArea.setStyle("-fx-background-color: #1E2A3A; -fx-text-fill: white;");
-        }
-        if (aclaracionesArea != null) {
-            setupSpellChecking(aclaracionesArea);
-            aclaracionesArea.setStyle("-fx-background-color: #1E2A3A; -fx-text-fill: white;");
-        }
-        if (informeTecnicoArea != null) {
-            setupSpellChecking(informeTecnicoArea);
-            informeTecnicoArea.setStyle("-fx-background-color: #1E2A3A; -fx-text-fill: white;");
-        }
-        // Configurar estilo para equipoAccesoriosArea
-        if (equipoAccesoriosArea != null) {
-            equipoAccesoriosArea.setStyle("-fx-background-color: #1E2A3A; -fx-text-fill: white;");
-        }
+        setupSpellChecking(equipoFallaArea);
+        setupSpellChecking(equipoEstadoFisicoArea);
+        setupSpellChecking(aclaracionesArea);
+        setupSpellChecking(equipoInformeTecnicoArea);
     }
 
     private void setupSpellChecking(StyleClassedTextArea textArea) {
-        // Esta parte para resaltar el texto mientras se escribe es correcta y se mantiene.
+        if (textArea == null) return;
+        textArea.setStyle("-fx-background-color: #1E2A3A; -fx-text-fill: white;");
         PauseTransition pause = new PauseTransition(Duration.seconds(0.5));
         textArea.textProperty().addListener((observable, oldValue, newValue) -> {
             pause.setOnFinished(event -> {
@@ -201,36 +178,25 @@ public class tecniMusicController {
             pause.playFromStart();
         });
 
-        // --- INICIO DE LA CORRECCIÓN ---
-
-        // 1. Crea el objeto ContextMenu.
         final ContextMenu contextMenu = new ContextMenu();
-
-        // 2. Asigna el menú al área de texto.
-        //    Esto es importante para que el framework sepa que existe un menú.
         textArea.setContextMenu(contextMenu);
 
-        // 3. Usa setOnContextMenuRequested para controlar todo el proceso.
         textArea.setOnContextMenuRequested(event -> {
-            if (isViewOnlyMode) {
+            if (isViewOnlyMode && !"CERRADA".equals(aclaracionesArea.getText())) { // Allow editing unless closed
                 event.consume();
                 return;
             }
-            // Primero, esconde el menú si ya estaba visible por alguna razón.
             contextMenu.hide();
-
-            // Mueve el cursor a la posición del clic.
             Point2D click = new Point2D(event.getX(), event.getY());
             int characterIndex = textArea.hit(click.getX(), click.getY()).getCharacterIndex().orElse(-1);
             if (characterIndex != -1) {
                 textArea.moveTo(characterIndex);
             }
 
-            // Ahora, pobla el menú (lógica que antes estaba en setOnShowing).
             contextMenu.getItems().clear();
             String text = textArea.getText();
             if (text == null || text.trim().isEmpty()) {
-                event.consume(); // No hay texto, no hagas nada más.
+                event.consume();
                 return;
             }
 
@@ -266,18 +232,12 @@ public class tecniMusicController {
                 // ignore
             }
 
-            // Si hay items para mostrar, muestra el menú en la posición del evento.
             if (!contextMenu.getItems().isEmpty()) {
                 contextMenu.show(textArea, event.getScreenX(), event.getScreenY());
             }
             
-            // Consume el evento para prevenir que el sistema muestre otro menú.
             event.consume();
         });
-        
-        // Ya no necesitamos el manejador setOnShowing.
-        
-        // --- FIN DE LA CORRECCIÓN ---
     }
 
     private void applyHighlighting(StyleClassedTextArea textArea, List<RuleMatch> matches) {
@@ -355,10 +315,6 @@ public class tecniMusicController {
 
             if (controller.isAceptado()) {
                 accesoriosList.setAll(controller.getAccesorios());
-                // Actualizar el StyleClassedTextArea con los accesorios seleccionados
-                if (equipoAccesoriosArea != null) {
-                    equipoAccesoriosArea.replaceText(String.join(", ", accesoriosList));
-                }
             }
         } catch (IOException e) {
             e.printStackTrace();
@@ -382,18 +338,7 @@ public class tecniMusicController {
         Equipo equipo = new Equipo(tipo, marca, serie, modelo, falla, null, estadoFisico, accesorios);
         equiposObservable.add(equipo);
 
-        // Limpiar campos para añadir siguiente equipo
-        equipoTipoField.clear();
-        equipoCompaniaField.clear();
-        equipoModeloField.clear();
-        equipoSerieField.clear();
-        equipoFallaArea.clear();
-        equipoEstadoFisicoArea.clear();
-        accesoriosList.clear();
-        if (equipoAccesoriosArea != null) {
-            equipoAccesoriosArea.clear();
-        }
-        equipoCostoField.clear();
+        clearEquipoInputFields();
     }
 
     private void onRemoveEquipo() {
@@ -405,10 +350,10 @@ public class tecniMusicController {
         equiposObservable.remove(seleccionado);
     }
 
-    private void onUpdateCosto() {
+    private void onUpdateEquipo() {
         Equipo selectedEquipo = equiposTable.getSelectionModel().getSelectedItem();
         if (selectedEquipo == null) {
-            showAlert(Alert.AlertType.WARNING, "Seleccionar Equipo", "Por favor, seleccione un equipo de la tabla para actualizar su costo.");
+            showAlert(Alert.AlertType.WARNING, "Seleccionar Equipo", "Por favor, seleccione un equipo de la tabla para actualizar.");
             return;
         }
 
@@ -425,101 +370,74 @@ public class tecniMusicController {
         }
 
         selectedEquipo.setCosto(nuevoCosto);
+        selectedEquipo.setInformeTecnico(equipoInformeTecnicoArea.getText());
+        
         equiposTable.refresh();
         actualizarCostosTotales();
     }
 
 
     private void actualizarCostosTotales() {
-        BigDecimal subtotal = BigDecimal.ZERO;
-        for (Equipo equipo : equiposObservable) {
-            if (equipo.getCosto() != null) {
-                subtotal = subtotal.add(equipo.getCosto());
-            }
-        }
+        BigDecimal subtotal = equiposObservable.stream()
+            .map(Equipo::getCosto)
+            .filter(java.util.Objects::nonNull)
+            .reduce(BigDecimal.ZERO, BigDecimal::add);
+
         NumberFormat currencyFormat = NumberFormat.getCurrencyInstance(SPANISH_MEXICO_LOCALE);
-        if (subtotalLabel != null) {
-            subtotalLabel.setText(currencyFormat.format(subtotal));
-        }
+        subtotalLabel.setText(currencyFormat.format(subtotal));
 
         BigDecimal anticipo = BigDecimal.ZERO;
-        String anticipoStr = anticipoField.getText().replaceAll("\\D", "");
+        String anticipoStr = anticipoField.getText().replaceAll("[^\\d]", "");
         if (!anticipoStr.isEmpty()) {
             try {
-                anticipo = new BigDecimal(anticipoStr).setScale(2, RoundingMode.HALF_UP).divide(new BigDecimal(100), RoundingMode.HALF_UP);
+                anticipo = new BigDecimal(anticipoStr).movePointLeft(2);
             } catch (NumberFormatException e) {
-                // Ignorar si el formato es inválido, se manejará en setupCurrencyField
+                // ignore
             }
         }
 
         BigDecimal totalFinal = subtotal.subtract(anticipo);
-        if (totalFinalLabel != null) {
-            totalFinalLabel.setText(currencyFormat.format(totalFinal));
-        }
+        totalFinalLabel.setText(currencyFormat.format(totalFinal));
     }
 
     public void loadForViewing(HojaServicioData data) {
         this.isViewOnlyMode = true;
         populateFormWithData(data);
 
-        // Deshabilitar todos los campos por defecto
-        for (Node node : List.of(clienteNombreField, clienteDireccionField, clienteTelefonoField, equipoSerieField, equipoTipoField, equipoCompaniaField, equipoModeloField, anticipoField, ordenFechaPicker, entregaFechaPicker, equipoFallaArea, equipoEstadoFisicoArea, aclaracionesArea, accesoriosButton)) {
-            node.setDisable(true);
-        }
-        if (equipoAccesoriosArea != null) {
-            equipoAccesoriosArea.setEditable(false);
-        }
+        setNodesDisabled(true, clienteNombreField, clienteDireccionField, clienteTelefonoField, equipoSerieField, equipoTipoField, equipoCompaniaField, equipoModeloField, anticipoField, ordenFechaPicker, entregaFechaPicker, equipoFallaArea, equipoEstadoFisicoArea, aclaracionesArea, accesoriosButton);
 
-        // Ocultar botones de acción principal
         guardarButton.setVisible(false);
         guardarButton.setManaged(false);
         limpiarButton.setVisible(false);
         limpiarButton.setManaged(false);
         salirButton.setText("Cerrar Vista");
 
-        // Mostrar botón de impresión
-        if (printButton != null) {
-            printButton.setVisible(true);
-            printButton.setManaged(true);
-        }
+        printButton.setVisible(true);
+        printButton.setManaged(true);
 
         // Configurar modo cierre
-        costoGridPane.setVisible(true);
-        costoGridPane.setManaged(true);
+        cierreBox.setVisible(true);
+        cierreBox.setManaged(true);
         subtotalBox.setVisible(true);
         subtotalBox.setManaged(true);
+        totalBox.setVisible(true);
+        totalBox.setManaged(true);
         colCosto.setVisible(true);
+        colInforme.setVisible(true);
         addEquipoButton.setVisible(false);
         addEquipoButton.setManaged(false);
         removeEquipoButton.setVisible(false);
         removeEquipoButton.setManaged(false);
-        updateCostoButton.setVisible(true);
-        updateCostoButton.setManaged(true);
+        updateEquipoButton.setVisible(true);
+        updateEquipoButton.setManaged(true);
+        cierreButton.setVisible(true);
+        cierreButton.setManaged(true);
 
-
-        // Lógica para el panel de cierre
-        if (cierrePane != null) {
-            cierrePane.setVisible(true);
-            cierrePane.setManaged(true);
-            cierreButton.setVisible(true);
-            cierreButton.setManaged(true);
-
-            if (data.getInformeTecnico() != null) {
-                informeTecnicoArea.replaceText(data.getInformeTecnico());
-            }
-
-            if ("CERRADA".equals(data.getEstado())) {
-                informeTecnicoArea.setEditable(false);
-                cierreButton.setDisable(true);
-                cierreButton.setText("Hoja Cerrada");
-                updateCostoButton.setDisable(true);
-                equipoCostoField.setDisable(true);
-            } else {
-                informeTecnicoArea.setEditable(true);
-                cierreButton.setDisable(false);
-                updateCostoButton.setDisable(false);
-                equipoCostoField.setDisable(false);
-            }
+        if ("CERRADA".equals(data.getEstado())) {
+            setNodesDisabled(true, cierreButton, updateEquipoButton, equipoCostoField, equipoInformeTecnicoArea);
+            cierreButton.setText("Hoja Cerrada");
+        } else {
+            setNodesDisabled(false, cierreButton, updateEquipoButton, equipoCostoField, equipoInformeTecnicoArea);
         }
     }
 
@@ -532,56 +450,30 @@ public class tecniMusicController {
         }
 
         String summary = "Cliente: " + clienteNombreField.getText().split("\\s*\\|\\s*")[0].trim() + "\n" +
-                         "Equipos: " + (equiposObservable.isEmpty() ? "(sin equipos)" : equiposObservable.size() + " equipo(s)") + "\n\n" +
-                         "Fallas resumidas:\n" + (equiposObservable.stream().map(Equipo::getFalla).reduce((a,b)->a+"; "+b).orElse("(sin fallas)"));
+                         "Equipos: " + equiposObservable.size() + " equipo(s)";
 
-        Alert confirmationAlert = new Alert(Alert.AlertType.CONFIRMATION);
-        confirmationAlert.setTitle("Confirmar Guardado");
-        confirmationAlert.setHeaderText("¿Está seguro de que desea guardar la hoja con los siguientes datos?");
-        confirmationAlert.setContentText(summary);
-        confirmationAlert.getDialogPane().getStylesheets().add(getClass().getResource("styles.css").toExternalForm());
-        ((Stage) confirmationAlert.getDialogPane().getScene().getWindow()).getIcons().add(new Image(getClass().getResourceAsStream("/logo.png")));
-
-        Optional<ButtonType> result = confirmationAlert.showAndWait();
-        if (result.isEmpty() || result.get() != ButtonType.OK) {
+        if (!showConfirmationDialog("Confirmar Guardado", "Se guardará la hoja con los siguientes datos:\n\n" + summary)) {
             return;
         }
 
-        String predictedOrdenNumero = ordenNumeroField.getText();
         try {
-            BigDecimal subtotal = parseCurrency(subtotalLabel.getText());
             BigDecimal anticipo = parseCurrency(anticipoField.getText());
 
             String realOrdenNumero = DatabaseService.getInstance().guardarHojaServicioCompleta(
                     idClienteSeleccionado, clienteNombreField.getText(), clienteTelefonoField.getText(), clienteDireccionField.getText(),
                     new ArrayList<>(equiposObservable),
-                    ordenFechaPicker.getValue(), "", subtotal, anticipo, // Updated parameters
+                    ordenFechaPicker.getValue(), "", BigDecimal.ZERO, anticipo,
                     entregaFechaPicker.getValue(), "", aclaracionesArea.getText()
             );
 
             HojaServicioData data = createHojaServicioDataFromForm(realOrdenNumero);
             String pdfPath = new PdfGenerator().generatePdf(data);
 
-            // Añadir una pequeña pausa para asegurar que el archivo se ha escrito completamente
-            try {
-                Thread.sleep(200); // 200 milisegundos
-            } catch (InterruptedException e) {
-                Thread.currentThread().interrupt();
-            }
-
-            Alert printConfirmAlert = new Alert(Alert.AlertType.CONFIRMATION);
-            printConfirmAlert.setTitle("Confirmar Impresión");
-            printConfirmAlert.setHeaderText("Hoja de servicio guardada. ¿Desea imprimirla ahora?");
-            printConfirmAlert.setContentText("Se abrirá el PDF en su visor predeterminado para que pueda imprimirlo.");
-            printConfirmAlert.getDialogPane().getStylesheets().add(getClass().getResource("styles.css").toExternalForm());
-            ((Stage) printConfirmAlert.getDialogPane().getScene().getWindow()).getIcons().add(new Image(getClass().getResourceAsStream("/logo.png")));
-
-            Optional<ButtonType> printResult = printConfirmAlert.showAndWait();
-            if (printResult.isPresent() && printResult.get() == ButtonType.OK) {
+            if (showConfirmationDialog("Imprimir Hoja", "Hoja de servicio guardada. ¿Desea imprimirla ahora?")) {
                 performPrint(pdfPath);
             }
 
-            mostrarExitoYSalir(predictedOrdenNumero, realOrdenNumero);
+            mostrarExitoYSalir(ordenNumeroField.getText(), realOrdenNumero);
 
         } catch (SQLException e) {
             showAlert(Alert.AlertType.ERROR, "Error de Base de Datos", "No se pudo guardar la hoja de servicio. Error: " + e.getMessage());
@@ -592,12 +484,6 @@ public class tecniMusicController {
 
     @FXML
     protected void onCierreClicked() {
-        String informe = informeTecnicoArea.getText();
-        if (informe == null || informe.trim().isEmpty()) {
-            showAlert(Alert.AlertType.WARNING, "Campo Requerido", "El informe técnico no puede estar vacío para cerrar la hoja.");
-            return;
-        }
-
         if (!showConfirmationDialog("Confirmar Cierre", "¿Está seguro de que desea cerrar esta hoja de servicio? Una vez cerrada, no podrá ser modificada.")) {
             return;
         }
@@ -606,33 +492,23 @@ public class tecniMusicController {
             long hojaId = Long.parseLong(ordenNumeroField.getText().split("-")[2]);
             BigDecimal totalCostos = parseCurrency(subtotalLabel.getText());
             
-            DatabaseService.getInstance().cerrarHojaServicio(hojaId, informe, new ArrayList<>(equiposObservable), totalCostos);
+            DatabaseService.getInstance().cerrarHojaServicio(hojaId, "", new ArrayList<>(equiposObservable), totalCostos);
 
             HojaServicioData data = createHojaServicioDataFromForm(ordenNumeroField.getText());
-            data.setInformeTecnico(informe); // Asegurarse de que el informe esté en los datos para el PDF
             data.setEstado("CERRADA");
 
             String pdfPath = new PdfGenerator().generatePdf(data);
 
             showAlert(Alert.AlertType.INFORMATION, "Hoja Cerrada", "La hoja de servicio ha sido cerrada y el PDF de cierre ha sido generado.");
 
-            if (Desktop.isDesktopSupported()) {
-                try {
-                    Desktop.getDesktop().open(new File(pdfPath));
-                } catch (IOException e) {
-                    showAlert(Alert.AlertType.ERROR, "Error al Abrir PDF", "No se pudo abrir el PDF automáticamente.");
-                }
-            }
+            performPrint(pdfPath);
             
             Stage stage = (Stage) cierreButton.getScene().getWindow();
             stage.close();
 
-        } catch (SQLException e) {
-            showAlert(Alert.AlertType.ERROR, "Error de Base de Datos", "No se pudo cerrar la hoja de servicio. Error: " + e.getMessage());
-        } catch (IOException | ParseException e) {
-            showAlert(Alert.AlertType.ERROR, "Error de PDF", "No se pudo generar el PDF de cierre. Error: " + e.getMessage());
-        } catch (NumberFormatException e) {
-            showAlert(Alert.AlertType.ERROR, "Error de Formato", "El número de orden no tiene el formato esperado.");
+        } catch (Exception e) {
+            showAlert(Alert.AlertType.ERROR, "Error al Cerrar Hoja", "Ocurrió un error: " + e.getMessage());
+            e.printStackTrace();
         }
     }
 
@@ -642,18 +518,7 @@ public class tecniMusicController {
         try {
             HojaServicioData data = createHojaServicioDataFromForm(ordenNumeroField.getText());
             String pdfPath = new PdfGenerator().generatePdf(data);
-
-            if (pdfPath != null) {
-                // Añadir una pequeña pausa para asegurar que el archivo se ha escrito completamente
-                try {
-                    Thread.sleep(200); // 200 milisegundos
-                } catch (InterruptedException e) {
-                    Thread.currentThread().interrupt();
-                }
-                performPrint(pdfPath);
-            } else {
-                showAlert(Alert.AlertType.ERROR, "Error de PDF", "No se pudo generar la ruta del PDF.");
-            }
+            performPrint(pdfPath);
         } catch (IOException | ParseException e) {
             showAlert(Alert.AlertType.ERROR, "Error de PDF", "No se pudo generar el PDF. Error: " + e.getMessage());
             e.printStackTrace();
@@ -734,23 +599,15 @@ public class tecniMusicController {
         });
 
         equipoSerieField.textProperty().addListener((observable, oldValue, newValue) -> {
-            if (isAutoCompleting) {
-                return;
-            }
-
-            Equipo selectedEquipo = equiposTable.getSelectionModel().getSelectedItem();
-            if (selectedEquipo != null) {
+            if (isAutoCompleting) return;
+            if (equiposTable.getSelectionModel().getSelectedItem() != null) {
                 equiposTable.getSelectionModel().clearSelection();
-                resetOtherEquipoFields();
-                return;
+                clearEquipoInputFields();
             }
-
             if (idAssetSeleccionado != null && !newValue.equals(serieEquipoSeleccionado)) {
                 idAssetSeleccionado = null;
                 serieEquipoSeleccionado = null;
-                equipoTipoField.setEditable(true);
-                equipoCompaniaField.setEditable(true);
-                equipoModeloField.setEditable(true);
+                setNodesEditable(true, equipoTipoField, equipoCompaniaField, equipoModeloField);
             }
         });
     }
@@ -779,14 +636,14 @@ public class tecniMusicController {
         textField.textProperty().addListener((observable, oldValue, newValue) -> {
             if (newValue == null || newValue.equals(oldValue)) return;
 
-            String digits = newValue.replaceAll("\\D", "");
+            String digits = newValue.replaceAll("[^\\d]", "");
             if (digits.isEmpty()) {
                 if (!newValue.isEmpty()) Platform.runLater(textField::clear);
                 return;
             }
 
             try {
-                BigDecimal value = new BigDecimal(digits).setScale(2, RoundingMode.HALF_UP).divide(new BigDecimal(100), RoundingMode.HALF_UP);
+                BigDecimal value = new BigDecimal(digits).movePointLeft(2);
                 NumberFormat currencyFormat = NumberFormat.getCurrencyInstance(SPANISH_MEXICO_LOCALE);
                 String formatted = currencyFormat.format(value);
 
@@ -851,8 +708,7 @@ public class tecniMusicController {
                 clienteNombreField.setText(suggestion);
                 clienteTelefonoField.setText(parts[1]);
                 clienteDireccionField.setText(rs.getString("direccion"));
-                clienteDireccionField.setEditable(false);
-                clienteTelefonoField.setEditable(false);
+                setNodesEditable(false, clienteDireccionField, clienteTelefonoField);
                 isAutoCompleting = false;
             }
         } catch (SQLException e) {
@@ -878,9 +734,7 @@ public class tecniMusicController {
                 equipoCompaniaField.setText(rs.getString("compania"));
                 equipoModeloField.setText(rs.getString("modelo"));
                 equipoSerieField.setText(serial);
-                equipoTipoField.setEditable(false);
-                equipoCompaniaField.setEditable(false);
-                equipoModeloField.setEditable(false);
+                setNodesEditable(false, equipoTipoField, equipoCompaniaField, equipoModeloField);
                 isAutoCompleting = false;
             }
         } catch (SQLException e) {
@@ -892,43 +746,12 @@ public class tecniMusicController {
         isAutoCompleting = true;
         isViewOnlyMode = false;
 
-        // Visibilidad para modo CREACIÓN
-        costoGridPane.setVisible(false);
-        costoGridPane.setManaged(false);
-        subtotalBox.setVisible(false);
-        subtotalBox.setManaged(false);
-        updateCostoButton.setVisible(false);
-        updateCostoButton.setManaged(false);
+        setNodesVisible(false, cierreBox, subtotalBox, totalBox, updateEquipoButton, cierreButton, printButton);
+        setNodesVisible(true, addEquipoButton, removeEquipoButton, guardarButton, limpiarButton);
         colCosto.setVisible(false);
-        addEquipoButton.setVisible(true);
-        addEquipoButton.setManaged(true);
-        removeEquipoButton.setVisible(true);
-        removeEquipoButton.setManaged(true);
-        guardarButton.setVisible(true);
-        guardarButton.setManaged(true);
-        limpiarButton.setVisible(true);
-        limpiarButton.setManaged(true);
-        cierrePane.setVisible(false);
-        cierrePane.setManaged(false);
-        cierreButton.setVisible(false);
-        cierreButton.setManaged(false);
-        printButton.setVisible(false);
-        printButton.setManaged(false);
+        colInforme.setVisible(false);
 
-        // Limpiar campos
-        resetCamposCliente();
-        clienteNombreField.clear();
-        equipoFallaArea.clear();
-        anticipoField.clear();
-        subtotalLabel.setText("$0.00");
-        totalFinalLabel.setText("$0.00");
-        entregaFechaPicker.setValue(null);
-        aclaracionesArea.clear();
-        ordenFechaPicker.setValue(LocalDate.now());
-        equiposObservable.clear();
-        if (equipoAccesoriosArea != null) {
-            equipoAccesoriosArea.clear();
-        }
+        clearAllInputFields();
         isAutoCompleting = false;
         predecirYAsignarNumeroDeOrden();
     }
@@ -938,19 +761,8 @@ public class tecniMusicController {
         return !clienteNombreField.getText().trim().isEmpty() ||
                !clienteDireccionField.getText().trim().isEmpty() ||
                !clienteTelefonoField.getText().trim().isEmpty() ||
-               !equipoSerieField.getText().trim().isEmpty() ||
-               !equipoTipoField.getText().trim().isEmpty() ||
-               !equipoCompaniaField.getText().trim().isEmpty() ||
-               !equipoModeloField.getText().trim().isEmpty() ||
-               !equipoCostoField.getText().trim().isEmpty() ||
-               !anticipoField.getText().trim().isEmpty() ||
-               !subtotalLabel.getText().equals("$0.00") ||
-               !totalFinalLabel.getText().equals("$0.00") ||
                !equiposObservable.isEmpty() ||
-               !equipoFallaArea.getText().trim().isEmpty() ||
-               !equipoEstadoFisicoArea.getText().trim().isEmpty() ||
-               !accesoriosList.isEmpty() ||
-               (equipoAccesoriosArea != null && !equipoAccesoriosArea.getText().trim().isEmpty()) || // Comprobar también el área de texto
+               !anticipoField.getText().trim().isEmpty() ||
                entregaFechaPicker.getValue() != null ||
                !aclaracionesArea.getText().trim().isEmpty();
     }
@@ -962,43 +774,11 @@ public class tecniMusicController {
         data.setClienteNombre(clienteNombreField.getText().split("\\s*\\|\\s*")[0].trim());
         data.setClienteTelefono(clienteTelefonoField.getText());
         data.setClienteDireccion(clienteDireccionField.getText());
-        data.setEquipoTipo(equipoTipoField.getText());
-        data.setEquipoMarca(equipoCompaniaField.getText());
-        data.setEquipoSerie(equipoSerieField.getText());
-        data.setEquipoModelo(equipoModeloField.getText());
-        data.setFallaReportada(equipoFallaArea.getText());
-        data.setEstadoFisico(equipoEstadoFisicoArea.getText());
         data.setFechaEntrega(entregaFechaPicker.getValue());
-        data.setFirmaAclaracion("");
         data.setAclaraciones(aclaracionesArea.getText());
-        if (informeTecnicoArea != null) {
-            data.setInformeTecnico(informeTecnicoArea.getText());
-        }
-
-
-        // Subtotal de costos
-        data.setTotalCostos(parseCurrency(subtotalLabel.getText())); // totalCostos en HojaServicioData ahora es el subtotal
-
-        // Anticipo
+        data.setTotalCostos(parseCurrency(subtotalLabel.getText()));
         data.setAnticipo(parseCurrency(anticipoField.getText()));
-
-        // Añadir lista de equipos (si existen), mantener compatibilidad con campos individuales usando el primero
-        if (!equiposObservable.isEmpty()) {
-            data.setEquipos(new ArrayList<>(equiposObservable));
-        } else {
-            // Si no hay equipos en la lista, crear uno con los campos individuales (retrocompat)
-            BigDecimal costo = null;
-            String costoStr = equipoCostoField.getText();
-            if (costoStr != null && !costoStr.isEmpty()) {
-                Number number = NumberFormat.getCurrencyInstance(SPANISH_MEXICO_LOCALE).parse(costoStr);
-                costo = BigDecimal.valueOf(number.doubleValue());
-            }
-            // Usar el contenido de equipoAccesoriosArea si está disponible, de lo contrario, la lista
-            String accesoriosParaGuardar = (equipoAccesoriosArea != null && !equipoAccesoriosArea.getText().trim().isEmpty()) ? equipoAccesoriosArea.getText().trim() : String.join(", ", accesoriosList);
-            Equipo single = new Equipo(equipoTipoField.getText(), equipoCompaniaField.getText(), equipoSerieField.getText(), equipoModeloField.getText(), equipoFallaArea.getText(), costo, equipoEstadoFisicoArea.getText(), accesoriosParaGuardar);
-            data.getEquipos().add(single);
-        }
-
+        data.setEquipos(new ArrayList<>(equiposObservable));
         return data;
     }
 
@@ -1009,77 +789,23 @@ public class tecniMusicController {
         clienteDireccionField.setText(data.getClienteDireccion());
         clienteTelefonoField.setText(data.getClienteTelefono());
     
-        // Limpiar campos de equipo individuales antes de popular
-        equipoSerieField.clear();
-        equipoTipoField.clear();
-        equipoCompaniaField.clear();
-        equipoModeloField.clear();
-        equipoFallaArea.clear();
-        equipoCostoField.clear();
-        equipoEstadoFisicoArea.clear();
-        accesoriosList.clear();
-        if (equipoAccesoriosArea != null) {
-            equipoAccesoriosArea.clear();
-        }
-    
-        // Rellenar tabla de equipos si la data contiene varios
         equiposObservable.clear();
-        if (data.getEquipos() != null && !data.getEquipos().isEmpty()) {
+        if (data.getEquipos() != null) {
             equiposObservable.addAll(data.getEquipos());
-            // Seleccionar el primer equipo de la lista para mostrar sus detalles
-            equiposTable.getSelectionModel().selectFirst();
-        } else {
-            // Para mantener compatibilidad con hojas de servicio viejas sin la lista de equipos
-            Equipo equipoLegacy = new Equipo(
-                data.getEquipoTipo(),
-                data.getEquipoMarca(),
-                data.getEquipoSerie(),
-                data.getEquipoModelo(),
-                data.getFallaReportada(),
-                data.getTotalCostos(), // Asumiendo que el costo total era el costo del único equipo
-                data.getEstadoFisico(),
-                data.getAccesorios()
-            );
-            equiposObservable.add(equipoLegacy);
-            equiposTable.getSelectionModel().selectFirst();
+            if (!equiposObservable.isEmpty()) {
+                equiposTable.getSelectionModel().selectFirst();
+            }
         }
     
-        BigDecimal subtotal = data.getTotalCostos() != null ? data.getTotalCostos() : BigDecimal.ZERO;
-        BigDecimal anticipo = data.getAnticipo() != null ? data.getAnticipo() : BigDecimal.ZERO;
-        BigDecimal totalFinal = subtotal.subtract(anticipo);
-    
-        NumberFormat currencyFormat = NumberFormat.getCurrencyInstance(SPANISH_MEXICO_LOCALE);
-    
-        if (data.getTotalCostos() != null) {
-            subtotalLabel.setText(currencyFormat.format(data.getTotalCostos()));
-        } else {
-            subtotalLabel.setText("$0.00");
-        }
+        actualizarCostosTotales();
         if (data.getAnticipo() != null) {
-            anticipoField.setText(currencyFormat.format(data.getAnticipo()));
+            anticipoField.setText(NumberFormat.getCurrencyInstance(SPANISH_MEXICO_LOCALE).format(data.getAnticipo()));
         } else {
             anticipoField.clear();
         }
-        if (totalFinalLabel != null) {
-            totalFinalLabel.setText(currencyFormat.format(totalFinal));
-        }
     
         entregaFechaPicker.setValue(data.getFechaEntrega());
-        
-        String aclaraciones = data.getAclaraciones() != null ? data.getAclaraciones() : "";
-        String informeCostos = data.getInformeCostos() != null ? data.getInformeCostos() : "";
-        StringBuilder combinedText = new StringBuilder();
-        if (!informeCostos.isEmpty()) {
-            combinedText.append("--- INFORME DE COSTOS ---\n");
-            combinedText.append(informeCostos);
-        }
-        if (!aclaraciones.isEmpty()) {
-            if (combinedText.length() > 0) {
-                combinedText.append("\n\n--- ACLARACIONES ---\n");
-            }
-            combinedText.append(aclaraciones);
-        }
-        aclaracionesArea.replaceText(combinedText.toString());
+        aclaracionesArea.replaceText(data.getAclaraciones() != null ? data.getAclaraciones() : "");
     }
 
     private void populateEquipoFields(Equipo equipo) {
@@ -1090,18 +816,14 @@ public class tecniMusicController {
         equipoSerieField.setText(equipo.getSerie());
         equipoFallaArea.replaceText(equipo.getFalla() != null ? equipo.getFalla() : "");
         equipoEstadoFisicoArea.replaceText(equipo.getEstadoFisico() != null ? equipo.getEstadoFisico() : "");
+        equipoInformeTecnicoArea.replaceText(equipo.getInformeTecnico() != null ? equipo.getInformeTecnico() : "");
 
         accesoriosList.clear();
         String acc = equipo.getAccesorios();
         if (acc != null && !acc.trim().isEmpty()) {
             accesoriosList.setAll(Arrays.asList(acc.split("\\s*,\\s*")));
-            if (equipoAccesoriosArea != null) {
-                equipoAccesoriosArea.replaceText(acc); // Actualizar el área de texto con los accesorios
-            }
         } else {
-            if (equipoAccesoriosArea != null) {
-                equipoAccesoriosArea.clear(); // Limpiar si no hay accesorios
-            }
+            // No clear equipoAccesoriosArea here, it's not a user input field anymore
         }
 
         if (equipo.getCosto() != null) {
@@ -1140,17 +862,30 @@ public class tecniMusicController {
         if (clienteNombreField.getText().trim().isEmpty()) camposFaltantes.add("• Nombre del Cliente");
         if (clienteTelefonoField.getText().trim().isEmpty()) camposFaltantes.add("• Teléfono del Cliente");
         if (equiposObservable.isEmpty()) camposFaltantes.add("• Al menos un Equipo");
-        // Opcional: validar campos del primer equipo
-        if (!equiposObservable.isEmpty()) {
-            Equipo primero = equiposObservable.get(0);
-            if (primero.getTipo() == null || primero.getTipo().trim().isEmpty()) camposFaltantes.add("• Tipo de Equipo (primer equipo)");
-            if (primero.getMarca() == null || primero.getMarca().trim().isEmpty()) camposFaltantes.add("• • Marca (primer equipo)");
-        }
+        return camposFaltantes.isEmpty() ? Optional.empty() : Optional.of("Los siguientes campos son obligatorios:\n\n" + String.join("\n", camposFaltantes));
+    }
 
-        if (!camposFaltantes.isEmpty()) {
-            return Optional.of("Los siguientes campos son obligatorios y no pueden estar vacíos:\n\n" + String.join("\n", camposFaltantes));
-        }
-        return Optional.empty();
+    private void clearAllInputFields() {
+        resetCamposCliente();
+        anticipoField.clear();
+        subtotalLabel.setText("$0.00");
+        totalFinalLabel.setText("$0.00");
+        entregaFechaPicker.setValue(null);
+        aclaracionesArea.clear();
+        ordenFechaPicker.setValue(LocalDate.now());
+        equiposObservable.clear();
+    }
+
+    private void clearEquipoInputFields() {
+        equipoTipoField.clear();
+        equipoCompaniaField.clear();
+        equipoModeloField.clear();
+        equipoSerieField.clear();
+        equipoFallaArea.clear();
+        equipoEstadoFisicoArea.clear();
+        accesoriosList.clear();
+        equipoCostoField.clear();
+        equipoInformeTecnicoArea.clear();
     }
 
     private void resetCamposCliente() {
@@ -1159,48 +894,22 @@ public class tecniMusicController {
         clienteNombreField.clear();
         clienteDireccionField.clear();
         clienteTelefonoField.clear();
-        clienteDireccionField.setEditable(true);
-        clienteTelefonoField.setEditable(true);
-        resetCamposEquipo();
-    }
-
-    private void resetOtherEquipoFields() {
-        equipoTipoField.clear();
-        equipoCompaniaField.clear();
-        equipoModeloField.clear();
-        equipoFallaArea.clear();
-        equipoEstadoFisicoArea.clear();
-        accesoriosList.clear();
-        if (equipoAccesoriosArea != null) {
-            equipoAccesoriosArea.clear();
-        }
-        equipoCostoField.clear();
-        equipoTipoField.setEditable(true);
-        equipoCompaniaField.setEditable(true);
-        equipoModeloField.setEditable(true);
-    }
-
-    private void resetCamposEquipo() {
-        idAssetSeleccionado = null;
-        serieEquipoSeleccionado = null;
-        equipoSerieField.clear();
-        resetOtherEquipoFields();
+        setNodesEditable(true, clienteDireccionField, clienteTelefonoField);
+        clearEquipoInputFields();
     }
 
     private void predecirYAsignarNumeroDeOrden() {
-        long maxId = 0;
         try (Connection conn = DatabaseManager.getInstance().getConnection()) {
             conn.setTransactionIsolation(Connection.TRANSACTION_READ_COMMITTED);
             try (Statement stmt = conn.createStatement()) {
                 ResultSet rs = stmt.executeQuery("SELECT MAX(id) FROM x_hojas_servicio");
-                if (rs.next()) maxId = rs.getLong(1);
+                long maxId = rs.next() ? rs.getLong(1) : 0;
+                this.predictedHojaId = maxId + 1;
+                ordenNumeroField.setText("TM-" + LocalDate.now().getYear() + "-" + this.predictedHojaId);
             }
         } catch (SQLException e) {
             showAlert(Alert.AlertType.WARNING, "Error de Predicción", "No se pudo predecir el número de orden.");
         }
-        this.predictedHojaId = maxId + 1;
-        String provisionalOrden = "TM-" + LocalDate.now().getYear() + "-" + this.predictedHojaId;
-        ordenNumeroField.setText(provisionalOrden);
     }
 
     private void cargarDatosDelLocal() {
@@ -1218,5 +927,26 @@ public class tecniMusicController {
         alert.getDialogPane().getStylesheets().add(getClass().getResource("styles.css").toExternalForm());
         ((Stage) alert.getDialogPane().getScene().getWindow()).getIcons().add(new Image(getClass().getResourceAsStream("/logo.png")));
         alert.showAndWait();
+    }
+
+    private void setNodesVisible(boolean visible, Node... nodes) {
+        for (Node node : nodes) {
+            node.setVisible(visible);
+            node.setManaged(visible);
+        }
+    }
+
+    private void setNodesDisabled(boolean disabled, Node... nodes) {
+        for (Node node : nodes) {
+            node.setDisable(disabled);
+        }
+    }
+
+    private void setNodesEditable(boolean editable, Control... controls) {
+        for (Control control : controls) {
+            if (control instanceof TextInputControl) {
+                ((TextInputControl) control).setEditable(editable);
+            }
+        }
     }
 }

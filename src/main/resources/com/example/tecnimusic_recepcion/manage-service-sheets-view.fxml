@@ -49,8 +49,9 @@
                 <Insets bottom="10.0" left="10.0" right="10.0" top="10.0" />
             </padding>
             <children>
-                <Button onAction="#onViewDetailsClicked" text="Ver Detalles" />
-                <Button onAction="#onPrintSelectedClicked" text="Imprimir" />
+                <Button onAction="#onViewDetailsClicked" text="Ver Detalles/Cerrar" />
+                <Button onAction="#onPrintReceptionClicked" text="Imprimir Recepción" />
+                <Button onAction="#onPrintClosureClicked" text="Imprimir Cierre" />
                 <Region HBox.hgrow="ALWAYS" />
                 <Button fx:id="salirButton" onAction="#onSalirClicked" text="Salir" />
             </children>
