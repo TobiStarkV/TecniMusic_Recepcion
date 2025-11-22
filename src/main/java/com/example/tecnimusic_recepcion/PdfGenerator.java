@@ -226,9 +226,11 @@ public class PdfGenerator {
 
         document.add(createSectionHeader("Entrega y Aclaraciones", headerColor));
         LocalDate fechaEntrega = data.getFechaEntrega();
-        Table entregaTable = new Table(UnitValue.createPercentArray(new float[]{1, 4})).useAllAvailableWidth().setMarginTop(5);
-        addInfoRow(entregaTable, "Fecha de Entrega:", (fechaEntrega != null ? fechaEntrega.format(DateTimeFormatter.ofPattern("dd/MM/yyyy")) : "Pendiente"), false);
-        document.add(entregaTable);
+        if (fechaEntrega != null) {
+            Table entregaTable = new Table(UnitValue.createPercentArray(new float[]{1, 4})).useAllAvailableWidth().setMarginTop(5);
+            addInfoRow(entregaTable, "Fecha Tentativa de Entrega:", fechaEntrega.format(DateTimeFormatter.ofPattern("dd/MM/yyyy")), false);
+            document.add(entregaTable);
+        }
 
         String aclaraciones = data.getAclaraciones();
         if (aclaraciones != null && !aclaraciones.trim().isEmpty()) {

@@ -688,8 +688,10 @@ public class tecniMusicController {
         });
 
         textField.focusedProperty().addListener((observable, wasFocused, isNowFocused) -> {
-            if (!isNowFocused && "$0.00".equals(textField.getText())) {
-                textField.clear();
+            if (!isNowFocused) {
+                if (textField.getText() == null || textField.getText().trim().isEmpty()) {
+                    textField.setText(NumberFormat.getCurrencyInstance(SPANISH_MEXICO_LOCALE).format(0));
+                }
             }
         });
     }

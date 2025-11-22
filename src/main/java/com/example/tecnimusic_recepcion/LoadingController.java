@@ -18,24 +18,23 @@ import javafx.util.Duration;
 
 import java.io.IOException;
 import java.sql.SQLException;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Optional;
-import java.util.concurrent.BlockingQueue;
-import java.util.concurrent.LinkedBlockingQueue;
 
 public class LoadingController {
 
     @FXML
     private ImageView loadingImageView;
 
+    // Constantes para la animación
     private static final int TOTAL_FRAMES = 271;
     private static final String IMAGE_PREFIX = "/com/example/tecnimusic_recepcion/images/TecniMusic Intro_";
     private static final String IMAGE_SUFFIX = ".png";
-    private static final int CACHE_SIZE = 30; // Número de imágenes a mantener en memoria
 
-    private final BlockingQueue<Image> frameCache = new LinkedBlockingQueue<>(CACHE_SIZE);
+    private final List<Image> animationFrames = new ArrayList<>(TOTAL_FRAMES);
     private int currentFrameIndex = 0;
     private Timeline timeline;
-    private Thread imageLoaderThread;
 
     private volatile boolean isDatabaseReady = false;
     private volatile boolean isAnimationCycleComplete = false;
@@ -48,49 +47,58 @@ public class LoadingController {
             }
         });
 
-        startImageLoader();
-
-        timeline = new Timeline();
-        timeline.setCycleCount(Timeline.INDEFINITE);
-        timeline.getKeyFrames().add(
-                new KeyFrame(Duration.millis(33), event -> {
-                    Image frame = frameCache.poll(); // Tomar una imagen de la caché
-                    if (frame != null) {
-                        loadingImageView.setImage(frame);
-                        currentFrameIndex++;
-                        if (currentFrameIndex >= TOTAL_FRAMES) {
-                            currentFrameIndex = 0;
-                            if (!isAnimationCycleComplete) {
-                                isAnimationCycleComplete = true;
-                                trySwitchToMainView();
-                            }
-                        }
-                    }
-                })
-        );
-        timeline.play();
-
+        preloadAnimationAndStart();
         startDatabaseLoadTask();
     }
 
-    private void startImageLoader() {
-        imageLoaderThread = new Thread(() -> {
-            try {
+    /**
+     * Carga todas las imágenes de la animación en segundo plano.
+     * Una vez cargadas, inicia el Timeline de JavaFX para reproducirlas.
+     */
+    private void preloadAnimationAndStart() {
+        Task<Void> imageLoaderTask = new Task<>() {
+            @Override
+            protected Void call() throws Exception {
                 for (int i = 0; i < TOTAL_FRAMES; i++) {
                     String frameNumber = String.format("%05d", i);
                     String imagePath = IMAGE_PREFIX + frameNumber + IMAGE_SUFFIX;
                     // Cargar la imagen con un tamaño reducido para ahorrar memoria y mejorar rendimiento
                     Image frame = new Image(getClass().getResourceAsStream(imagePath), 500, 500, true, true);
-                    frameCache.put(frame); // Poner en la caché, esperando si está llena
+                    animationFrames.add(frame);
                 }
-            } catch (InterruptedException e) {
-                Thread.currentThread().interrupt(); // Restaurar el estado de interrupción
-            } catch (Exception e) {
-                System.err.println("Error en el hilo de carga de imágenes: " + e.getMessage());
+                return null;
             }
+        };
+
+        imageLoaderTask.setOnSucceeded(event -> {
+            // Una vez que todas las imágenes están en memoria, iniciamos la animación.
+            timeline = new Timeline();
+            timeline.setCycleCount(Timeline.INDEFINITE);
+            timeline.getKeyFrames().add(
+                    new KeyFrame(Duration.millis(33), e -> {
+                        if (animationFrames.isEmpty()) return;
+                        loadingImageView.setImage(animationFrames.get(currentFrameIndex));
+                        currentFrameIndex++;
+                        if (currentFrameIndex >= TOTAL_FRAMES) {
+                            currentFrameIndex = 0; // Reiniciar para el bucle
+                            if (!isAnimationCycleComplete) {
+                                isAnimationCycleComplete = true;
+                                trySwitchToMainView();
+                            }
+                        }
+                    })
+            );
+            timeline.play();
         });
-        imageLoaderThread.setDaemon(true);
-        imageLoaderThread.start();
+
+        imageLoaderTask.setOnFailed(event -> {
+            // Manejar el error si las imágenes no se pueden cargar
+            System.err.println("Error crítico: No se pudieron cargar los frames de la animación.");
+            imageLoaderTask.getException().printStackTrace();
+            // Podrías mostrar una alerta y cerrar la app aquí.
+        });
+
+        new Thread(imageLoaderTask).start();
     }
 
     private void startDatabaseLoadTask() {
@@ -117,8 +125,7 @@ public class LoadingController {
                 trySwitchToMainView();
             } else {
                 Platform.runLater(() -> {
-                    timeline.stop();
-                    if (imageLoaderThread != null) imageLoaderThread.interrupt();
+                    if (timeline != null) timeline.stop();
                     Alert alert = new Alert(Alert.AlertType.ERROR);
                     alert.setTitle("Error de Base de Datos");
                     alert.setHeaderText("No se pudo conectar a la base de datos de Snipe-IT.");
@@ -161,10 +168,8 @@ public class LoadingController {
             // Reiniciar el estado para una nueva verificación
             isDatabaseReady = false;
             isAnimationCycleComplete = false;
-            currentFrameIndex = 0;
-            frameCache.clear();
-            startImageLoader();
-            timeline.play();
+            // La animación ya está cargada, solo necesitamos reiniciar el timeline si se detuvo.
+            if (timeline != null) timeline.play();
             startDatabaseLoadTask();
 
         } catch (IOException e) {
@@ -188,10 +193,7 @@ public class LoadingController {
     }
 
     private void switchToMainView() {
-        if (imageLoaderThread != null) {
-            imageLoaderThread.interrupt(); // Detener el hilo de carga de imágenes
-        }
-        timeline.stop();
+        if (timeline != null) timeline.stop();
 
         try {
             Parent mainView = FXMLLoader.load(getClass().getResource("main-menu-view.fxml"));
