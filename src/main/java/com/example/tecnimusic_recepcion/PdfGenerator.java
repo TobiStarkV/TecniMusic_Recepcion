@@ -46,9 +46,10 @@ public class PdfGenerator {
         this.pdfFooter = dbConfig.getPdfFooter();
     }
 
-    public String generatePdf(HojaServicioData data) throws IOException {
-        boolean isCierre = "CERRADA".equals(data.getEstado());
-        String dest = crearRutaDestinoPdf(data.getNumeroOrden() + (isCierre ? "_CIERRE" : ""));
+    public String generatePdf(HojaServicioData data, boolean forceReception) throws IOException {
+        boolean isCierre = "CERRADA".equals(data.getEstado()) && !forceReception;
+        String suffix = isCierre ? "_CIERRE" : "_RECEPCION";
+        String dest = crearRutaDestinoPdf(data.getNumeroOrden() + suffix);
         if (dest == null) return null;
 
         PdfWriter writer = new PdfWriter(dest);
@@ -70,6 +71,11 @@ public class PdfGenerator {
         document.close();
         return dest;
     }
+
+    public String generatePdf(HojaServicioData data) throws IOException {
+        return generatePdf(data, false);
+    }
+
 
     private void agregarNumerosDePagina(PdfDocument pdf, Document doc) {
         int totalPages = pdf.getNumberOfPages();

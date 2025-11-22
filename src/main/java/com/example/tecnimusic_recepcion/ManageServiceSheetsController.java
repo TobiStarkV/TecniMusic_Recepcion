@@ -141,7 +141,7 @@ public class ManageServiceSheetsController {
     }
 
     @FXML
-    protected void onPrintSelectedClicked() {
+    protected void onPrintReceptionClicked() {
         ServiceSheetSummary selected = serviceSheetsTable.getSelectionModel().getSelectedItem();
         if (selected == null) {
             showAlert(Alert.AlertType.WARNING, "Selección Requerida", "Por favor, seleccione una hoja de servicio de la tabla para imprimir.");
@@ -150,30 +150,60 @@ public class ManageServiceSheetsController {
 
         fetchAndProcessServiceSheet(selected.getOrderNumber(), (data) -> {
             try {
+                // Forzar la generación del PDF de recepción
+                data.setEstado("ABIERTA"); 
                 String pdfPath = new PdfGenerator().generatePdf(data);
-                if (pdfPath != null) {
-                    // Añadir una pequeña pausa para asegurar que el archivo se ha escrito completamente
-                    try {
-                        Thread.sleep(200);
-                    } catch (InterruptedException e) {
-                        Thread.currentThread().interrupt();
-                    }
-
-                    File pdfFile = new File(pdfPath);
-                    if (Desktop.isDesktopSupported()) {
-                        Desktop.getDesktop().open(pdfFile);
-                    } else {
-                        showAlert(Alert.AlertType.WARNING, "Función no Soportada", "La apertura automática de archivos no es soportada en este sistema.");
-                    }
-                } else {
-                    showAlert(Alert.AlertType.ERROR, "Error de PDF", "No se pudo generar la ruta del PDF.");
-                }
+                performPrint(pdfPath);
             } catch (IOException e) {
                 showAlert(Alert.AlertType.ERROR, "Error de PDF", "No se pudo generar el PDF. Error: " + e.getMessage());
                 e.printStackTrace();
             }
         });
     }
+
+    @FXML
+    protected void onPrintClosureClicked() {
+        ServiceSheetSummary selected = serviceSheetsTable.getSelectionModel().getSelectedItem();
+        if (selected == null) {
+            showAlert(Alert.AlertType.WARNING, "Selección Requerida", "Por favor, seleccione una hoja de servicio de la tabla para imprimir.");
+            return;
+        }
+
+        if (!"CERRADA".equals(selected.getStatus())) {
+            showAlert(Alert.AlertType.WARNING, "Hoja no Cerrada", "La hoja de servicio debe estar cerrada para poder imprimir el informe de cierre.");
+            return;
+        }
+
+        fetchAndProcessServiceSheet(selected.getOrderNumber(), (data) -> {
+            try {
+                String pdfPath = new PdfGenerator().generatePdf(data);
+                performPrint(pdfPath);
+            } catch (IOException e) {
+                showAlert(Alert.AlertType.ERROR, "Error de PDF", "No se pudo generar el PDF. Error: " + e.getMessage());
+                e.printStackTrace();
+            }
+        });
+    }
+
+    private void performPrint(String pdfPath) {
+        if (pdfPath == null) {
+            showAlert(Alert.AlertType.ERROR, "Error de PDF", "No se pudo encontrar la ruta del PDF para imprimir.");
+            return;
+        }
+        
+        File pdfFile = new File(pdfPath);
+        if (Desktop.isDesktopSupported()) {
+            try {
+                Desktop.getDesktop().open(pdfFile);
+            } catch (IOException e) {
+                showAlert(Alert.AlertType.ERROR, "Error al Abrir", "No se pudo abrir el archivo PDF con el visor predeterminado.");
+                e.printStackTrace();
+            }
+        } else {
+            showAlert(Alert.AlertType.WARNING, "Función no Soportada", "La apertura automática de archivos no es soportada en este sistema.");
+        }
+    }
+
 
     @FXML
     protected void onViewDetailsClicked() {
@@ -240,57 +270,6 @@ public class ManageServiceSheetsController {
             showAlert(Alert.AlertType.ERROR, "Error de Base de Datos", "Ocurrió un error al consultar los datos: " + e.getMessage());
             e.printStackTrace();
         }
-    }
-
-    private HojaServicioData createHojaServicioDataFromResultSet(ResultSet rs, Connection conn) throws SQLException {
-        HojaServicioData data = new HojaServicioData();
-        long hojaServicioId = rs.getLong("id");
-        data.setNumeroOrden(rs.getString("numero_orden"));
-        Date fechaOrden = rs.getDate("fecha_orden");
-        if (fechaOrden != null) data.setFechaOrden(fechaOrden.toLocalDate());
-
-        data.setClienteNombre(rs.getString("cliente_nombre"));
-        data.setClienteDireccion(rs.getString("cliente_direccion"));
-        data.setClienteTelefono(rs.getString("cliente_telefono"));
-
-        data.setTotalCostos(rs.getBigDecimal("total_costos"));
-        data.setAnticipo(rs.getBigDecimal("anticipo"));
-
-        Date fechaEntrega = rs.getDate("fecha_entrega");
-        if (fechaEntrega != null) data.setFechaEntrega(fechaEntrega.toLocalDate());
-
-        data.setAclaraciones(rs.getString("aclaraciones"));
-        data.setFirmaAclaracion("");
-        data.setInformeCostos(rs.getString("informe_costos"));
-        data.setEstado(rs.getString("estado"));
-        data.setInformeTecnico(rs.getString("informe_tecnico"));
-
-
-        // Cargar equipos asociados
-        data.setEquipos(loadEquiposForHojaServicio(hojaServicioId, conn));
-
-        return data;
-    }
-
-    private List<Equipo> loadEquiposForHojaServicio(long hojaServicioId, Connection conn) throws SQLException {
-        List<Equipo> equipos = new ArrayList<>();
-        String sql = "SELECT * FROM x_hojas_servicio_equipos WHERE hoja_id = ?";
-        try (PreparedStatement pstmt = conn.prepareStatement(sql)) {
-            pstmt.setLong(1, hojaServicioId);
-            ResultSet rs = pstmt.executeQuery();
-            while (rs.next()) {
-                String tipo = rs.getString("equipo_tipo");
-                String marca = rs.getString("equipo_marca");
-                String modelo = rs.getString("equipo_modelo");
-                String serie = rs.getString("equipo_serie");
-                String falla = rs.getString("falla_reportada");
-                BigDecimal costo = rs.getBigDecimal("costo");
-                String estadoFisico = rs.getString("estado_fisico");
-                String accesorios = rs.getString("accesorios");
-                equipos.add(new Equipo(tipo, marca, serie, modelo, falla, costo, estadoFisico, accesorios));
-            }
-        }
-        return equipos;
     }
 
     private void showAlert(Alert.AlertType type, String title, String message) {
