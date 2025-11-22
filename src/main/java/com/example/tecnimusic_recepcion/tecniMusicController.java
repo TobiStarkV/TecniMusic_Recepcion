@@ -775,6 +775,7 @@ public class tecniMusicController {
     private void resetFormulario() {
         isAutoCompleting = true;
         isViewOnlyMode = false;
+        currentHojaServicioData = null; // Limpiar la data al resetear
 
         setNodesVisible(false, cierreBox, subtotalBox, totalBox, updateEquipoButton, cierreButton, printReceptionButton, printClosureButton);
         setNodesVisible(true, addEquipoButton, removeEquipoButton, guardarButton, limpiarButton);

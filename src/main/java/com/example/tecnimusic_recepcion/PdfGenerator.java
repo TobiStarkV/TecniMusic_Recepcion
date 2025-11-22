@@ -11,13 +11,13 @@ import com.itextpdf.kernel.pdf.canvas.PdfCanvas;
 import com.itextpdf.layout.Canvas;
 import com.itextpdf.layout.Document;
 import com.itextpdf.layout.borders.Border;
-import com.itextpdf.layout.borders.SolidBorder;
 import com.itextpdf.layout.element.Image;
 import com.itextpdf.layout.element.LineSeparator;
 import com.itextpdf.layout.element.Paragraph;
 import com.itextpdf.layout.element.Table;
 import com.itextpdf.layout.properties.TextAlignment;
 import com.itextpdf.layout.properties.UnitValue;
+// import com.itextpdf.layout.properties.WordBreak; // Importar WordBreak
 import javafx.scene.control.Alert;
 
 import java.io.File;
@@ -178,12 +178,12 @@ public class PdfGenerator {
                 addInfoRow(equipoTable, "Serie:", nullToEmpty(eq.getSerie()), false);
                 document.add(equipoTable);
 
-                Table detallesTable = new Table(UnitValue.createPercentArray(new float[]{1, 1})).useAllAvailableWidth().setMarginTop(2);
-                addDetailCell(detallesTable, "Estado Físico", nullToEmpty(eq.getEstadoFisico()));
-                addDetailCell(detallesTable, "Accesorios", nullToEmpty(eq.getAccesorios()));
-                addDetailCell(detallesTable, "Falla Reportada", nullToEmpty(eq.getFalla()));
+                Table detallesTable = new Table(UnitValue.createPercentArray(new float[]{1, 4})).useAllAvailableWidth().setMarginTop(2);
+                addInfoRow(detallesTable, "Estado Físico:", nullToEmpty(eq.getEstadoFisico()), false);
+                addInfoRow(detallesTable, "Accesorios:", nullToEmpty(eq.getAccesorios()), false);
+                addInfoRow(detallesTable, "Falla Reportada:", nullToEmpty(eq.getFalla()), false);
                 if (isCierre) {
-                    addDetailCell(detallesTable, "Informe Técnico", nullToEmpty(eq.getInformeTecnico()));
+                    addInfoRow(detallesTable, "Informe Técnico:", nullToEmpty(eq.getInformeTecnico()), false);
                 }
                 document.add(detallesTable);
                 document.add(new LineSeparator(new com.itextpdf.kernel.pdf.canvas.draw.DashedLine()).setMarginTop(5));
@@ -194,24 +194,35 @@ public class PdfGenerator {
 
         document.add(new LineSeparator(new com.itextpdf.kernel.pdf.canvas.draw.SolidLine(0.5f)).setMarginTop(10));
 
-        Table totalesTable = new Table(UnitValue.createPercentArray(new float[]{3, 1})).useAllAvailableWidth().setMarginTop(5);
-        totalesTable.setBorder(Border.NO_BORDER);
-
-        BigDecimal subtotal = data.getTotalCostos() != null ? data.getTotalCostos() : BigDecimal.ZERO;
-        BigDecimal anticipo = data.getAnticipo() != null ? data.getAnticipo() : BigDecimal.ZERO;
-        BigDecimal totalFinal = subtotal.subtract(anticipo);
         NumberFormat currencyFormat = NumberFormat.getCurrencyInstance(SPANISH_MEXICO_LOCALE);
+        BigDecimal anticipo = data.getAnticipo() != null ? data.getAnticipo() : BigDecimal.ZERO;
 
-        totalesTable.addCell(new com.itextpdf.layout.element.Cell().add(new Paragraph("Subtotal:")).setTextAlignment(TextAlignment.RIGHT).setBorder(Border.NO_BORDER).setBold());
-        totalesTable.addCell(new com.itextpdf.layout.element.Cell().add(new Paragraph(currencyFormat.format(subtotal))).setTextAlignment(TextAlignment.RIGHT).setBorder(Border.NO_BORDER));
+        if (isCierre) {
+            Table totalesTable = new Table(UnitValue.createPercentArray(new float[]{3, 1})).useAllAvailableWidth().setMarginTop(5);
+            totalesTable.setBorder(Border.NO_BORDER);
 
-        totalesTable.addCell(new com.itextpdf.layout.element.Cell().add(new Paragraph("Anticipo:")).setTextAlignment(TextAlignment.RIGHT).setBorder(Border.NO_BORDER).setBold());
-        totalesTable.addCell(new com.itextpdf.layout.element.Cell().add(new Paragraph(currencyFormat.format(anticipo))).setTextAlignment(TextAlignment.RIGHT).setBorder(Border.NO_BORDER));
+            BigDecimal subtotal = data.getTotalCostos() != null ? data.getTotalCostos() : BigDecimal.ZERO;
+            BigDecimal totalFinal = subtotal.subtract(anticipo);
 
-        totalesTable.addCell(new com.itextpdf.layout.element.Cell().add(new Paragraph("Total a Pagar:")).setTextAlignment(TextAlignment.RIGHT).setBorder(Border.NO_BORDER).setBold().setFontSize(12));
-        totalesTable.addCell(new com.itextpdf.layout.element.Cell().add(new Paragraph(currencyFormat.format(totalFinal))).setTextAlignment(TextAlignment.RIGHT).setBorder(Border.NO_BORDER).setBold().setFontSize(12));
+            totalesTable.addCell(new com.itextpdf.layout.element.Cell().add(new Paragraph("Subtotal:")).setTextAlignment(TextAlignment.RIGHT).setBorder(Border.NO_BORDER).setBold());
+            totalesTable.addCell(new com.itextpdf.layout.element.Cell().add(new Paragraph(currencyFormat.format(subtotal))).setTextAlignment(TextAlignment.RIGHT).setBorder(Border.NO_BORDER));
 
-        document.add(totalesTable);
+            totalesTable.addCell(new com.itextpdf.layout.element.Cell().add(new Paragraph("Anticipo:")).setTextAlignment(TextAlignment.RIGHT).setBorder(Border.NO_BORDER).setBold());
+            totalesTable.addCell(new com.itextpdf.layout.element.Cell().add(new Paragraph(currencyFormat.format(anticipo))).setTextAlignment(TextAlignment.RIGHT).setBorder(Border.NO_BORDER));
+
+            totalesTable.addCell(new com.itextpdf.layout.element.Cell().add(new Paragraph("Total a Pagar:")).setTextAlignment(TextAlignment.RIGHT).setBorder(Border.NO_BORDER).setBold().setFontSize(12));
+            totalesTable.addCell(new com.itextpdf.layout.element.Cell().add(new Paragraph(currencyFormat.format(totalFinal))).setTextAlignment(TextAlignment.RIGHT).setBorder(Border.NO_BORDER).setBold().setFontSize(12));
+
+            document.add(totalesTable);
+        } else {
+            if (anticipo.compareTo(BigDecimal.ZERO) > 0) {
+                Table totalesTable = new Table(UnitValue.createPercentArray(new float[]{3, 1})).useAllAvailableWidth().setMarginTop(5);
+                totalesTable.setBorder(Border.NO_BORDER);
+                totalesTable.addCell(new com.itextpdf.layout.element.Cell().add(new Paragraph("Anticipo:")).setTextAlignment(TextAlignment.RIGHT).setBorder(Border.NO_BORDER).setBold());
+                totalesTable.addCell(new com.itextpdf.layout.element.Cell().add(new Paragraph(currencyFormat.format(anticipo))).setTextAlignment(TextAlignment.RIGHT).setBorder(Border.NO_BORDER));
+                document.add(totalesTable);
+            }
+        }
 
         document.add(createSectionHeader("Entrega y Aclaraciones", headerColor));
         LocalDate fechaEntrega = data.getFechaEntrega();
@@ -225,15 +236,6 @@ public class PdfGenerator {
             document.add(new Paragraph(aclaraciones).setFontSize(9));
         }
     }
-
-    private void addDetailCell(Table table, String title, String content) {
-        com.itextpdf.layout.element.Cell cell = new com.itextpdf.layout.element.Cell();
-        cell.setBorder(new SolidBorder(ColorConstants.LIGHT_GRAY, 0.5f));
-        cell.add(new Paragraph(title).setBold().setFontSize(8));
-        cell.add(new Paragraph(content).setFontSize(8));
-        table.addCell(cell);
-    }
-
 
     private void agregarMarcaDeAgua(PdfDocument pdf) throws IOException {
         URL logoUrl = getClass().getClassLoader().getResource("logo.png");
@@ -272,7 +274,10 @@ public class PdfGenerator {
         labelCell.setBorder(Border.NO_BORDER).setPadding(1);
         table.addCell(labelCell);
 
-        com.itextpdf.layout.element.Cell valueCell = new com.itextpdf.layout.element.Cell().add(new Paragraph(value).setFontSize(9));
+        Paragraph valueParagraph = new Paragraph(value).setFontSize(9);
+        // valueParagraph.setWordBreak(WordBreak.BY_CHAR); // Añadir esta línea
+        
+        com.itextpdf.layout.element.Cell valueCell = new com.itextpdf.layout.element.Cell().add(valueParagraph);
         if (isValueBold) {
             valueCell.setBold();
         }
