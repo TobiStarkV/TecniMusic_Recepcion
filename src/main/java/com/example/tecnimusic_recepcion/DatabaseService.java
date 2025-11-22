@@ -457,7 +457,7 @@ public class DatabaseService {
                             nombreCliente);
 
                     insertarEquipoEnHoja(conn, hojaId, assetId,
-                            equipo.getSerie(), equipo.getTipo(), equipo.getMarca(), equipo.getModelo(), equipo.getFalla(), equipo.getCosto(), equipo.getEstadoFisico(), equipo.getAccesorios());
+                            equipo.getSerie(), equipo.getTipo(), equipo.getMarca(), equipo.getModelo(), equipo.getFalla(), null, equipo.getEstadoFisico(), equipo.getAccesorios());
                 }
             }
 
@@ -552,16 +552,45 @@ public class DatabaseService {
         return -1; // No records found
     }
 
-    public void cerrarHojaServicio(long hojaId, String informeTecnico) throws SQLException {
-        String sql = "UPDATE x_hojas_servicio SET estado = 'CERRADA', informe_tecnico = ?, fecha_entrega = ? WHERE id = ?";
-        try (Connection conn = DatabaseManager.getInstance().getConnection();
-             PreparedStatement pstmt = conn.prepareStatement(sql)) {
-            pstmt.setString(1, informeTecnico);
-            pstmt.setDate(2, Date.valueOf(LocalDate.now())); // Establece la fecha de entrega al día actual
-            pstmt.setLong(3, hojaId);
-            pstmt.executeUpdate();
+    public void cerrarHojaServicio(long hojaId, String informeTecnico, List<Equipo> equipos, BigDecimal totalCostos) throws SQLException {
+        Connection conn = null;
+        try {
+            conn = DatabaseManager.getInstance().getConnection();
+            conn.setAutoCommit(false);
+
+            // 1. Actualizar la hoja de servicio principal
+            String sqlHoja = "UPDATE x_hojas_servicio SET estado = 'CERRADA', informe_tecnico = ?, fecha_entrega = ?, total_costos = ? WHERE id = ?";
+            try (PreparedStatement pstmt = conn.prepareStatement(sqlHoja)) {
+                pstmt.setString(1, informeTecnico);
+                pstmt.setDate(2, Date.valueOf(LocalDate.now()));
+                pstmt.setBigDecimal(3, totalCostos);
+                pstmt.setLong(4, hojaId);
+                pstmt.executeUpdate();
+            }
+
+            // 2. Actualizar el costo de cada equipo
+            String sqlEquipo = "UPDATE x_hojas_servicio_equipos SET costo = ? WHERE id = ?";
+            try (PreparedStatement pstmt = conn.prepareStatement(sqlEquipo)) {
+                for (Equipo equipo : equipos) {
+                    if (equipo.getId() != null) { // Solo actualizar equipos que ya existen en la BD
+                        pstmt.setBigDecimal(1, equipo.getCosto());
+                        pstmt.setLong(2, equipo.getId());
+                        pstmt.addBatch();
+                    }
+                }
+                pstmt.executeBatch();
+            }
+
+            conn.commit();
+
+        } catch (SQLException e) {
+            if (conn != null) try { conn.rollback(); } catch (SQLException ex) { ex.printStackTrace(); }
+            throw e;
+        } finally {
+            if (conn != null) try { conn.close(); } catch (SQLException e) { e.printStackTrace(); }
         }
     }
+
 
     /**
      * Obtiene todos los datos de una hoja de servicio, incluyendo sus equipos, para reconstruirla.
@@ -615,6 +644,7 @@ public class DatabaseService {
                     List<Equipo> equipos = new ArrayList<>();
                     while (rsEquipos.next()) {
                         Equipo equipo = new Equipo(
+                            rsEquipos.getLong("id"),
                             rsEquipos.getString("equipo_tipo"),
                             rsEquipos.getString("equipo_marca"),
                             rsEquipos.getString("equipo_serie"),

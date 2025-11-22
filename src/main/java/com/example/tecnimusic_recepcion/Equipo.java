@@ -3,6 +3,7 @@ package com.example.tecnimusic_recepcion;
 import java.math.BigDecimal;
 
 public class Equipo {
+    private Long id; // Nuevo campo para el ID de la base de datos
     private String tipo;
     private String marca;
     private String serie;
@@ -10,11 +11,12 @@ public class Equipo {
     private String falla;
     private BigDecimal costo;
     private String estadoFisico;
-    private String accesorios; // Nuevo campo
+    private String accesorios;
 
     public Equipo() {}
 
-    public Equipo(String tipo, String marca, String serie, String modelo, String falla, BigDecimal costo, String estadoFisico, String accesorios) {
+    public Equipo(Long id, String tipo, String marca, String serie, String modelo, String falla, BigDecimal costo, String estadoFisico, String accesorios) {
+        this.id = id;
         this.tipo = tipo;
         this.marca = marca;
         this.serie = serie;
@@ -25,11 +27,24 @@ public class Equipo {
         this.accesorios = accesorios;
     }
 
+    // Constructor para la creación inicial (sin ID)
+    public Equipo(String tipo, String marca, String serie, String modelo, String falla, BigDecimal costo, String estadoFisico, String accesorios) {
+        this(null, tipo, marca, serie, modelo, falla, costo, estadoFisico, accesorios);
+    }
+
     // Constructor anterior para mantener compatibilidad
     public Equipo(String tipo, String marca, String serie, String modelo, String falla, BigDecimal costo, String estadoFisico) {
-        this(tipo, marca, serie, modelo, falla, costo, estadoFisico, "");
+        this(null, tipo, marca, serie, modelo, falla, costo, estadoFisico, "");
     }
     
+    public Long getId() {
+        return id;
+    }
+
+    public void setId(Long id) {
+        this.id = id;
+    }
+
     public String getTipo() {
         return tipo;
     }

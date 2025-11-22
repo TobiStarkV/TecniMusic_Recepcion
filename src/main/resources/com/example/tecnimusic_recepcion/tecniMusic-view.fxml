@@ -115,7 +115,7 @@
                               <Button fx:id="accesoriosButton" mnemonicParsing="false" onAction="#onAccesoriosClicked" text="Gestionar Accesorios" />
                               <Label text="Falla Reportada:" />
                               <StyleClassedTextArea fx:id="equipoFallaArea" prefHeight="80.0" wrapText="true" styleClass="falla-reportada-text-area" />
-                              <GridPane hgap="10.0" vgap="5.0">
+                              <GridPane fx:id="costoGridPane" hgap="10.0" vgap="5.0">
                                  <columnConstraints>
                                     <ColumnConstraints hgrow="SOMETIMES" prefWidth="140.0" />
                                     <ColumnConstraints hgrow="SOMETIMES" prefWidth="150.0" />
@@ -128,10 +128,11 @@
                               </GridPane>
 
                               <!-- Botones para añadir/quitar equipos -->
-                              <HBox spacing="10.0" alignment="CENTER_RIGHT">
+                              <HBox fx:id="equipoActionBox" spacing="10.0" alignment="CENTER_RIGHT">
                                  <children>
                                     <Button fx:id="addEquipoButton" mnemonicParsing="false" text="Añadir Equipo" />
                                     <Button fx:id="removeEquipoButton" mnemonicParsing="false" text="Quitar Equipo" />
+                                    <Button fx:id="updateCostoButton" mnemonicParsing="false" text="Actualizar Costo de Equipo" visible="false" managed="false" />
                                  </children>
                               </HBox>
 
@@ -148,7 +149,7 @@
                                     <TableColumn fx:id="colCosto" text="Costo" />
                                  </columns>
                               </TableView>
-                              <HBox alignment="CENTER_RIGHT" spacing="10.0">
+                              <HBox fx:id="subtotalBox" alignment="CENTER_RIGHT" spacing="10.0">
                                  <children>
                                     <Label text="Subtotal:" style="-fx-font-weight: bold;"/>
                                     <Label fx:id="subtotalLabel" text="\$0.00" style="-fx-font-weight: bold;"/>

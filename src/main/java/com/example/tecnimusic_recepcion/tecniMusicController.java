@@ -12,6 +12,7 @@ import javafx.scene.Node;
 import javafx.scene.Scene;
 import javafx.scene.control.*;
 import javafx.scene.image.Image;
+import javafx.scene.layout.GridPane;
 import javafx.scene.layout.HBox;
 import javafx.stage.Modality;
 import javafx.stage.Stage;
@@ -63,7 +64,10 @@ public class tecniMusicController {
     // Nuevos campos para múltiples equipos
     @FXML private TableView<Equipo> equiposTable;
     @FXML private TableColumn<Equipo, String> colTipo, colMarca, colModelo, colSerie, colFalla, colCosto, colEstadoFisico, colAccesorios;
-    @FXML private Button addEquipoButton, removeEquipoButton;
+    @FXML private Button addEquipoButton, removeEquipoButton, updateCostoButton;
+    @FXML private HBox equipoActionBox, subtotalBox;
+    @FXML private GridPane costoGridPane;
+
 
     // Componentes para el cierre de la hoja
     @FXML private TitledPane cierrePane;
@@ -143,6 +147,8 @@ public class tecniMusicController {
 
         if (addEquipoButton != null) addEquipoButton.setOnAction(e -> onAddEquipo());
         if (removeEquipoButton != null) removeEquipoButton.setOnAction(e -> onRemoveEquipo());
+        if (updateCostoButton != null) updateCostoButton.setOnAction(e -> onUpdateCosto());
+
 
         if (printButton != null) {
             printButton.setVisible(false);
@@ -367,25 +373,13 @@ public class tecniMusicController {
         String falla = equipoFallaArea.getText() == null ? "" : equipoFallaArea.getText().trim();
         String estadoFisico = equipoEstadoFisicoArea.getText() == null ? "" : equipoEstadoFisicoArea.getText().trim();
         String accesorios = String.join(", ", accesoriosList);
-        String costoStr = equipoCostoField.getText() == null ? "" : equipoCostoField.getText().trim();
-
+        
         if (tipo.isEmpty() && marca.isEmpty() && modelo.isEmpty() && serie.isEmpty()) {
             showAlert(Alert.AlertType.WARNING, "Equipo vacío", "Complete al menos un campo del equipo antes de añadir.");
             return;
         }
 
-        BigDecimal costo = null;
-        if (!costoStr.isEmpty()) {
-            try {
-                Number number = NumberFormat.getCurrencyInstance(SPANISH_MEXICO_LOCALE).parse(costoStr);
-                costo = BigDecimal.valueOf(number.doubleValue());
-            } catch (ParseException e) {
-                showAlert(Alert.AlertType.ERROR, "Formato de Costo Inválido", "El formato del costo de reparación no es válido.");
-                return;
-            }
-        }
-
-        Equipo equipo = new Equipo(tipo, marca, serie, modelo, falla, costo, estadoFisico, accesorios);
+        Equipo equipo = new Equipo(tipo, marca, serie, modelo, falla, null, estadoFisico, accesorios);
         equiposObservable.add(equipo);
 
         // Limpiar campos para añadir siguiente equipo
@@ -396,7 +390,7 @@ public class tecniMusicController {
         equipoFallaArea.clear();
         equipoEstadoFisicoArea.clear();
         accesoriosList.clear();
-        if (equipoAccesoriosArea != null) { // Limpiar también el área de texto de accesorios
+        if (equipoAccesoriosArea != null) {
             equipoAccesoriosArea.clear();
         }
         equipoCostoField.clear();
@@ -410,6 +404,31 @@ public class tecniMusicController {
         }
         equiposObservable.remove(seleccionado);
     }
+
+    private void onUpdateCosto() {
+        Equipo selectedEquipo = equiposTable.getSelectionModel().getSelectedItem();
+        if (selectedEquipo == null) {
+            showAlert(Alert.AlertType.WARNING, "Seleccionar Equipo", "Por favor, seleccione un equipo de la tabla para actualizar su costo.");
+            return;
+        }
+
+        String costoStr = equipoCostoField.getText();
+        BigDecimal nuevoCosto = null;
+        if (costoStr != null && !costoStr.isEmpty()) {
+            try {
+                Number number = NumberFormat.getCurrencyInstance(SPANISH_MEXICO_LOCALE).parse(costoStr);
+                nuevoCosto = BigDecimal.valueOf(number.doubleValue());
+            } catch (ParseException e) {
+                showAlert(Alert.AlertType.ERROR, "Formato de Costo Inválido", "El formato del costo de reparación no es válido.");
+                return;
+            }
+        }
+
+        selectedEquipo.setCosto(nuevoCosto);
+        equiposTable.refresh();
+        actualizarCostosTotales();
+    }
+
 
     private void actualizarCostosTotales() {
         BigDecimal subtotal = BigDecimal.ZERO;
@@ -444,7 +463,7 @@ public class tecniMusicController {
         populateFormWithData(data);
 
         // Deshabilitar todos los campos por defecto
-        for (Node node : List.of(clienteNombreField, clienteDireccionField, clienteTelefonoField, equipoSerieField, equipoTipoField, equipoCompaniaField, equipoModeloField, equipoCostoField, anticipoField, ordenFechaPicker, entregaFechaPicker, equipoFallaArea, equipoEstadoFisicoArea, aclaracionesArea, accesoriosButton, addEquipoButton, removeEquipoButton)) {
+        for (Node node : List.of(clienteNombreField, clienteDireccionField, clienteTelefonoField, equipoSerieField, equipoTipoField, equipoCompaniaField, equipoModeloField, anticipoField, ordenFechaPicker, entregaFechaPicker, equipoFallaArea, equipoEstadoFisicoArea, aclaracionesArea, accesoriosButton)) {
             node.setDisable(true);
         }
         if (equipoAccesoriosArea != null) {
@@ -464,6 +483,20 @@ public class tecniMusicController {
             printButton.setManaged(true);
         }
 
+        // Configurar modo cierre
+        costoGridPane.setVisible(true);
+        costoGridPane.setManaged(true);
+        subtotalBox.setVisible(true);
+        subtotalBox.setManaged(true);
+        colCosto.setVisible(true);
+        addEquipoButton.setVisible(false);
+        addEquipoButton.setManaged(false);
+        removeEquipoButton.setVisible(false);
+        removeEquipoButton.setManaged(false);
+        updateCostoButton.setVisible(true);
+        updateCostoButton.setManaged(true);
+
+
         // Lógica para el panel de cierre
         if (cierrePane != null) {
             cierrePane.setVisible(true);
@@ -479,9 +512,13 @@ public class tecniMusicController {
                 informeTecnicoArea.setEditable(false);
                 cierreButton.setDisable(true);
                 cierreButton.setText("Hoja Cerrada");
+                updateCostoButton.setDisable(true);
+                equipoCostoField.setDisable(true);
             } else {
                 informeTecnicoArea.setEditable(true);
                 cierreButton.setDisable(false);
+                updateCostoButton.setDisable(false);
+                equipoCostoField.setDisable(false);
             }
         }
     }
@@ -567,7 +604,9 @@ public class tecniMusicController {
 
         try {
             long hojaId = Long.parseLong(ordenNumeroField.getText().split("-")[2]);
-            DatabaseService.getInstance().cerrarHojaServicio(hojaId, informe);
+            BigDecimal totalCostos = parseCurrency(subtotalLabel.getText());
+            
+            DatabaseService.getInstance().cerrarHojaServicio(hojaId, informe, new ArrayList<>(equiposObservable), totalCostos);
 
             HojaServicioData data = createHojaServicioDataFromForm(ordenNumeroField.getText());
             data.setInformeTecnico(informe); // Asegurarse de que el informe esté en los datos para el PDF
@@ -851,6 +890,32 @@ public class tecniMusicController {
 
     private void resetFormulario() {
         isAutoCompleting = true;
+        isViewOnlyMode = false;
+
+        // Visibilidad para modo CREACIÓN
+        costoGridPane.setVisible(false);
+        costoGridPane.setManaged(false);
+        subtotalBox.setVisible(false);
+        subtotalBox.setManaged(false);
+        updateCostoButton.setVisible(false);
+        updateCostoButton.setManaged(false);
+        colCosto.setVisible(false);
+        addEquipoButton.setVisible(true);
+        addEquipoButton.setManaged(true);
+        removeEquipoButton.setVisible(true);
+        removeEquipoButton.setManaged(true);
+        guardarButton.setVisible(true);
+        guardarButton.setManaged(true);
+        limpiarButton.setVisible(true);
+        limpiarButton.setManaged(true);
+        cierrePane.setVisible(false);
+        cierrePane.setManaged(false);
+        cierreButton.setVisible(false);
+        cierreButton.setManaged(false);
+        printButton.setVisible(false);
+        printButton.setManaged(false);
+
+        // Limpiar campos
         resetCamposCliente();
         clienteNombreField.clear();
         equipoFallaArea.clear();
@@ -861,21 +926,11 @@ public class tecniMusicController {
         aclaracionesArea.clear();
         ordenFechaPicker.setValue(LocalDate.now());
         equiposObservable.clear();
-        if (equipoAccesoriosArea != null) { // Limpiar también el área de texto de accesorios
+        if (equipoAccesoriosArea != null) {
             equipoAccesoriosArea.clear();
         }
         isAutoCompleting = false;
         predecirYAsignarNumeroDeOrden();
-
-        // Ocultar panel de cierre en modo creación
-        if (cierrePane != null) {
-            cierrePane.setVisible(false);
-            cierrePane.setManaged(false);
-        }
-        if (cierreButton != null) {
-            cierreButton.setVisible(false);
-            cierreButton.setManaged(false);
-        }
     }
 
     private boolean isFormDirty() {
