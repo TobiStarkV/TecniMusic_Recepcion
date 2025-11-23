@@ -37,6 +37,7 @@ public class LoadingController {
     private Timeline timeline;
 
     private volatile boolean isDatabaseReady = false;
+    private volatile boolean isSpellCheckerReady = false; // Nuevo estado
     private volatile boolean isAnimationCycleComplete = false;
     private volatile boolean isTransitioning = false;
 
@@ -49,6 +50,7 @@ public class LoadingController {
 
         preloadAnimationAndStart();
         startDatabaseLoadTask();
+        startSpellCheckerLoadTask(); // Iniciar la carga del corrector
     }
 
     /**
@@ -152,6 +154,31 @@ public class LoadingController {
         new Thread(databaseTask).start();
     }
 
+    private void startSpellCheckerLoadTask() {
+        Task<Void> spellCheckerTask = new Task<>() {
+            @Override
+            protected Void call() {
+                System.out.println("Iniciando corrector ortográfico...");
+                CorrectorOrtografico.inicializar();
+                System.out.println("Corrector ortográfico: Listo");
+                return null;
+            }
+        };
+
+        spellCheckerTask.setOnSucceeded(event -> {
+            isSpellCheckerReady = true;
+            trySwitchToMainView();
+        });
+
+        spellCheckerTask.setOnFailed(event -> {
+            System.err.println("Error crítico: No se pudo inicializar el corrector ortográfico.");
+            spellCheckerTask.getException().printStackTrace();
+            // Opcional: Mostrar una alerta, aunque la app podría seguir funcionando sin el corrector.
+        });
+
+        new Thread(spellCheckerTask).start();
+    }
+
     private void showSettingsAndRetry() {
         try {
             FXMLLoader fxmlLoader = new FXMLLoader(getClass().getResource("/com/example/tecnimusic_recepcion/settings-view.fxml"));
@@ -186,7 +213,7 @@ public class LoadingController {
     }
 
     private synchronized void trySwitchToMainView() {
-        if (isDatabaseReady && isAnimationCycleComplete && !isTransitioning) {
+        if (isDatabaseReady && isSpellCheckerReady && isAnimationCycleComplete && !isTransitioning) {
             isTransitioning = true;
             Platform.runLater(this::switchToMainView);
         }
