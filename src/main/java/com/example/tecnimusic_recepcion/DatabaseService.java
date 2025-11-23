@@ -459,7 +459,7 @@ public class DatabaseService {
         return -1;
     }
 
-    public void cerrarHojaServicio(long hojaId, String informeTecnicoGeneral, List<Equipo> equipos, BigDecimal totalCostos) throws SQLException {
+    public void cerrarHojaServicio(long hojaId, String informeTecnicoGeneral, List<Equipo> equipos, BigDecimal totalCostos, LocalDate fechaEntrega) throws SQLException {
         Connection conn = null;
         try {
             conn = DatabaseManager.getInstance().getConnection();
@@ -468,7 +468,11 @@ public class DatabaseService {
             String sqlHoja = "UPDATE x_hojas_servicio SET estado = 'CERRADA', informe_tecnico = ?, fecha_entrega = ?, total_costos = ? WHERE id = ?";
             try (PreparedStatement pstmt = conn.prepareStatement(sqlHoja)) {
                 pstmt.setString(1, informeTecnicoGeneral);
-                pstmt.setDate(2, Date.valueOf(LocalDate.now()));
+                if (fechaEntrega != null) {
+                    pstmt.setDate(2, Date.valueOf(fechaEntrega));
+                } else {
+                    pstmt.setNull(2, Types.DATE);
+                }
                 pstmt.setBigDecimal(3, totalCostos);
                 pstmt.setLong(4, hojaId);
                 pstmt.executeUpdate();

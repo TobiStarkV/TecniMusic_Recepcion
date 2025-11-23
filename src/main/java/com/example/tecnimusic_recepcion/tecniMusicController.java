@@ -407,10 +407,10 @@ public class tecniMusicController {
 
     public void loadForViewing(HojaServicioData data) {
         this.isViewOnlyMode = true;
-        this.currentHojaServicioData = data; // Guardar la HojaServicioData original
+        this.currentHojaServicioData = data;
         populateFormWithData(data);
 
-        setNodesDisabled(true, clienteNombreField, clienteDireccionField, clienteTelefonoField, equipoSerieField, equipoTipoField, equipoCompaniaField, equipoModeloField, anticipoField, ordenFechaPicker, entregaFechaPicker, equipoFallaArea, equipoEstadoFisicoArea, aclaracionesArea, accesoriosButton);
+        setNodesDisabled(true, clienteNombreField, clienteDireccionField, clienteTelefonoField, equipoSerieField, equipoTipoField, equipoCompaniaField, equipoModeloField, anticipoField, ordenFechaPicker, equipoFallaArea, equipoEstadoFisicoArea, aclaracionesArea, accesoriosButton);
 
         guardarButton.setVisible(false);
         guardarButton.setManaged(false);
@@ -423,8 +423,6 @@ public class tecniMusicController {
         printClosureButton.setVisible(true);
         printClosureButton.setManaged(true);
 
-
-        // Configurar modo cierre
         cierreBox.setVisible(true);
         cierreBox.setManaged(true);
         subtotalBox.setVisible(true);
@@ -443,11 +441,14 @@ public class tecniMusicController {
         cierreButton.setManaged(true);
 
         if ("CERRADA".equals(data.getEstado())) {
-            setNodesDisabled(true, cierreButton, updateEquipoButton, equipoCostoField, equipoInformeTecnicoArea);
+            setNodesDisabled(true, cierreButton, updateEquipoButton, equipoCostoField, equipoInformeTecnicoArea, entregaFechaPicker);
             cierreButton.setText("Hoja Cerrada");
             printClosureButton.setDisable(false);
         } else {
-            setNodesDisabled(false, cierreButton, updateEquipoButton, equipoCostoField, equipoInformeTecnicoArea);
+            setNodesDisabled(false, cierreButton, updateEquipoButton, equipoCostoField, equipoInformeTecnicoArea, entregaFechaPicker);
+            if (entregaFechaPicker.getValue() == null) {
+                entregaFechaPicker.setValue(LocalDate.now());
+            }
             printClosureButton.setDisable(true);
         }
     }
@@ -502,15 +503,16 @@ public class tecniMusicController {
         try {
             long hojaId = Long.parseLong(ordenNumeroField.getText().split("-")[2]);
             BigDecimal totalCostos = parseCurrency(subtotalLabel.getText());
-            
-            DatabaseService.getInstance().cerrarHojaServicio(hojaId, "", new ArrayList<>(equiposObservable), totalCostos);
+            LocalDate fechaEntrega = entregaFechaPicker.getValue();
 
-            // Actualizar el estado en currentHojaServicioData después de cerrar
+            DatabaseService.getInstance().cerrarHojaServicio(hojaId, "", new ArrayList<>(equiposObservable), totalCostos, fechaEntrega);
+
             currentHojaServicioData.setEstado("CERRADA");
-            currentHojaServicioData.setEquipos(new ArrayList<>(equiposObservable)); // Asegurarse de que los equipos actualizados estén en el objeto
-            currentHojaServicioData.setTotalCostos(totalCostos); // Actualizar el total de costos
+            currentHojaServicioData.setEquipos(new ArrayList<>(equiposObservable));
+            currentHojaServicioData.setTotalCostos(totalCostos);
+            currentHojaServicioData.setFechaEntrega(fechaEntrega);
 
-            String pdfPath = new PdfGenerator().generatePdf(currentHojaServicioData, false); // Usar el objeto actualizado
+            String pdfPath = new PdfGenerator().generatePdf(currentHojaServicioData, false);
 
             showAlert(Alert.AlertType.INFORMATION, "Hoja Cerrada", "La hoja de servicio ha sido cerrada y el PDF de cierre ha sido generado.");
 
