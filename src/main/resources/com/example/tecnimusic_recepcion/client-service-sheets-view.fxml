@@ -27,7 +27,8 @@
             <columns>
                 <TableColumn fx:id="orderNumberColumn" prefWidth="150.0" text="N° Orden" />
                 <TableColumn fx:id="orderDateColumn" prefWidth="120.0" text="Fecha de Orden" />
-                <TableColumn fx:id="equipmentColumn" prefWidth="400.0" text="Equipo" />
+                <TableColumn fx:id="equipmentColumn" prefWidth="300.0" text="Equipo" />
+                <TableColumn fx:id="statusColumn" prefWidth="100.0" text="Estado" />
             </columns>
             <BorderPane.margin>
                 <Insets bottom="10.0" left="10.0" right="10.0" top="10.0" />
