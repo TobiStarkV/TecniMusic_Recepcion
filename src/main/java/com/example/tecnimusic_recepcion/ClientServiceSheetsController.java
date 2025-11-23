@@ -39,18 +39,19 @@ public class ClientServiceSheetsController {
     @FXML
     private TableColumn<ServiceSheetSummary, String> equipmentColumn;
     @FXML
-    private TableColumn<ServiceSheetSummary, String> statusColumn; // Columna añadida
+    private TableColumn<ServiceSheetSummary, String> statusColumn;
     @FXML
     private Button closeButton;
 
     private final ObservableList<ServiceSheetSummary> serviceSheetList = FXCollections.observableArrayList();
+    private int currentClientId; // Guardar el ID del cliente actual
 
     @FXML
     public void initialize() {
         orderNumberColumn.setCellValueFactory(new PropertyValueFactory<>("orderNumber"));
         orderDateColumn.setCellValueFactory(new PropertyValueFactory<>("orderDate"));
         equipmentColumn.setCellValueFactory(new PropertyValueFactory<>("equipment"));
-        statusColumn.setCellValueFactory(new PropertyValueFactory<>("status")); // Vinculación de la nueva columna
+        statusColumn.setCellValueFactory(new PropertyValueFactory<>("status"));
         serviceSheetsTable.setItems(serviceSheetList);
 
         serviceSheetsTable.setRowFactory(tv -> {
@@ -65,8 +66,9 @@ public class ClientServiceSheetsController {
     }
 
     public void setClient(Client client) {
+        this.currentClientId = client.getId(); // Guardar el ID
         clientNameLabel.setText("Hojas de Servicio para: " + client.getName());
-        loadServiceSheets(client.getId());
+        loadServiceSheets(this.currentClientId);
     }
 
     private void loadServiceSheets(int clientId) {
@@ -93,6 +95,7 @@ public class ClientServiceSheetsController {
 
                 serviceSheetList.add(new ServiceSheetSummary(
                         rs.getLong("id"),
+                        clientId, // Pasar el ID del cliente
                         rs.getString("numero_orden"),
                         rs.getDate("fecha_orden").toLocalDate(),
                         equipmentSummary.trim(),
@@ -178,13 +181,13 @@ public class ClientServiceSheetsController {
         private final SimpleStringProperty equipment;
         private final SimpleStringProperty status;
 
-        public ServiceSheetSummary(long id, String orderNumber, LocalDate orderDate, String equipment, String status) {
+        public ServiceSheetSummary(long id, int clientId, String orderNumber, LocalDate orderDate, String equipment, String status) {
             this.id = id;
+            this.clientId = clientId;
             this.orderNumber = new SimpleStringProperty(orderNumber);
             this.orderDate = orderDate;
             this.equipment = new SimpleStringProperty(equipment);
             this.status = new SimpleStringProperty(status);
-            this.clientId = 0; // Este campo ya no es necesario aquí, pero se mantiene por compatibilidad
         }
 
         public long getId() { return id; }
