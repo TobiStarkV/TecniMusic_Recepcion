@@ -168,6 +168,7 @@ public class PdfGenerator {
 
         document.add(createSectionHeader("Equipos y Desglose", headerColor));
 
+        NumberFormat currencyFormat = NumberFormat.getCurrencyInstance(SPANISH_MEXICO_LOCALE);
         List<Equipo> equipos = data.getEquipos();
         if (equipos != null && !equipos.isEmpty()) {
             for (Equipo eq : equipos) {
@@ -184,6 +185,8 @@ public class PdfGenerator {
                 addInfoRow(detallesTable, "Falla Reportada:", nullToEmpty(eq.getFalla()), false);
                 if (isCierre) {
                     addInfoRow(detallesTable, "Informe Técnico:", nullToEmpty(eq.getInformeTecnico()), false);
+                    BigDecimal costoEquipo = eq.getCosto() != null ? eq.getCosto() : BigDecimal.ZERO;
+                    addInfoRow(detallesTable, "Costo de Reparación:", currencyFormat.format(costoEquipo), false);
                 }
                 document.add(detallesTable);
                 document.add(new LineSeparator(new com.itextpdf.kernel.pdf.canvas.draw.DashedLine()).setMarginTop(5));
@@ -194,7 +197,6 @@ public class PdfGenerator {
 
         document.add(new LineSeparator(new com.itextpdf.kernel.pdf.canvas.draw.SolidLine(0.5f)).setMarginTop(10));
 
-        NumberFormat currencyFormat = NumberFormat.getCurrencyInstance(SPANISH_MEXICO_LOCALE);
         BigDecimal anticipo = data.getAnticipo() != null ? data.getAnticipo() : BigDecimal.ZERO;
 
         if (isCierre) {
@@ -226,11 +228,9 @@ public class PdfGenerator {
 
         document.add(createSectionHeader("Entrega y Aclaraciones", headerColor));
         LocalDate fechaEntrega = data.getFechaEntrega();
-        if (fechaEntrega != null) {
-            Table entregaTable = new Table(UnitValue.createPercentArray(new float[]{1, 4})).useAllAvailableWidth().setMarginTop(5);
-            addInfoRow(entregaTable, "Fecha Tentativa de Entrega:", fechaEntrega.format(DateTimeFormatter.ofPattern("dd/MM/yyyy")), false);
-            document.add(entregaTable);
-        }
+        Table entregaTable = new Table(UnitValue.createPercentArray(new float[]{1, 4})).useAllAvailableWidth().setMarginTop(5);
+        addInfoRow(entregaTable, "Fecha de Entrega:", (fechaEntrega != null ? fechaEntrega.format(DateTimeFormatter.ofPattern("dd/MM/yyyy")) : "Pendiente"), false);
+        document.add(entregaTable);
 
         String aclaraciones = data.getAclaraciones();
         if (aclaraciones != null && !aclaraciones.trim().isEmpty()) {

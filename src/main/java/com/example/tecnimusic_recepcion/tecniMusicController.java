@@ -187,7 +187,7 @@ public class tecniMusicController {
         textArea.setContextMenu(contextMenu);
 
         textArea.setOnContextMenuRequested(event -> {
-            if (isViewOnlyMode && !"CERRADA".equals(aclaracionesArea.getText())) { // Allow editing unless closed
+            if (!textArea.isEditable()) {
                 event.consume();
                 return;
             }
