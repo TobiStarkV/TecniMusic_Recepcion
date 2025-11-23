@@ -203,11 +203,21 @@ public class DatabaseService {
 
         String serieEquipoTrimmed = serieEquipo == null ? "" : serieEquipo.trim();
         if (!serieEquipoTrimmed.isEmpty()) {
-            String sqlSelect = "SELECT id FROM assets WHERE serial = ?";
+            String sqlSelect = "SELECT id, deleted_at FROM assets WHERE serial = ?";
             try (PreparedStatement pstmtSelect = conn.prepareStatement(sqlSelect)) {
                 pstmtSelect.setString(1, serieEquipoTrimmed);
                 ResultSet rs = pstmtSelect.executeQuery();
-                if (rs.next()) assetId = rs.getLong("id");
+                if (rs.next()) {
+                    assetId = rs.getLong("id");
+                    if (rs.getTimestamp("deleted_at") != null) {
+                        // Reactivar el activo
+                        String sqlReactivate = "UPDATE assets SET deleted_at = NULL WHERE id = ?";
+                        try (PreparedStatement pstmtReactivate = conn.prepareStatement(sqlReactivate)) {
+                            pstmtReactivate.setLong(1, assetId);
+                            pstmtReactivate.executeUpdate();
+                        }
+                    }
+                }
             }
         }
 
@@ -465,6 +475,7 @@ public class DatabaseService {
             conn = DatabaseManager.getInstance().getConnection();
             conn.setAutoCommit(false);
 
+            // 1. Actualizar la hoja de servicio principal
             String sqlHoja = "UPDATE x_hojas_servicio SET estado = 'CERRADA', informe_tecnico = ?, fecha_entrega = ?, total_costos = ? WHERE id = ?";
             try (PreparedStatement pstmt = conn.prepareStatement(sqlHoja)) {
                 pstmt.setString(1, informeTecnicoGeneral);
@@ -478,6 +489,7 @@ public class DatabaseService {
                 pstmt.executeUpdate();
             }
 
+            // 2. Actualizar los equipos individuales
             String sqlEquipo = "UPDATE x_hojas_servicio_equipos SET costo = ?, informe_tecnico = ? WHERE id = ?";
             try (PreparedStatement pstmt = conn.prepareStatement(sqlEquipo)) {
                 for (Equipo equipo : equipos) {
@@ -489,6 +501,13 @@ public class DatabaseService {
                     }
                 }
                 pstmt.executeBatch();
+            }
+
+            // 3. Archivar los activos en Snipe-IT
+            String sqlArchivarAsset = "UPDATE assets SET deleted_at = NOW() WHERE id IN (SELECT asset_id FROM x_hojas_servicio_equipos WHERE hoja_id = ? AND asset_id IS NOT NULL)";
+            try (PreparedStatement pstmt = conn.prepareStatement(sqlArchivarAsset)) {
+                pstmt.setLong(1, hojaId);
+                pstmt.executeUpdate();
             }
 
             conn.commit();
