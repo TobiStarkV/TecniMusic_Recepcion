@@ -38,6 +38,11 @@ public class DatabaseManager {
         }
     }
 
+    // Nuevo método para obtener la configuración actual
+    public DatabaseConfig getDbConfig() {
+        return dbConfig;
+    }
+
     public Connection getConnection() throws SQLException {
         DriverManager.setLoginTimeout(10);
 

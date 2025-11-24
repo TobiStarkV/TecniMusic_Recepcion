@@ -24,12 +24,7 @@ public class DatabaseConfig {
     private static final String KEY_DB_NAME = "db.name";
     private static final String KEY_USER = "db.user";
     private static final String KEY_PASSWORD = "db.password";
-    // PDF properties
-    private static final String KEY_PDF_FOOTER = "pdf.footer";
-    // Local properties
-    private static final String KEY_LOCAL_NOMBRE = "local.nombre";
-    private static final String KEY_LOCAL_DIRECCION = "local.direccion";
-    private static final String KEY_LOCAL_TELEFONO = "local.telefono";
+    // Eliminamos las claves de PDF y Local de aquí
 
     private Properties props;
 
@@ -38,10 +33,7 @@ public class DatabaseConfig {
     private String dbName;
     private String user;
     private String password;
-    private String pdfFooter;
-    private String localNombre;
-    private String localDireccion;
-    private String localTelefono;
+    // Eliminamos los campos de PDF y Local de aquí
 
     public DatabaseConfig() {
         props = new Properties();
@@ -73,10 +65,7 @@ public class DatabaseConfig {
         dbName = props.getProperty(KEY_DB_NAME, "snipeit");
         user = props.getProperty(KEY_USER, "root");
         password = props.getProperty(KEY_PASSWORD, "");
-        pdfFooter = props.getProperty(KEY_PDF_FOOTER, "");
-        localNombre = props.getProperty(KEY_LOCAL_NOMBRE, "TecniMusic");
-        localDireccion = props.getProperty(KEY_LOCAL_DIRECCION, "Dirección no configurada");
-        localTelefono = props.getProperty(KEY_LOCAL_TELEFONO, "Teléfono no configurado");
+        // Eliminamos la asignación de pdfFooter, localNombre, etc.
     }
 
     public void save() {
@@ -93,10 +82,7 @@ public class DatabaseConfig {
                 props.setProperty(KEY_DB_NAME, dbName);
                 props.setProperty(KEY_USER, user);
                 props.setProperty(KEY_PASSWORD, password);
-                props.setProperty(KEY_PDF_FOOTER, pdfFooter);
-                props.setProperty(KEY_LOCAL_NOMBRE, localNombre);
-                props.setProperty(KEY_LOCAL_DIRECCION, localDireccion);
-                props.setProperty(KEY_LOCAL_TELEFONO, localTelefono);
+                // Eliminamos el guardado de pdfFooter, localNombre, etc.
                 props.store(output, "TecniMusic Recepcion User Configuration");
             }
         } catch (IOException ex) {
@@ -104,7 +90,7 @@ public class DatabaseConfig {
         }
     }
 
-    // Getters and Setters
+    // Getters and Setters (solo para las propiedades de la DB)
 
     public String getHost() {
         return host;
@@ -146,35 +132,5 @@ public class DatabaseConfig {
         this.password = password;
     }
 
-    public String getPdfFooter() {
-        return pdfFooter;
-    }
-
-    public void setPdfFooter(String pdfFooter) {
-        this.pdfFooter = pdfFooter;
-    }
-
-    public String getLocalNombre() {
-        return localNombre;
-    }
-
-    public void setLocalNombre(String localNombre) {
-        this.localNombre = localNombre;
-    }
-
-    public String getLocalDireccion() {
-        return localDireccion;
-    }
-
-    public void setLocalDireccion(String localDireccion) {
-        this.localDireccion = localDireccion;
-    }
-
-    public String getLocalTelefono() {
-        return localTelefono;
-    }
-
-    public void setLocalTelefono(String localTelefono) {
-        this.localTelefono = localTelefono;
-    }
+    // Eliminamos los getters y setters para pdfFooter, localNombre, etc.
 }

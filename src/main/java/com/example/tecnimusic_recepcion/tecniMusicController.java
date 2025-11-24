@@ -95,13 +95,6 @@ public class tecniMusicController {
 
     @FXML
     public void initialize() {
-        try {
-            DatabaseService.getInstance().checkAndUpgradeSchema();
-        } catch (SQLException e) {
-            e.printStackTrace();
-            showAlert(Alert.AlertType.ERROR, "Error de Base de Datos", "No se pudo verificar o actualizar la estructura de la base de datos.");
-        }
-
         ordenNumeroField.setEditable(false);
         cargarDatosDelLocal();
         setupListeners();
@@ -948,10 +941,15 @@ public class tecniMusicController {
     }
 
     private void cargarDatosDelLocal() {
-        DatabaseConfig dbConfig = new DatabaseConfig();
-        localNombreLabel.setText(dbConfig.getLocalNombre());
-        localDireccionLabel.setText(dbConfig.getLocalDireccion());
-        localTelefonoLabel.setText(dbConfig.getLocalTelefono());
+        try {
+            DatabaseService db = DatabaseService.getInstance();
+            localNombreLabel.setText(db.getSetting("local.nombre", "TecniMusic"));
+            localDireccionLabel.setText(db.getSetting("local.direccion", "Dirección no configurada"));
+            localTelefonoLabel.setText(db.getSetting("local.telefono", "Teléfono no configurado"));
+        } catch (SQLException e) {
+            showAlert(Alert.AlertType.ERROR, "Error de Configuración", "No se pudieron cargar los datos del local desde la base de datos.");
+            e.printStackTrace();
+        }
     }
 
     private void showAlert(Alert.AlertType tipo, String titulo, String contenido) {

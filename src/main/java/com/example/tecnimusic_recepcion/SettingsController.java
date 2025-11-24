@@ -12,6 +12,8 @@ import org.fxmisc.richtext.StyleClassedTextArea;
 import org.languagetool.rules.RuleMatch;
 
 import java.io.IOException;
+import java.sql.Connection;
+import java.sql.SQLException;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
@@ -38,14 +40,10 @@ public class SettingsController {
     @FXML
     private TextField localTelefonoField;
 
-    private DatabaseConfig dbConfig;
-
     @FXML
     public void initialize() {
-        dbConfig = new DatabaseConfig();
         loadSettings();
 
-        // Cargar la hoja de estilos programáticamente
         Platform.runLater(() -> {
             if (hostField.getScene() != null) {
                 String css = this.getClass().getResource("styles.css").toExternalForm();
@@ -60,32 +58,79 @@ public class SettingsController {
     }
 
     private void loadSettings() {
+        // Cargar configuración de la DB (del archivo local)
+        DatabaseConfig dbConfig = DatabaseManager.getInstance().getDbConfig();
         hostField.setText(dbConfig.getHost());
         portField.setText(dbConfig.getPort());
         dbNameField.setText(dbConfig.getDbName());
         userField.setText(dbConfig.getUser());
         passwordField.setText(dbConfig.getPassword());
-        pdfFooterField.replaceText(dbConfig.getPdfFooter());
-        localNombreField.setText(dbConfig.getLocalNombre());
-        localDireccionField.setText(dbConfig.getLocalDireccion());
-        localTelefonoField.setText(dbConfig.getLocalTelefono());
+
+        // Intentar cargar configuración de PDF y Local (de la base de datos)
+        try {
+            DatabaseService dbService = DatabaseService.getInstance();
+            pdfFooterField.replaceText(dbService.getSetting("pdf.footer", ""));
+            localNombreField.setText(dbService.getSetting("local.nombre", "TecniMusic"));
+            localDireccionField.setText(dbService.getSetting("local.direccion", "Dirección no configurada"));
+            localTelefonoField.setText(dbService.getSetting("local.telefono", "Teléfono no configurado"));
+            // Habilitar campos si la carga fue exitosa
+            setLocalPdfFieldsDisabled(false);
+        } catch (SQLException e) {
+            showAlert(Alert.AlertType.WARNING, "Sin Conexión", "No se pudo conectar a la base de datos para cargar la configuración del local y PDF. Estos campos están deshabilitados.");
+            // Deshabilitar campos si la carga falló
+            setLocalPdfFieldsDisabled(true);
+        }
     }
 
     @FXML
     private void handleSave() {
+        // 1. Guardar configuración de la DB en el archivo local
+        DatabaseConfig dbConfig = DatabaseManager.getInstance().getDbConfig();
         dbConfig.setHost(hostField.getText());
         dbConfig.setPort(portField.getText());
         dbConfig.setDbName(dbNameField.getText());
         dbConfig.setUser(userField.getText());
         dbConfig.setPassword(passwordField.getText());
-        dbConfig.setPdfFooter(pdfFooterField.getText());
-        dbConfig.setLocalNombre(localNombreField.getText());
-        dbConfig.setLocalDireccion(localDireccionField.getText());
-        dbConfig.setLocalTelefono(localTelefonoField.getText());
         dbConfig.save();
 
-        showAlert(Alert.AlertType.INFORMATION, "Configuración Guardada", "La configuración se ha guardado correctamente.");
-        closeWindow();
+        boolean wereFieldsDisabled = localNombreField.isDisabled();
+
+        // 2. Resetear y probar la nueva conexión
+        DatabaseManager.resetInstance();
+        try (Connection testConnection = DatabaseManager.getInstance().getConnection()) {
+            // Si la conexión es exitosa
+            if (wereFieldsDisabled) {
+                // Los campos estaban deshabilitados, lo que significa que acabamos de arreglar la conexión.
+                // Recargamos los datos desde la DB en lugar de guardar los campos vacíos.
+                loadSettings(); // Esto recargará y habilitará los campos.
+                showAlert(Alert.AlertType.INFORMATION, "Conexión Exitosa", "Se ha conectado a la base de datos. La configuración del local y PDF ha sido cargada. Verifique los datos y guarde de nuevo si es necesario.");
+            } else {
+                // La conexión ya era buena, así que procedemos a guardar los cambios.
+                DatabaseService dbService = DatabaseService.getInstance();
+                dbService.saveSetting("pdf.footer", pdfFooterField.getText());
+                dbService.saveSetting("local.nombre", localNombreField.getText());
+                dbService.saveSetting("local.direccion", localDireccionField.getText());
+                dbService.saveSetting("local.telefono", localTelefonoField.getText());
+
+                showAlert(Alert.AlertType.INFORMATION, "Configuración Guardada", "Toda la configuración se ha guardado correctamente.");
+                closeWindow();
+            }
+
+        } catch (SQLException e) {
+            // Si la conexión falla con los nuevos datos
+            showAlert(Alert.AlertType.ERROR, "Error de Conexión", "No se pudo conectar a la base de datos con la nueva configuración. \n\nLos datos de conexión se guardaron, pero la configuración del local y PDF no pudo ser actualizada. Por favor, revise los datos de conexión.");
+            setLocalPdfFieldsDisabled(true); // Mantener los campos deshabilitados
+        } catch (Exception e) {
+            showAlert(Alert.AlertType.ERROR, "Error Inesperado", "Ocurrió un error al guardar la configuración: " + e.getMessage());
+            e.printStackTrace();
+        }
+    }
+
+    private void setLocalPdfFieldsDisabled(boolean disabled) {
+        pdfFooterField.setDisable(disabled);
+        localNombreField.setDisable(disabled);
+        localDireccionField.setDisable(disabled);
+        localTelefonoField.setDisable(disabled);
     }
 
     @FXML
@@ -178,7 +223,7 @@ public class SettingsController {
             if (!contextMenu.getItems().isEmpty()) {
                 contextMenu.show(textArea, event.getScreenX(), event.getScreenY());
             }
-            
+
             event.consume();
         });
     }

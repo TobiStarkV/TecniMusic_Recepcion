@@ -12,19 +12,12 @@ import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.List;
 
-/**
- * Servicio de base de datos (Singleton) que encapsula la lógica de acceso y operaciones.
- */
 public class DatabaseService {
 
     private static DatabaseService instance;
 
     private DatabaseService() {}
 
-    /**
-     * Obtiene la instancia única del servicio de base de datos (patrón Singleton).
-     * @return La instancia única de {@code DatabaseService}.
-     */
     public static synchronized DatabaseService getInstance() {
         if (instance == null) instance = new DatabaseService();
         return instance;
@@ -32,6 +25,7 @@ public class DatabaseService {
 
     public void checkAndUpgradeSchema() throws SQLException {
         try (Connection conn = DatabaseManager.getInstance().getConnection()) {
+            ensureSettingsTableExists(conn);
             ensureAnticipoColumnExists(conn);
             ensureEquiposTableExists(conn);
             ensureCostoColumnExistsInEquiposTable(conn);
@@ -39,10 +33,46 @@ public class DatabaseService {
             ensureAccesoriosColumnExists(conn);
             ensureAccesoriosSugerenciasTableExists(conn);
             ensureEstadoAndInformeTecnicoColumnsExist(conn);
-            ensureInformeTecnicoColumnInEquiposTableExists(conn); // Nueva verificación
+            ensureInformeTecnicoColumnInEquiposTableExists(conn);
         }
     }
 
+    private void ensureSettingsTableExists(Connection conn) throws SQLException {
+        String sql = "CREATE TABLE IF NOT EXISTS x_tecnimusic_settings (" +
+                     "setting_key VARCHAR(255) PRIMARY KEY, " +
+                     "setting_value TEXT" +
+                     ")";
+        try (Statement stmt = conn.createStatement()) {
+            stmt.execute(sql);
+        }
+    }
+
+    public String getSetting(String key, String defaultValue) throws SQLException {
+        String sql = "SELECT setting_value FROM x_tecnimusic_settings WHERE setting_key = ?";
+        try (Connection conn = DatabaseManager.getInstance().getConnection();
+             PreparedStatement pstmt = conn.prepareStatement(sql)) {
+            pstmt.setString(1, key);
+            ResultSet rs = pstmt.executeQuery();
+            if (rs.next()) {
+                return rs.getString("setting_value");
+            }
+        }
+        return defaultValue;
+    }
+
+    public void saveSetting(String key, String value) throws SQLException {
+        String sql = "INSERT INTO x_tecnimusic_settings (setting_key, setting_value) VALUES (?, ?) " +
+                     "ON DUPLICATE KEY UPDATE setting_value = ?";
+        try (Connection conn = DatabaseManager.getInstance().getConnection();
+             PreparedStatement pstmt = conn.prepareStatement(sql)) {
+            pstmt.setString(1, key);
+            pstmt.setString(2, value);
+            pstmt.setString(3, value);
+            pstmt.executeUpdate();
+        }
+    }
+    
+    // ... (resto de los métodos de DatabaseService sin cambios)
     private void ensureInformeTecnicoColumnInEquiposTableExists(Connection conn) throws SQLException {
         String checkColumnSql = "SELECT COUNT(*) FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'x_hojas_servicio_equipos' AND COLUMN_NAME = 'informe_tecnico'";
         try (Statement stmt = conn.createStatement(); ResultSet rs = stmt.executeQuery(checkColumnSql)) {
@@ -165,10 +195,6 @@ public class DatabaseService {
             }
         }
     }
-
-    // --------------------------------------------------
-    // Métodos auxiliares (cliente, asset, modelos, etc.)
-    // --------------------------------------------------
 
     private long gestionarCliente(Connection conn, Long idClienteSeleccionado, String nombreCliente, String telefonoCliente, String direccionCliente) throws SQLException {
         if (idClienteSeleccionado != null) return idClienteSeleccionado;

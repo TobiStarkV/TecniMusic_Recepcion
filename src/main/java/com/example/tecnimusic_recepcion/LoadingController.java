@@ -98,12 +98,14 @@ public class LoadingController {
         Task<Boolean> databaseTask = new Task<>() {
             @Override
             protected Boolean call() {
-                System.out.println("Iniciando conexión a la base de datos...");
+                System.out.println("Iniciando conexión y verificación de esquema de BD...");
                 try (var ignored = DatabaseManager.getInstance().getConnection()) {
-                    System.out.println("Conexión a la base de datos: Exitosa");
+                    System.out.println("Conexión a la base de datos: Exitosa.");
+                    DatabaseService.getInstance().checkAndUpgradeSchema();
+                    System.out.println("Esquema de base de datos: Verificado y actualizado.");
                     return true;
                 } catch (SQLException e) {
-                    System.err.println("Conexión a la base de datos: Fallida");
+                    System.err.println("Conexión o verificación de esquema fallida.");
                     e.printStackTrace();
                     updateMessage(e.getMessage());
                     return false;
@@ -122,8 +124,8 @@ public class LoadingController {
                     if (imageLoaderThread != null) imageLoaderThread.interrupt();
                     Alert alert = new Alert(Alert.AlertType.ERROR);
                     alert.setTitle("Error de Base de Datos");
-                    alert.setHeaderText("No se pudo conectar a la base de datos de Snipe-IT.");
-                    alert.setContentText("Por favor, verifique la configuración de la conexión.\nError: " + databaseTask.getMessage());
+                    alert.setHeaderText("No se pudo conectar o inicializar la base de datos.");
+                    alert.setContentText("Por favor, verifique la configuración de la conexión y el estado de la base de datos.\nError: " + databaseTask.getMessage());
 
                     ButtonType retryButton = new ButtonType("Reintentar");
                     ButtonType exitButton = new ButtonType("Salir");

@@ -17,13 +17,13 @@ import com.itextpdf.layout.element.Paragraph;
 import com.itextpdf.layout.element.Table;
 import com.itextpdf.layout.properties.TextAlignment;
 import com.itextpdf.layout.properties.UnitValue;
-// import com.itextpdf.layout.properties.WordBreak; // Importar WordBreak
 import javafx.scene.control.Alert;
 
 import java.io.File;
 import java.io.IOException;
 import java.math.BigDecimal;
 import java.net.URL;
+import java.sql.SQLException;
 import java.text.NumberFormat;
 import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
@@ -32,18 +32,23 @@ import java.util.Locale;
 
 public class PdfGenerator {
 
-    private final String localNombre;
-    private final String localDireccion;
-    private final String localTelefono;
-    private final String pdfFooter;
+    private String localNombre;
+    private String localDireccion;
+    private String localTelefono;
+    private String pdfFooter;
     private static final Locale SPANISH_MEXICO_LOCALE = new Locale("es", "MX");
 
     public PdfGenerator() {
-        DatabaseConfig dbConfig = new DatabaseConfig();
-        this.localNombre = dbConfig.getLocalNombre();
-        this.localDireccion = dbConfig.getLocalDireccion();
-        this.localTelefono = dbConfig.getLocalTelefono();
-        this.pdfFooter = dbConfig.getPdfFooter();
+        try {
+            DatabaseService db = DatabaseService.getInstance();
+            this.localNombre = db.getSetting("local.nombre", "TecniMusic");
+            this.localDireccion = db.getSetting("local.direccion", "Dirección no configurada");
+            this.localTelefono = db.getSetting("local.telefono", "Teléfono no configurado");
+            this.pdfFooter = db.getSetting("pdf.footer", "");
+        } catch (SQLException e) {
+            mostrarAlerta(Alert.AlertType.ERROR, "Error de Configuración", "No se pudieron cargar las configuraciones desde la base de datos para generar el PDF.");
+            e.printStackTrace();
+        }
     }
 
     public String generatePdf(HojaServicioData data, boolean forceReception) throws IOException {
@@ -277,7 +282,6 @@ public class PdfGenerator {
         table.addCell(labelCell);
 
         Paragraph valueParagraph = new Paragraph(value).setFontSize(9);
-        // valueParagraph.setWordBreak(WordBreak.BY_CHAR); // Añadir esta línea
         
         com.itextpdf.layout.element.Cell valueCell = new com.itextpdf.layout.element.Cell().add(valueParagraph);
         if (isValueBold) {
