@@ -25,15 +25,91 @@ public class DatabaseService {
 
     public void checkAndUpgradeSchema() throws SQLException {
         try (Connection conn = DatabaseManager.getInstance().getConnection()) {
-            ensureSettingsTableExists(conn);
-            ensureAnticipoColumnExists(conn);
+            // 1. Crear todas las tablas si no existen, con todas sus columnas.
+            ensureClientesTableExists(conn);
+            ensureHojasServicioTableExists(conn);
             ensureEquiposTableExists(conn);
+            ensureAccesoriosSugerenciasTableExists(conn);
+            ensureSettingsTableExists(conn);
+
+            // 2. Verificar y añadir columnas individuales para dar soporte a versiones antiguas (migración).
+            // Esto es redundante si las tablas se acaban de crear, pero es crucial para actualizar instalaciones existentes.
+            ensureAnticipoColumnExists(conn);
             ensureCostoColumnExistsInEquiposTable(conn);
             ensureEstadoFisicoColumnExists(conn);
             ensureAccesoriosColumnExists(conn);
-            ensureAccesoriosSugerenciasTableExists(conn);
             ensureEstadoAndInformeTecnicoColumnsExist(conn);
             ensureInformeTecnicoColumnInEquiposTableExists(conn);
+        }
+    }
+
+    private void ensureClientesTableExists(Connection conn) throws SQLException {
+        String sql = "CREATE TABLE IF NOT EXISTS x_clientes (" +
+                     "id INT AUTO_INCREMENT PRIMARY KEY, " +
+                     "nombre VARCHAR(255), " +
+                     "telefono VARCHAR(255), " +
+                     "direccion TEXT" +
+                     ")";
+        try (Statement stmt = conn.createStatement()) {
+            stmt.execute(sql);
+        }
+    }
+
+    private void ensureHojasServicioTableExists(Connection conn) throws SQLException {
+        String sql = "CREATE TABLE IF NOT EXISTS x_hojas_servicio (" +
+                     "id BIGINT AUTO_INCREMENT PRIMARY KEY, " +
+                     "numero_orden VARCHAR(255), " +
+                     "cliente_id INT, " +
+                     "fecha_orden DATE, " +
+                     "fecha_entrega DATE, " +
+                     "aclaraciones TEXT, " +
+                     "informe_tecnico TEXT, " +
+                     "total_costos DECIMAL(10, 2), " +
+                     "anticipo DECIMAL(10, 2) DEFAULT 0.00, " +
+                     "estado VARCHAR(50) DEFAULT 'ABIERTA', " +
+                     "firma_aclaracion TEXT, " +
+                     "informe_costos TEXT, " +
+                     "asset_id INT, " +
+                     "equipo_serie VARCHAR(255), " +
+                     "equipo_tipo VARCHAR(255), " +
+                     "equipo_marca VARCHAR(255), " +
+                     "equipo_modelo VARCHAR(255), " +
+                     "falla_reportada TEXT" +
+                     ")";
+        try (Statement stmt = conn.createStatement()) {
+            stmt.execute(sql);
+        }
+    }
+
+    private void ensureEquiposTableExists(Connection conn) throws SQLException {
+        String sql = "CREATE TABLE IF NOT EXISTS x_hojas_servicio_equipos (" +
+                     "id BIGINT PRIMARY KEY AUTO_INCREMENT, " +
+                     "hoja_id BIGINT NOT NULL, " +
+                     "asset_id BIGINT, " +
+                     "equipo_serie VARCHAR(255), " +
+                     "equipo_tipo VARCHAR(255), " +
+                     "equipo_marca VARCHAR(255), " +
+                     "equipo_modelo VARCHAR(255), " +
+                     "falla_reportada TEXT, " +
+                     "estado_fisico TEXT, " +
+                     "accesorios TEXT, " +
+                     "informe_tecnico TEXT, " +
+                     "costo DECIMAL(10, 2), " +
+                     "created_at DATETIME DEFAULT NOW(), " +
+                     "updated_at DATETIME DEFAULT NOW()" +
+                     ")";
+        try (Statement stmt = conn.createStatement()) {
+            stmt.execute(sql);
+        }
+    }
+
+    private void ensureAccesoriosSugerenciasTableExists(Connection conn) throws SQLException {
+        String sql = "CREATE TABLE IF NOT EXISTS x_accesorios_sugerencias (" +
+                     "id INT AUTO_INCREMENT PRIMARY KEY, " +
+                     "nombre VARCHAR(255) NOT NULL UNIQUE" +
+                     ")";
+        try (Statement stmt = conn.createStatement()) {
+            stmt.execute(sql);
         }
     }
 
@@ -72,7 +148,6 @@ public class DatabaseService {
         }
     }
     
-    // ... (resto de los métodos de DatabaseService sin cambios)
     private void ensureInformeTecnicoColumnInEquiposTableExists(Connection conn) throws SQLException {
         String checkColumnSql = "SELECT COUNT(*) FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'x_hojas_servicio_equipos' AND COLUMN_NAME = 'informe_tecnico'";
         try (Statement stmt = conn.createStatement(); ResultSet rs = stmt.executeQuery(checkColumnSql)) {
@@ -106,17 +181,6 @@ public class DatabaseService {
                     alterStmt.execute(addInformeSql);
                 }
             }
-        }
-    }
-
-
-    private void ensureAccesoriosSugerenciasTableExists(Connection conn) throws SQLException {
-        String sql = "CREATE TABLE IF NOT EXISTS x_accesorios_sugerencias (" +
-                "id INT AUTO_INCREMENT PRIMARY KEY, " +
-                "nombre VARCHAR(255) NOT NULL UNIQUE" +
-                ")";
-        try (Statement stmt = conn.createStatement()) {
-            stmt.execute(sql);
         }
     }
 
@@ -447,23 +511,6 @@ public class DatabaseService {
             if (rs.next()) return rs.getLong(1);
         }
         throw new SQLException("No se pudo crear la hoja de servicio maestra.");
-    }
-
-    private void ensureEquiposTableExists(Connection conn) throws SQLException {
-        String sql = "CREATE TABLE IF NOT EXISTS x_hojas_servicio_equipos (" +
-                "id BIGINT PRIMARY KEY AUTO_INCREMENT, " +
-                "hoja_id BIGINT NOT NULL, " +
-                "asset_id BIGINT, " +
-                "equipo_serie VARCHAR(255), " +
-                "equipo_tipo VARCHAR(255), " +
-                "equipo_marca VARCHAR(255), " +
-                "equipo_modelo VARCHAR(255), " +
-                "falla_reportada TEXT, " +
-                "costo DECIMAL(10, 2), " +
-                "created_at DATETIME DEFAULT NOW(), " +
-                "updated_at DATETIME DEFAULT NOW()" +
-                ")";
-        try (Statement stmt = conn.createStatement()) { stmt.execute(sql); }
     }
 
     private void insertarEquipoEnHoja(Connection conn, long hojaId, Long assetId, String serie, String tipo, String marca, String modelo, String falla, BigDecimal costo, String estadoFisico, String accesorios) throws SQLException {
