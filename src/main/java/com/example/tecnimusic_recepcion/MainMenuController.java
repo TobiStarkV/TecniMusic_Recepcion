@@ -7,8 +7,8 @@ import javafx.scene.Scene;
 import javafx.scene.control.Alert;
 import javafx.scene.control.Button;
 import javafx.scene.image.Image;
-import javafx.stage.Modality;
 import javafx.stage.Stage;
+import javafx.stage.Window;
 
 import java.io.IOException;
 
@@ -28,75 +28,56 @@ public class MainMenuController {
         // Opcional: Configuración inicial de los botones o la ventana
     }
 
-    @FXML
-    protected void onCreateServiceSheetClicked() {
+    private void openWindow(String fxmlFile, String title, Button ownerButton) {
         try {
-            FXMLLoader fxmlLoader = new FXMLLoader(getClass().getResource("/com/example/tecnimusic_recepcion/tecniMusic-view.fxml"));
+            FXMLLoader fxmlLoader = new FXMLLoader(getClass().getResource(fxmlFile));
             Scene scene = new Scene(fxmlLoader.load());
             scene.getStylesheets().add(getClass().getResource("/com/example/tecnimusic_recepcion/styles.css").toExternalForm());
+            
             Stage stage = new Stage();
-            stage.setTitle("TecniMusic - Nueva Hoja de Servicio");
+            stage.setTitle(title);
             stage.getIcons().add(new Image(getClass().getResourceAsStream("/logo.png")));
             stage.setScene(scene);
-            stage.initModality(Modality.APPLICATION_MODAL); // Bloquea la ventana principal hasta que esta se cierre
-            stage.showAndWait();
+
+            // **LA SOLUCIÓN DEFINITIVA: SIMULACIÓN DE MODALIDAD**
+            Window parentWindow = ownerButton.getScene().getWindow();
+            
+            // 1. Deshabilitar la ventana padre.
+            parentWindow.getScene().getRoot().setDisable(true);
+
+            // 2. Añadir un listener que se ejecute cuando la ventana hija se cierre.
+            stage.setOnHidden(e -> {
+                // 3. Rehabilitar la ventana padre.
+                parentWindow.getScene().getRoot().setDisable(false);
+            });
+
+            // 4. Mostrar la ventana de forma no bloqueante.
+            stage.show();
+
         } catch (IOException e) {
             e.printStackTrace();
-            showAlert(Alert.AlertType.ERROR, "Error", "No se pudo abrir la ventana de Nueva Hoja de Servicio.");
+            showAlert(Alert.AlertType.ERROR, "Error de Carga", "No se pudo abrir la ventana: " + title);
         }
+    }
+
+    @FXML
+    protected void onCreateServiceSheetClicked() {
+        openWindow("/com/example/tecnimusic_recepcion/tecniMusic-view.fxml", "TecniMusic - Nueva Hoja de Servicio", createServiceSheetButton);
     }
 
     @FXML
     protected void onManageServiceSheetsClicked() {
-        try {
-            FXMLLoader fxmlLoader = new FXMLLoader(getClass().getResource("/com/example/tecnimusic_recepcion/manage-service-sheets-view.fxml"));
-            Scene scene = new Scene(fxmlLoader.load());
-            scene.getStylesheets().add(getClass().getResource("/com/example/tecnimusic_recepcion/styles.css").toExternalForm());
-            Stage stage = new Stage();
-            stage.setTitle("TecniMusic - Consultar/Gestionar Hojas de Servicio");
-            stage.getIcons().add(new Image(getClass().getResourceAsStream("/logo.png")));
-            stage.setScene(scene);
-            stage.initModality(Modality.APPLICATION_MODAL);
-            stage.showAndWait();
-        } catch (IOException e) {
-            e.printStackTrace();
-            showAlert(Alert.AlertType.ERROR, "Error", "No se pudo abrir la ventana de Gestión de Hojas de Servicio.");
-        }
+        openWindow("/com/example/tecnimusic_recepcion/manage-service-sheets-view.fxml", "TecniMusic - Consultar/Gestionar Hojas de Servicio", manageServiceSheetsButton);
     }
 
     @FXML
     protected void onManageClientsClicked() {
-        try {
-            FXMLLoader fxmlLoader = new FXMLLoader(getClass().getResource("/com/example/tecnimusic_recepcion/manage-clients-view.fxml"));
-            Scene scene = new Scene(fxmlLoader.load());
-            scene.getStylesheets().add(getClass().getResource("/com/example/tecnimusic_recepcion/styles.css").toExternalForm());
-            Stage stage = new Stage();
-            stage.setTitle("TecniMusic - Gestión de Clientes");
-            stage.getIcons().add(new Image(getClass().getResourceAsStream("/logo.png")));
-            stage.setScene(scene);
-            stage.initModality(Modality.APPLICATION_MODAL);
-            stage.showAndWait();
-        } catch (IOException e) {
-            e.printStackTrace();
-            showAlert(Alert.AlertType.ERROR, "Error", "No se pudo abrir la ventana de Gestión de Clientes.");
-        }
+        openWindow("/com/example/tecnimusic_recepcion/manage-clients-view.fxml", "TecniMusic - Gestión de Clientes", manageClientsButton);
     }
 
     @FXML
     protected void onSettingsClicked() {
-        try {
-            FXMLLoader fxmlLoader = new FXMLLoader(getClass().getResource("/com/example/tecnimusic_recepcion/settings-view.fxml"));
-            Scene scene = new Scene(fxmlLoader.load());
-            Stage stage = new Stage();
-            stage.setTitle("TecniMusic - Configuración");
-            stage.getIcons().add(new Image(getClass().getResourceAsStream("/logo.png")));
-            stage.setScene(scene);
-            stage.initModality(Modality.APPLICATION_MODAL);
-            stage.showAndWait();
-        } catch (IOException e) {
-            e.printStackTrace();
-            showAlert(Alert.AlertType.ERROR, "Error", "No se pudo abrir la ventana de Configuración.");
-        }
+        openWindow("/com/example/tecnimusic_recepcion/settings-view.fxml", "TecniMusic - Configuración", settingsButton);
     }
 
     @FXML

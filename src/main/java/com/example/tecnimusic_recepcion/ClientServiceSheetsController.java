@@ -15,8 +15,8 @@ import javafx.scene.control.Alert;
 import javafx.scene.control.TableRow;
 import javafx.scene.image.Image;
 import javafx.scene.input.MouseButton;
-import javafx.stage.Modality;
 import javafx.stage.Stage;
+import javafx.stage.Window;
 
 import java.io.IOException;
 import java.sql.Connection;
@@ -139,11 +139,17 @@ public class ClientServiceSheetsController {
                 stage.setTitle("Detalles de Hoja de Servicio: " + data.getNumeroOrden());
                 stage.getIcons().add(new Image(getClass().getResourceAsStream("/logo.png")));
                 stage.setScene(scene);
-                stage.initModality(Modality.APPLICATION_MODAL);
-                stage.showAndWait();
                 
-                // Refrescar la tabla por si el estado cambió
-                loadServiceSheets(selected.getClientId());
+                Window parentWindow = serviceSheetsTable.getScene().getWindow();
+                parentWindow.getScene().getRoot().setDisable(true);
+                
+                stage.setOnHidden(e -> {
+                    parentWindow.getScene().getRoot().setDisable(false);
+                    // Refrescar la tabla por si el estado cambió
+                    loadServiceSheets(selected.getClientId());
+                });
+                
+                stage.show();
 
             } catch (IOException e) {
                 showAlert(Alert.AlertType.ERROR, "Error de Carga", "No se pudo abrir la ventana de detalles.");

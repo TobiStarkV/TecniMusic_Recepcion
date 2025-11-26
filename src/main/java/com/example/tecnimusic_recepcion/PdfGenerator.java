@@ -111,12 +111,12 @@ public class PdfGenerator {
 
             pdfCanvas.moveTo(centerX - (signatureLineWidth / 2), signatureLineY).lineTo(centerX + (signatureLineWidth / 2), signatureLineY).stroke();
 
-            String firmaTitle = "Recibido y de Conformidad";
+            String firmaTitle = "Sello y Firma del Técnico";
 
             try (Canvas signatureTextCanvas = new Canvas(pdfCanvas, pageSize)) {
+                // Se elimina el nombre del cliente y se coloca el nuevo título para el técnico.
                 signatureTextCanvas
-                    .showTextAligned(new Paragraph(clienteNombre).setFontSize(9), centerX, signatureLineY - 15, TextAlignment.CENTER)
-                    .showTextAligned(new Paragraph(firmaTitle).setFontSize(8).setItalic(), centerX, signatureLineY - 25, TextAlignment.CENTER);
+                    .showTextAligned(new Paragraph(firmaTitle).setFontSize(9).setBold(), centerX, signatureLineY - 15, TextAlignment.CENTER);
             }
         }
 

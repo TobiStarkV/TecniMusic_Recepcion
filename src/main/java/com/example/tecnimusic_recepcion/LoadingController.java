@@ -1,7 +1,5 @@
 package com.example.tecnimusic_recepcion;
 
-import javafx.animation.KeyFrame;
-import javafx.animation.Timeline;
 import javafx.application.Platform;
 import javafx.concurrent.Task;
 import javafx.fxml.FXML;
@@ -14,32 +12,18 @@ import javafx.scene.image.Image;
 import javafx.scene.image.ImageView;
 import javafx.stage.Modality;
 import javafx.stage.Stage;
-import javafx.util.Duration;
 
 import java.io.IOException;
 import java.sql.SQLException;
 import java.util.Optional;
-import java.util.concurrent.BlockingQueue;
-import java.util.concurrent.LinkedBlockingQueue;
 
 public class LoadingController {
 
     @FXML
     private ImageView loadingImageView;
 
-    private static final int TOTAL_FRAMES = 271;
-    private static final String IMAGE_PREFIX = "/com/example/tecnimusic_recepcion/images/TecniMusic Intro_";
-    private static final String IMAGE_SUFFIX = ".png";
-    private static final int CACHE_SIZE = 30; // Número de imágenes a mantener en memoria
-
-    private final BlockingQueue<Image> frameCache = new LinkedBlockingQueue<>(CACHE_SIZE);
-    private int currentFrameIndex = 0;
-    private Timeline timeline;
-    private Thread imageLoaderThread;
-
     private volatile boolean isDatabaseReady = false;
     private volatile boolean isSpellCheckerReady = false;
-    private volatile boolean isAnimationCycleComplete = false;
     private volatile boolean isTransitioning = false;
 
     public void initialize() {
@@ -49,49 +33,26 @@ public class LoadingController {
             }
         });
 
-        startImageLoader();
+        // Cargar el GIF directamente. JavaFX lo animará automáticamente.
+        Image gif = new Image(getClass().getResourceAsStream("/com/example/tecnimusic_recepcion/images/TecniMusic_Intro.gif"));
+        loadingImageView.setImage(gif);
 
-        timeline = new Timeline();
-        timeline.setCycleCount(Timeline.INDEFINITE);
-        timeline.getKeyFrames().add(
-                new KeyFrame(Duration.millis(33), event -> {
-                    Image frame = frameCache.poll(); // Tomar una imagen de la caché
-                    if (frame != null) {
-                        loadingImageView.setImage(frame);
-                        currentFrameIndex++;
-                        if (currentFrameIndex >= TOTAL_FRAMES) {
-                            currentFrameIndex = 0;
-                            if (!isAnimationCycleComplete) {
-                                isAnimationCycleComplete = true;
-                                trySwitchToMainView();
-                            }
-                        }
-                    }
-                })
-        );
-        timeline.play();
+        // Simular un tiempo mínimo de visualización de la animación para que no sea un flash.
+        // Esto también da tiempo a que las tareas de fondo comiencen.
+        Task<Void> delayTask = new Task<>() {
+            @Override
+            protected Void call() throws Exception {
+                // Espera 3 segundos. Ajusta este valor si la animación es más corta o más larga.
+                Thread.sleep(3000);
+                return null;
+            }
+        };
+        delayTask.setOnSucceeded(event -> trySwitchToMainView(true));
+        new Thread(delayTask).start();
+
 
         startDatabaseLoadTask();
         startSpellCheckerLoadTask();
-    }
-
-    private void startImageLoader() {
-        imageLoaderThread = new Thread(() -> {
-            try {
-                for (int i = 0; i < TOTAL_FRAMES; i++) {
-                    String frameNumber = String.format("%05d", i);
-                    String imagePath = IMAGE_PREFIX + frameNumber + IMAGE_SUFFIX;
-                    Image frame = new Image(getClass().getResourceAsStream(imagePath), 500, 500, true, true);
-                    frameCache.put(frame); // Poner en la caché, esperando si está llena
-                }
-            } catch (InterruptedException e) {
-                Thread.currentThread().interrupt(); // Restaurar el estado de interrupción
-            } catch (Exception e) {
-                System.err.println("Error en el hilo de carga de imágenes: " + e.getMessage());
-            }
-        });
-        imageLoaderThread.setDaemon(true);
-        imageLoaderThread.start();
     }
 
     private void startDatabaseLoadTask() {
@@ -117,11 +78,9 @@ public class LoadingController {
             boolean success = databaseTask.getValue();
             if (success) {
                 isDatabaseReady = true;
-                trySwitchToMainView();
+                trySwitchToMainView(false);
             } else {
                 Platform.runLater(() -> {
-                    timeline.stop();
-                    if (imageLoaderThread != null) imageLoaderThread.interrupt();
                     Alert alert = new Alert(Alert.AlertType.ERROR);
                     alert.setTitle("Error de Base de Datos");
                     alert.setHeaderText("No se pudo conectar o inicializar la base de datos.");
@@ -161,7 +120,7 @@ public class LoadingController {
 
         spellCheckerTask.setOnSucceeded(event -> {
             isSpellCheckerReady = true;
-            trySwitchToMainView();
+            trySwitchToMainView(false);
         });
 
         spellCheckerTask.setOnFailed(event -> {
@@ -186,11 +145,6 @@ public class LoadingController {
             DatabaseManager.resetInstance();
             
             isDatabaseReady = false;
-            isAnimationCycleComplete = false;
-            currentFrameIndex = 0;
-            frameCache.clear();
-            startImageLoader();
-            timeline.play();
             startDatabaseLoadTask();
 
         } catch (IOException e) {
@@ -206,19 +160,19 @@ public class LoadingController {
         }
     }
 
-    private synchronized void trySwitchToMainView() {
-        if (isDatabaseReady && isSpellCheckerReady && isAnimationCycleComplete && !isTransitioning) {
+    private boolean animationDelayComplete = false;
+    private synchronized void trySwitchToMainView(boolean isAnimationDelay) {
+        if (isAnimationDelay) {
+            animationDelayComplete = true;
+        }
+        
+        if (isDatabaseReady && isSpellCheckerReady && animationDelayComplete && !isTransitioning) {
             isTransitioning = true;
             Platform.runLater(this::switchToMainView);
         }
     }
 
     private void switchToMainView() {
-        if (imageLoaderThread != null) {
-            imageLoaderThread.interrupt();
-        }
-        timeline.stop();
-
         try {
             Parent mainView = FXMLLoader.load(getClass().getResource("main-menu-view.fxml"));
             Scene mainScene = new Scene(mainView);

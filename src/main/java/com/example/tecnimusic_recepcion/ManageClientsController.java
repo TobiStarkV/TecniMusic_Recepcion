@@ -16,6 +16,7 @@ import javafx.scene.image.Image;
 import javafx.scene.layout.VBox;
 import javafx.stage.Modality;
 import javafx.stage.Stage;
+import javafx.stage.Window;
 
 import java.io.IOException;
 import java.sql.Connection;
@@ -120,7 +121,11 @@ public class ManageClientsController {
             Scene scene = new Scene(root);
             scene.getStylesheets().add(getClass().getResource("styles.css").toExternalForm());
             stage.setScene(scene);
-            stage.initModality(Modality.APPLICATION_MODAL);
+            
+            Window parentWindow = clientsTable.getScene().getWindow();
+            parentWindow.getScene().getRoot().setDisable(true);
+            stage.setOnHidden(e -> parentWindow.getScene().getRoot().setDisable(false));
+            
             stage.show();
 
         } catch (IOException e) {

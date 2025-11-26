@@ -300,8 +300,10 @@ public class tecniMusicController {
             Scene scene = new Scene(loader.load());
             Stage dialogStage = new Stage();
             dialogStage.setTitle("Gestionar Accesorios");
-            dialogStage.initModality(Modality.WINDOW_MODAL);
+            
+            dialogStage.initModality(Modality.NONE);
             dialogStage.initOwner(accesoriosButton.getScene().getWindow());
+            
             dialogStage.setScene(scene);
 
             AccesoriosDialogController controller = loader.getController();

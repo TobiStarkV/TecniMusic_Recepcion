@@ -10,8 +10,8 @@ import javafx.scene.control.*;
 import javafx.scene.control.cell.PropertyValueFactory;
 import javafx.scene.image.Image;
 import javafx.scene.input.MouseButton;
-import javafx.stage.Modality;
 import javafx.stage.Stage;
+import javafx.stage.Window;
 
 import java.awt.Desktop;
 import java.io.File;
@@ -226,11 +226,17 @@ public class ManageServiceSheetsController {
                 stage.setTitle("Detalles de Hoja de Servicio: " + data.getNumeroOrden());
                 stage.getIcons().add(new Image(getClass().getResourceAsStream("/logo.png")));
                 stage.setScene(scene);
-                stage.initModality(Modality.APPLICATION_MODAL);
-                stage.showAndWait();
                 
-                // Después de cerrar la ventana de detalles, refrescar la tabla
-                searchAndLoadServiceSheets(searchField.getText());
+                Window parentWindow = serviceSheetsTable.getScene().getWindow();
+                parentWindow.getScene().getRoot().setDisable(true);
+                
+                stage.setOnHidden(e -> {
+                    parentWindow.getScene().getRoot().setDisable(false);
+                    // Después de cerrar la ventana de detalles, refrescar la tabla
+                    searchAndLoadServiceSheets(searchField.getText());
+                });
+                
+                stage.show();
 
             } catch (IOException e) {
                 showAlert(Alert.AlertType.ERROR, "Error de Carga", "No se pudo abrir la ventana de detalles.");
