@@ -22,8 +22,14 @@ public class LoadingController {
     @FXML
     private ImageView loadingImageView;
 
+    // --- CONFIGURACIÓN DE LA ANIMACIÓN ---
+    // Ajusta este valor para que coincida con la duración de tu animación GIF en milisegundos.
+    // Por ejemplo, si el GIF dura 4.5 segundos, el valor debería ser 4500.
+    private static final long ANIMATION_DURATION_MS = 9000;
+
     private volatile boolean isDatabaseReady = false;
     private volatile boolean isSpellCheckerReady = false;
+    private volatile boolean isAnimationFinished = false;
     private volatile boolean isTransitioning = false;
 
     public void initialize() {
@@ -37,19 +43,19 @@ public class LoadingController {
         Image gif = new Image(getClass().getResourceAsStream("/com/example/tecnimusic_recepcion/images/TecniMusic_Intro.gif"));
         loadingImageView.setImage(gif);
 
-        // Simular un tiempo mínimo de visualización de la animación para que no sea un flash.
-        // Esto también da tiempo a que las tareas de fondo comiencen.
-        Task<Void> delayTask = new Task<>() {
+        // Tarea que espera a que la duración de la animación GIF se complete.
+        Task<Void> animationFinishTask = new Task<>() {
             @Override
             protected Void call() throws Exception {
-                // Espera 3 segundos. Ajusta este valor si la animación es más corta o más larga.
-                Thread.sleep(3000);
+                Thread.sleep(ANIMATION_DURATION_MS);
                 return null;
             }
         };
-        delayTask.setOnSucceeded(event -> trySwitchToMainView(true));
-        new Thread(delayTask).start();
-
+        animationFinishTask.setOnSucceeded(event -> {
+            isAnimationFinished = true;
+            trySwitchToMainView();
+        });
+        new Thread(animationFinishTask).start();
 
         startDatabaseLoadTask();
         startSpellCheckerLoadTask();
@@ -78,7 +84,7 @@ public class LoadingController {
             boolean success = databaseTask.getValue();
             if (success) {
                 isDatabaseReady = true;
-                trySwitchToMainView(false);
+                trySwitchToMainView();
             } else {
                 Platform.runLater(() -> {
                     Alert alert = new Alert(Alert.AlertType.ERROR);
@@ -120,7 +126,7 @@ public class LoadingController {
 
         spellCheckerTask.setOnSucceeded(event -> {
             isSpellCheckerReady = true;
-            trySwitchToMainView(false);
+            trySwitchToMainView();
         });
 
         spellCheckerTask.setOnFailed(event -> {
@@ -160,13 +166,8 @@ public class LoadingController {
         }
     }
 
-    private boolean animationDelayComplete = false;
-    private synchronized void trySwitchToMainView(boolean isAnimationDelay) {
-        if (isAnimationDelay) {
-            animationDelayComplete = true;
-        }
-        
-        if (isDatabaseReady && isSpellCheckerReady && animationDelayComplete && !isTransitioning) {
+    private synchronized void trySwitchToMainView() {
+        if (isDatabaseReady && isSpellCheckerReady && isAnimationFinished && !isTransitioning) {
             isTransitioning = true;
             Platform.runLater(this::switchToMainView);
         }
