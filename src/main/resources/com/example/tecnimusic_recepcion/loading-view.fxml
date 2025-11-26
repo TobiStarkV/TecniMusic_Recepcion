@@ -21,8 +21,8 @@
         - fx:id="loadingImageView": Es el identificador único que permite al LoadingController acceder y manipular este nodo.
         - pickOnBounds="true": Asegura que el nodo completo responda a eventos del ratón.
         - preserveRatio="true": Mantiene la proporción de aspecto de la imagen si se redimensiona.
-        La animación se logra cambiando la imagen de este ImageView repetidamente desde el controlador.
+        - fitWidth y fitHeight: Se han añadido para escalar la animación a un tamaño específico.
       -->
-      <ImageView fx:id="loadingImageView" pickOnBounds="true" preserveRatio="true" />
+      <ImageView fx:id="loadingImageView" pickOnBounds="true" preserveRatio="true" fitWidth="400" fitHeight="400" />
    </children>
 </StackPane>
