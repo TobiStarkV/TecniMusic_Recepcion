@@ -103,20 +103,24 @@ public class PdfGenerator {
 
         float margin = doc.getLeftMargin();
         float centerX = pageSize.getWidth() / 2;
-        
-        float signatureLineY = 100;
-        float signatureLineWidth = 140;
 
-        pdfCanvas.moveTo(centerX - (signatureLineWidth / 2), signatureLineY).lineTo(centerX + (signatureLineWidth / 2), signatureLineY).stroke();
+        // La sección de la firma solo se añade si es un PDF de cierre.
+        if (isCierre) {
+            float signatureLineY = 100;
+            float signatureLineWidth = 140;
 
-        String firmaTitle = isCierre ? "Recibido y de Conformidad" : "Firma de Conformidad";
+            pdfCanvas.moveTo(centerX - (signatureLineWidth / 2), signatureLineY).lineTo(centerX + (signatureLineWidth / 2), signatureLineY).stroke();
 
-        try (Canvas signatureTextCanvas = new Canvas(pdfCanvas, pageSize)) {
-            signatureTextCanvas
-                .showTextAligned(new Paragraph(clienteNombre).setFontSize(9), centerX, signatureLineY - 15, TextAlignment.CENTER)
-                .showTextAligned(new Paragraph(firmaTitle).setFontSize(8).setItalic(), centerX, signatureLineY - 25, TextAlignment.CENTER);
+            String firmaTitle = "Recibido y de Conformidad";
+
+            try (Canvas signatureTextCanvas = new Canvas(pdfCanvas, pageSize)) {
+                signatureTextCanvas
+                    .showTextAligned(new Paragraph(clienteNombre).setFontSize(9), centerX, signatureLineY - 15, TextAlignment.CENTER)
+                    .showTextAligned(new Paragraph(firmaTitle).setFontSize(8).setItalic(), centerX, signatureLineY - 25, TextAlignment.CENTER);
+            }
         }
 
+        // El pie de página con las aclaraciones se muestra en todos los PDFs.
         Rectangle footerTextRect = new Rectangle(margin, 30, pageSize.getWidth() - (margin * 2), 40);
         try (Canvas footerCanvas = new Canvas(pdfCanvas, footerTextRect)) {
             footerCanvas.add(new Paragraph(pdfFooter).setFontSize(6).setItalic().setTextAlignment(TextAlignment.CENTER));
