@@ -254,7 +254,7 @@ public class PdfGenerator {
 
         com.itextpdf.io.image.ImageData imageData = ImageDataFactory.create(logoUrl);
         for (int i = 1; i <= pdf.getNumberOfPages(); i++) {
-            Image watermarkImg = new Image(imageData).setOpacity(0.1f);
+            Image watermarkImg = new Image(imageData).setOpacity(0.2f); // Aumentado de 0.1f a 0.2f
             PdfPage page = pdf.getPage(i);
             Rectangle pageSize = page.getPageSize();
             PdfCanvas pdfCanvas = new PdfCanvas(page.newContentStreamBefore(), page.getResources(), pdf);
