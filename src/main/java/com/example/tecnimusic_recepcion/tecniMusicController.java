@@ -84,6 +84,7 @@ public class tecniMusicController {
     private String serieEquipoSeleccionado = null;
     private boolean isAutoCompleting = false;
     private boolean isViewOnlyMode = false;
+    private boolean isEditMode = false;
     private HojaServicioData currentHojaServicioData; // Campo para almacenar la HojaServicioData
     private static final Locale SPANISH_MEXICO_LOCALE = new Locale("es", "MX");
 
@@ -301,7 +302,7 @@ public class tecniMusicController {
             Stage dialogStage = new Stage();
             dialogStage.setTitle("Gestionar Accesorios");
             
-            dialogStage.initModality(Modality.NONE);
+            dialogStage.initModality(Modality.WINDOW_MODAL);
             dialogStage.initOwner(accesoriosButton.getScene().getWindow());
             
             dialogStage.setScene(scene);
@@ -400,6 +401,29 @@ public class tecniMusicController {
         totalFinalLabel.setText(currencyFormat.format(totalFinal));
     }
 
+    public void loadForEditing(HojaServicioData data) {
+        this.isEditMode = true;
+        this.currentHojaServicioData = data;
+        populateFormWithData(data);
+
+        // Configurar la UI para el modo de edición
+        guardarButton.setText("Guardar Cambios");
+        limpiarButton.setVisible(false);
+        limpiarButton.setManaged(false);
+        cierreBox.setVisible(false);
+        cierreBox.setManaged(false);
+        subtotalBox.setVisible(false);
+        subtotalBox.setManaged(false);
+        totalBox.setVisible(false);
+        totalBox.setManaged(false);
+        colCosto.setVisible(false);
+        colInforme.setVisible(false);
+        updateEquipoButton.setVisible(false);
+        updateEquipoButton.setManaged(false);
+        cierreButton.setVisible(false);
+        cierreButton.setManaged(false);
+    }
+
     public void loadForViewing(HojaServicioData data) {
         this.isViewOnlyMode = true;
         this.currentHojaServicioData = data;
@@ -456,10 +480,18 @@ public class tecniMusicController {
             return;
         }
 
+        if (isEditMode) {
+            handleUpdate();
+        } else {
+            handleCreate();
+        }
+    }
+
+    private void handleCreate() {
         String summary = "Cliente: " + clienteNombreField.getText().split("\\s*\\|\\s*")[0].trim() + "\n" +
                          "Equipos: " + equiposObservable.size() + " equipo(s)";
 
-        if (!showConfirmationDialog("Confirmar Guardado", "Se guardará la hoja con los siguientes datos:\n\n" + summary)) {
+        if (!showConfirmationDialog("Confirmar Creación", "Se creará una nueva hoja con los siguientes datos:\n\n" + summary)) {
             return;
         }
 
@@ -480,12 +512,37 @@ public class tecniMusicController {
                 performPrint(pdfPath);
             }
 
-            mostrarExitoYSalir(ordenNumeroField.getText(), realOrdenNumero);
+            mostrarExitoYSalir("Hoja creada con éxito: " + realOrdenNumero);
 
         } catch (SQLException e) {
             showAlert(Alert.AlertType.ERROR, "Error de Base de Datos", "No se pudo guardar la hoja de servicio. Error: " + e.getMessage());
         } catch (IOException | ParseException e) {
             showAlert(Alert.AlertType.ERROR, "Error de PDF", "No se pudo generar el PDF. Error: " + e.getMessage());
+        }
+    }
+
+    private void handleUpdate() {
+        if (!showConfirmationDialog("Confirmar Actualización", "¿Está seguro de que desea guardar los cambios en la hoja de servicio " + currentHojaServicioData.getNumeroOrden() + "?")) {
+            return;
+        }
+
+        try {
+            BigDecimal anticipo = parseCurrency(anticipoField.getText());
+            long hojaId = Long.parseLong(currentHojaServicioData.getNumeroOrden().split("-")[2]);
+
+            DatabaseService.getInstance().actualizarHojaServicioCompleta(
+                    hojaId, idClienteSeleccionado, clienteNombreField.getText(), clienteTelefonoField.getText(), clienteDireccionField.getText(),
+                    new ArrayList<>(equiposObservable),
+                    ordenFechaPicker.getValue(), anticipo, entregaFechaPicker.getValue(), aclaracionesArea.getText()
+            );
+
+            mostrarExitoYSalir("Hoja de servicio " + currentHojaServicioData.getNumeroOrden() + " actualizada correctamente.");
+
+        } catch (SQLException e) {
+            showAlert(Alert.AlertType.ERROR, "Error de Base de Datos", "No se pudo actualizar la hoja de servicio. Error: " + e.getMessage());
+            e.printStackTrace();
+        } catch (ParseException e) {
+            showAlert(Alert.AlertType.ERROR, "Error de Formato", "No se pudo procesar un valor monetario. Error: " + e.getMessage());
         }
     }
 
@@ -774,6 +831,7 @@ public class tecniMusicController {
     private void resetFormulario() {
         isAutoCompleting = true;
         isViewOnlyMode = false;
+        isEditMode = false;
         currentHojaServicioData = null; // Limpiar la data al resetear
 
         setNodesVisible(false, cierreBox, subtotalBox, totalBox, updateEquipoButton, cierreButton, printReceptionButton, printClosureButton);
@@ -876,13 +934,8 @@ public class tecniMusicController {
         return result.isPresent() && result.get() == ButtonType.OK;
     }
 
-    private void mostrarExitoYSalir(String predictedOrdenNumero, String realOrdenNumero) {
-        if (predictedOrdenNumero.equals("TM-" + LocalDate.now().getYear() + "-" + predictedHojaId)) {
-            showAlert(Alert.AlertType.INFORMATION, "Éxito", "Hoja de servicio " + realOrdenNumero + " guardada correctamente.");
-        } else {
-            showAlert(Alert.AlertType.WARNING, "Éxito con Reasignación",
-                    "La hoja de servicio se guardó correctamente, pero el número de orden predicho (" + predictedOrdenNumero + ") ya estaba en uso.\nSe ha asignado el siguiente número disponible: " + realOrdenNumero);
-        }
+    private void mostrarExitoYSalir(String message) {
+        showAlert(Alert.AlertType.INFORMATION, "Éxito", message);
         Stage stage = (Stage) clienteNombreField.getScene().getWindow();
         stage.close();
     }

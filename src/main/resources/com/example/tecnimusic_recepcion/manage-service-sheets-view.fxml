@@ -50,6 +50,7 @@
             </padding>
             <children>
                 <Button onAction="#onViewDetailsClicked" text="Ver Detalles/Cerrar" />
+                <Button fx:id="editSheetButton" onAction="#onEditSheetClicked" text="Editar Hoja" />
                 <Button onAction="#onPrintReceptionClicked" text="Imprimir Recepción" />
                 <Button onAction="#onPrintClosureClicked" text="Imprimir Cierre" />
                 <Region HBox.hgrow="ALWAYS" />

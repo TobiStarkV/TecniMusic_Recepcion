@@ -488,6 +488,62 @@ public class DatabaseService {
         }
     }
 
+    public void actualizarHojaServicioCompleta(
+        long hojaId, Long idClienteSeleccionado, String nombreCliente, String telefonoCliente, String direccionCliente,
+        List<Equipo> equipos,
+        LocalDate fechaOrden, BigDecimal anticipo, LocalDate fechaEntrega, String aclaraciones) throws SQLException {
+
+        Connection conn = null;
+        try {
+            conn = DatabaseManager.getInstance().getConnection();
+            conn.setAutoCommit(false);
+
+            long clienteId = gestionarCliente(conn, idClienteSeleccionado, nombreCliente, telefonoCliente, direccionCliente);
+
+            // 1. Actualizar la hoja de servicio maestra
+            String sqlUpdateHoja = "UPDATE x_hojas_servicio SET cliente_id = ?, fecha_orden = ?, anticipo = ?, fecha_entrega = ?, aclaraciones = ? WHERE id = ?";
+            try (PreparedStatement pstmt = conn.prepareStatement(sqlUpdateHoja)) {
+                pstmt.setLong(1, clienteId);
+                pstmt.setDate(2, fechaOrden != null ? Date.valueOf(fechaOrden) : null);
+                if (anticipo != null) pstmt.setBigDecimal(3, anticipo); else pstmt.setNull(3, Types.DECIMAL);
+                pstmt.setDate(4, fechaEntrega != null ? Date.valueOf(fechaEntrega) : null);
+                pstmt.setString(5, aclaraciones);
+                pstmt.setLong(6, hojaId);
+                pstmt.executeUpdate();
+            }
+
+            // 2. Borrar los equipos antiguos asociados a esta hoja
+            String sqlDeleteEquipos = "DELETE FROM x_hojas_servicio_equipos WHERE hoja_id = ?";
+            try (PreparedStatement pstmt = conn.prepareStatement(sqlDeleteEquipos)) {
+                pstmt.setLong(1, hojaId);
+                pstmt.executeUpdate();
+            }
+
+            // 3. Insertar los nuevos equipos (la lista actualizada)
+            if (equipos != null) {
+                for (Equipo equipo : equipos) {
+                    Long assetId = gestionarAsset(conn,
+                            equipo.getSerie() == null ? "" : equipo.getSerie(),
+                            equipo.getMarca() == null ? "" : equipo.getMarca(),
+                            equipo.getModelo() == null ? "" : equipo.getModelo(),
+                            equipo.getTipo() == null ? "" : equipo.getTipo(),
+                            nombreCliente);
+
+                    insertarEquipoEnHoja(conn, hojaId, assetId,
+                            equipo.getSerie(), equipo.getTipo(), equipo.getMarca(), equipo.getModelo(), equipo.getFalla(), null, equipo.getEstadoFisico(), equipo.getAccesorios());
+                }
+            }
+
+            conn.commit();
+
+        } catch (SQLException e) {
+            if (conn != null) try { conn.rollback(); } catch (SQLException ex) { System.err.println("Error during rollback: " + ex.getMessage()); }
+            throw e;
+        } finally {
+            if (conn != null) try { conn.close(); } catch (SQLException e) { System.err.println("Error al cerrar la conexión: " + e.getMessage()); }
+        }
+    }
+
     private long insertarHojaServicioMaestra(Connection conn, long clienteId, LocalDate fechaOrden, String informeDiagnostico, BigDecimal subtotal, BigDecimal anticipo, LocalDate fechaEntrega, String firmaAclaracion, String aclaraciones) throws SQLException {
         String sql = "INSERT INTO x_hojas_servicio (fecha_orden, cliente_id, asset_id, equipo_serie, equipo_tipo, equipo_marca, equipo_modelo, falla_reportada, informe_costos, total_costos, anticipo, fecha_entrega, firma_aclaracion, aclaraciones, estado) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'ABIERTA')";
         try (PreparedStatement pstmt = conn.prepareStatement(sql, Statement.RETURN_GENERATED_KEYS)) {
@@ -595,7 +651,7 @@ public class DatabaseService {
 
     public HojaServicioData getHojaServicioCompleta(long hojaId) throws SQLException {
         HojaServicioData data = null;
-        String sqlHoja = "SELECT hs.*, c.nombre as cliente_nombre, c.direccion as cliente_direccion, c.telefono as cliente_telefono " +
+        String sqlHoja = "SELECT hs.*, c.id as cliente_id_fk, c.nombre as cliente_nombre, c.direccion as cliente_direccion, c.telefono as cliente_telefono " +
                          "FROM x_hojas_servicio hs " +
                          "JOIN x_clientes c ON hs.cliente_id = c.id " +
                          "WHERE hs.id = ?";
@@ -608,10 +664,12 @@ public class DatabaseService {
 
             if (rsHoja.next()) {
                 data = new HojaServicioData();
+                data.setId(rsHoja.getLong("id"));
                 data.setNumeroOrden(rsHoja.getString("numero_orden"));
                 Date fechaOrden = rsHoja.getDate("fecha_orden");
                 if (fechaOrden != null) data.setFechaOrden(fechaOrden.toLocalDate());
 
+                data.setClienteId(rsHoja.getLong("cliente_id_fk"));
                 data.setClienteNombre(rsHoja.getString("cliente_nombre"));
                 data.setClienteDireccion(rsHoja.getString("cliente_direccion"));
                 data.setClienteTelefono(rsHoja.getString("cliente_telefono"));

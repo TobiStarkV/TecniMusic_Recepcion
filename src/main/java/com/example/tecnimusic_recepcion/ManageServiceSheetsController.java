@@ -41,6 +41,8 @@ public class ManageServiceSheetsController {
     private TableColumn<ServiceSheetSummary, String> statusCol;
     @FXML
     private Button salirButton;
+    @FXML
+    private Button editSheetButton;
 
     private final ObservableList<ServiceSheetSummary> serviceSheets = FXCollections.observableArrayList();
 
@@ -59,8 +61,17 @@ public class ManageServiceSheetsController {
         equipmentCol.setCellValueFactory(new PropertyValueFactory<>("equipment"));
         statusCol.setCellValueFactory(new PropertyValueFactory<>("status"));
 
-
         serviceSheetsTable.setItems(serviceSheets);
+
+        // Listener para habilitar/deshabilitar el botón de editar
+        editSheetButton.setDisable(true);
+        serviceSheetsTable.getSelectionModel().selectedItemProperty().addListener((obs, oldSelection, newSelection) -> {
+            if (newSelection != null) {
+                editSheetButton.setDisable(!"ABIERTA".equals(newSelection.getStatus()));
+            } else {
+                editSheetButton.setDisable(true);
+            }
+        });
 
         serviceSheetsTable.setRowFactory(tv -> {
             TableRow<ServiceSheetSummary> row = new TableRow<>();
@@ -78,7 +89,7 @@ public class ManageServiceSheetsController {
     private void searchAndLoadServiceSheets(String searchTerm) {
         serviceSheets.clear();
 
-        String baseSql = "SELECT hs.numero_orden, hs.fecha_orden, c.nombre as cliente_nombre, hs.estado, " +
+        String baseSql = "SELECT hs.id, hs.numero_orden, hs.fecha_orden, c.nombre as cliente_nombre, hs.estado, " +
                          "GROUP_CONCAT( " +
                          "    TRIM(CONCAT_WS(' ', " +
                          "        hse.equipo_tipo, " +
@@ -120,13 +131,14 @@ public class ManageServiceSheetsController {
             ResultSet rs = pstmt.executeQuery();
 
             while (rs.next()) {
-                String orderNumber = rs.getString("numero_orden");
-                LocalDate date = rs.getDate("fecha_orden").toLocalDate();
-                String clientName = rs.getString("cliente_nombre");
-                String equipmentSummary = rs.getString("equipment_summary");
-                String status = rs.getString("estado");
-
-                serviceSheets.add(new ServiceSheetSummary(orderNumber, date, clientName, equipmentSummary != null ? equipmentSummary : "", status));
+                serviceSheets.add(new ServiceSheetSummary(
+                        rs.getLong("id"),
+                        rs.getString("numero_orden"),
+                        rs.getDate("fecha_orden").toLocalDate(),
+                        rs.getString("cliente_nombre"),
+                        rs.getString("equipment_summary") != null ? rs.getString("equipment_summary") : "",
+                        rs.getString("estado")
+                ));
             }
 
         } catch (SQLException e) {
@@ -148,7 +160,7 @@ public class ManageServiceSheetsController {
             return;
         }
 
-        fetchAndProcessServiceSheet(selected.getOrderNumber(), (data) -> {
+        fetchAndProcessServiceSheet(selected.getId(), (data) -> {
             try {
                 // Forzar la generación del PDF de recepción
                 data.setEstado("ABIERTA"); 
@@ -174,7 +186,7 @@ public class ManageServiceSheetsController {
             return;
         }
 
-        fetchAndProcessServiceSheet(selected.getOrderNumber(), (data) -> {
+        fetchAndProcessServiceSheet(selected.getId(), (data) -> {
             try {
                 String pdfPath = new PdfGenerator().generatePdf(data);
                 performPrint(pdfPath);
@@ -204,6 +216,18 @@ public class ManageServiceSheetsController {
         }
     }
 
+    @FXML
+    protected void onEditSheetClicked() {
+        ServiceSheetSummary selected = serviceSheetsTable.getSelectionModel().getSelectedItem();
+        if (selected == null || !"ABIERTA".equals(selected.getStatus())) {
+            showAlert(Alert.AlertType.WARNING, "Selección Inválida", "Por favor, seleccione una hoja de servicio con estado 'ABIERTA' para editar.");
+            return;
+        }
+
+        fetchAndProcessServiceSheet(selected.getId(), (data) -> {
+            openTecniMusicView(data, true); // true para modo edición
+        });
+    }
 
     @FXML
     protected void onViewDetailsClicked() {
@@ -213,36 +237,43 @@ public class ManageServiceSheetsController {
             return;
         }
 
-        fetchAndProcessServiceSheet(selected.getOrderNumber(), (data) -> {
-            try {
-                FXMLLoader fxmlLoader = new FXMLLoader(getClass().getResource("tecniMusic-view.fxml"));
-                Scene scene = new Scene(fxmlLoader.load());
-                scene.getStylesheets().add(getClass().getResource("styles.css").toExternalForm());
-
-                tecniMusicController controller = fxmlLoader.getController();
-                controller.loadForViewing(data);
-
-                Stage stage = new Stage();
-                stage.setTitle("Detalles de Hoja de Servicio: " + data.getNumeroOrden());
-                stage.getIcons().add(new Image(getClass().getResourceAsStream("/logo.png")));
-                stage.setScene(scene);
-                
-                Window parentWindow = serviceSheetsTable.getScene().getWindow();
-                parentWindow.getScene().getRoot().setDisable(true);
-                
-                stage.setOnHidden(e -> {
-                    parentWindow.getScene().getRoot().setDisable(false);
-                    // Después de cerrar la ventana de detalles, refrescar la tabla
-                    searchAndLoadServiceSheets(searchField.getText());
-                });
-                
-                stage.show();
-
-            } catch (IOException e) {
-                showAlert(Alert.AlertType.ERROR, "Error de Carga", "No se pudo abrir la ventana de detalles.");
-                e.printStackTrace();
-            }
+        fetchAndProcessServiceSheet(selected.getId(), (data) -> {
+            openTecniMusicView(data, false); // false para modo vista
         });
+    }
+
+    private void openTecniMusicView(HojaServicioData data, boolean isEditMode) {
+        try {
+            FXMLLoader fxmlLoader = new FXMLLoader(getClass().getResource("tecniMusic-view.fxml"));
+            Scene scene = new Scene(fxmlLoader.load());
+            scene.getStylesheets().add(getClass().getResource("styles.css").toExternalForm());
+
+            tecniMusicController controller = fxmlLoader.getController();
+            if (isEditMode) {
+                controller.loadForEditing(data);
+            } else {
+                controller.loadForViewing(data);
+            }
+
+            Stage stage = new Stage();
+            stage.setTitle(isEditMode ? "Editando Hoja de Servicio: " + data.getNumeroOrden() : "Detalles de Hoja de Servicio: " + data.getNumeroOrden());
+            stage.getIcons().add(new Image(getClass().getResourceAsStream("/logo.png")));
+            stage.setScene(scene);
+            
+            Window parentWindow = serviceSheetsTable.getScene().getWindow();
+            parentWindow.getScene().getRoot().setDisable(true);
+            
+            stage.setOnHidden(e -> {
+                parentWindow.getScene().getRoot().setDisable(false);
+                searchAndLoadServiceSheets(searchField.getText());
+            });
+            
+            stage.show();
+
+        } catch (IOException e) {
+            showAlert(Alert.AlertType.ERROR, "Error de Carga", "No se pudo abrir la ventana de detalles/edición.");
+            e.printStackTrace();
+        }
     }
 
     @FXML
@@ -251,27 +282,14 @@ public class ManageServiceSheetsController {
         stage.close();
     }
 
-    private void fetchAndProcessServiceSheet(String orderNumber, java.util.function.Consumer<HojaServicioData> dataConsumer) {
-        String sql = "SELECT hs.id FROM x_hojas_servicio hs WHERE hs.numero_orden = ?";
-
-        try (Connection conn = DatabaseManager.getInstance().getConnection();
-             PreparedStatement pstmt = conn.prepareStatement(sql)) {
-
-            pstmt.setString(1, orderNumber);
-            ResultSet rs = pstmt.executeQuery();
-
-            if (rs.next()) {
-                long hojaId = rs.getLong("id");
-                HojaServicioData data = DatabaseService.getInstance().getHojaServicioCompleta(hojaId);
-                if (data != null) {
-                    dataConsumer.accept(data);
-                } else {
-                    showAlert(Alert.AlertType.ERROR, "Error", "No se pudieron obtener los detalles completos para la hoja de servicio seleccionada.");
-                }
+    private void fetchAndProcessServiceSheet(long hojaId, java.util.function.Consumer<HojaServicioData> dataConsumer) {
+        try {
+            HojaServicioData data = DatabaseService.getInstance().getHojaServicioCompleta(hojaId);
+            if (data != null) {
+                dataConsumer.accept(data);
             } else {
-                showAlert(Alert.AlertType.ERROR, "Error", "No se encontraron los detalles para la hoja de servicio seleccionada.");
+                showAlert(Alert.AlertType.ERROR, "Error", "No se pudieron obtener los detalles completos para la hoja de servicio seleccionada.");
             }
-
         } catch (SQLException e) {
             showAlert(Alert.AlertType.ERROR, "Error de Base de Datos", "Ocurrió un error al consultar los datos: " + e.getMessage());
             e.printStackTrace();
@@ -283,20 +301,21 @@ public class ManageServiceSheetsController {
         alert.setTitle(title);
         alert.setHeaderText(null);
         alert.setContentText(message);
-        // Añadir estilos y icono a todos los diálogos
         alert.getDialogPane().getStylesheets().add(getClass().getResource("styles.css").toExternalForm());
         ((Stage) alert.getDialogPane().getScene().getWindow()).getIcons().add(new Image(getClass().getResourceAsStream("/logo.png")));
         alert.showAndWait();
     }
 
     public static class ServiceSheetSummary {
+        private final long id;
         private final SimpleStringProperty orderNumber;
         private final LocalDate date;
         private final SimpleStringProperty clientName;
         private final SimpleStringProperty equipment;
         private final SimpleStringProperty status;
 
-        public ServiceSheetSummary(String orderNumber, LocalDate date, String clientName, String equipment, String status) {
+        public ServiceSheetSummary(long id, String orderNumber, LocalDate date, String clientName, String equipment, String status) {
+            this.id = id;
             this.orderNumber = new SimpleStringProperty(orderNumber);
             this.date = date;
             this.clientName = new SimpleStringProperty(clientName);
@@ -304,6 +323,7 @@ public class ManageServiceSheetsController {
             this.status = new SimpleStringProperty(status);
         }
 
+        public long getId() { return id; }
         public String getOrderNumber() { return orderNumber.get(); }
         public LocalDate getDate() { return date; }
         public String getClientName() { return clientName.get(); }
