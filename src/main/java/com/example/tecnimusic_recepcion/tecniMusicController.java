@@ -85,6 +85,7 @@ public class tecniMusicController {
     private boolean isAutoCompleting = false;
     private boolean isViewOnlyMode = false;
     private boolean isEditMode = false;
+    private boolean isVersioningMode = false; // Nueva bandera para el modo de versionado
     private HojaServicioData currentHojaServicioData; // Campo para almacenar la HojaServicioData
     private static final Locale SPANISH_MEXICO_LOCALE = new Locale("es", "MX");
 
@@ -401,13 +402,32 @@ public class tecniMusicController {
         totalFinalLabel.setText(currencyFormat.format(totalFinal));
     }
 
-    public void loadForEditing(HojaServicioData data) {
+    public void loadForEditing(HojaServicioData data, String motivo) {
         this.isEditMode = true;
         this.currentHojaServicioData = data;
         populateFormWithData(data);
 
-        // Configurar la UI para el modo de edición
-        guardarButton.setText("Guardar Cambios");
+        if ("versioning".equals(motivo)) {
+            this.isVersioningMode = true;
+            guardarButton.setText("Crear Nueva Versión");
+            ordenNumeroField.setText("Nueva Versión de " + data.getNumeroOrden()); // Placeholder
+            // Limpiar campos específicos para la nueva versión
+            equipoCostoField.clear();
+            equipoInformeTecnicoArea.clear();
+            equiposObservable.forEach(equipo -> {
+                equipo.setCosto(null);
+                equipo.setInformeTecnico(null);
+            });
+            equiposTable.refresh(); // Refrescar la tabla para reflejar los cambios
+            actualizarCostosTotales(); // Recalcular totales
+            entregaFechaPicker.setValue(null); // Limpiar fecha de entrega
+            aclaracionesArea.clear(); // Limpiar aclaraciones
+            anticipoField.clear(); // Limpiar anticipo
+        } else {
+            guardarButton.setText("Guardar Cambios");
+        }
+
+        // Configurar la UI para el modo de edición/versionado
         limpiarButton.setVisible(false);
         limpiarButton.setManaged(false);
         cierreBox.setVisible(false);
@@ -522,21 +542,34 @@ public class tecniMusicController {
     }
 
     private void handleUpdate() {
-        if (!showConfirmationDialog("Confirmar Actualización", "¿Está seguro de que desea guardar los cambios en la hoja de servicio " + currentHojaServicioData.getNumeroOrden() + "?")) {
+        String confirmationMessage;
+        if (isVersioningMode) {
+            confirmationMessage = "¿Está seguro de que desea crear una nueva versión de la hoja de servicio " + currentHojaServicioData.getNumeroOrden() + "? La hoja original será ANULADA.";
+        } else {
+            confirmationMessage = "¿Está seguro de que desea guardar los cambios en la hoja de servicio " + currentHojaServicioData.getNumeroOrden() + "?";
+        }
+
+        if (!showConfirmationDialog("Confirmar Actualización", confirmationMessage)) {
             return;
         }
 
         try {
             BigDecimal anticipo = parseCurrency(anticipoField.getText());
-            long hojaId = Long.parseLong(currentHojaServicioData.getNumeroOrden().split("-")[2]);
-
-            DatabaseService.getInstance().actualizarHojaServicioCompleta(
-                    hojaId, idClienteSeleccionado, clienteNombreField.getText(), clienteTelefonoField.getText(), clienteDireccionField.getText(),
-                    new ArrayList<>(equiposObservable),
-                    ordenFechaPicker.getValue(), anticipo, entregaFechaPicker.getValue(), aclaracionesArea.getText()
+            
+            String nuevoNumeroOrden = DatabaseService.getInstance().versionarHojaServicio(
+                currentHojaServicioData.getId(),
+                currentHojaServicioData.getClienteId(),
+                clienteNombreField.getText(),
+                clienteTelefonoField.getText(),
+                clienteDireccionField.getText(),
+                new ArrayList<>(equiposObservable),
+                ordenFechaPicker.getValue(),
+                anticipo,
+                entregaFechaPicker.getValue(),
+                aclaracionesArea.getText()
             );
 
-            mostrarExitoYSalir("Hoja de servicio " + currentHojaServicioData.getNumeroOrden() + " actualizada correctamente.");
+            mostrarExitoYSalir("Hoja de servicio " + currentHojaServicioData.getNumeroOrden() + " anulada.\nNueva hoja creada: " + nuevoNumeroOrden);
 
         } catch (SQLException e) {
             showAlert(Alert.AlertType.ERROR, "Error de Base de Datos", "No se pudo actualizar la hoja de servicio. Error: " + e.getMessage());
@@ -548,12 +581,17 @@ public class tecniMusicController {
 
     @FXML
     protected void onCierreClicked() {
+        if (!"ABIERTA".equals(currentHojaServicioData.getEstado())) {
+            showAlert(Alert.AlertType.WARNING, "Estado Inválido", "Solo se pueden cerrar hojas de servicio con estado 'ABIERTA'.");
+            return;
+        }
+
         if (!showConfirmationDialog("Confirmar Cierre", "¿Está seguro de que desea cerrar esta hoja de servicio? Una vez cerrada, no podrá ser modificada.")) {
             return;
         }
 
         try {
-            long hojaId = Long.parseLong(ordenNumeroField.getText().split("-")[2]);
+            long hojaId = currentHojaServicioData.getId(); // Usar el ID de la hoja actual
             BigDecimal totalCostos = parseCurrency(subtotalLabel.getText());
             LocalDate fechaEntrega = entregaFechaPicker.getValue();
 
@@ -832,6 +870,7 @@ public class tecniMusicController {
         isAutoCompleting = true;
         isViewOnlyMode = false;
         isEditMode = false;
+        isVersioningMode = false; // Resetear la bandera de versionado
         currentHojaServicioData = null; // Limpiar la data al resetear
 
         setNodesVisible(false, cierreBox, subtotalBox, totalBox, updateEquipoButton, cierreButton, printReceptionButton, printClosureButton);

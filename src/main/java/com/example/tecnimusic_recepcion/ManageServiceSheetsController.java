@@ -43,6 +43,8 @@ public class ManageServiceSheetsController {
     private Button salirButton;
     @FXML
     private Button editSheetButton;
+    @FXML
+    private CheckBox showAnuladasCheckBox; // Nuevo: CheckBox para mostrar/ocultar anuladas
 
     private final ObservableList<ServiceSheetSummary> serviceSheets = FXCollections.observableArrayList();
 
@@ -64,10 +66,11 @@ public class ManageServiceSheetsController {
         serviceSheetsTable.setItems(serviceSheets);
 
         // Listener para habilitar/deshabilitar el botón de editar
-        editSheetButton.setDisable(true);
+        editSheetButton.setDisable(true); // Keep disabled by default
         serviceSheetsTable.getSelectionModel().selectedItemProperty().addListener((obs, oldSelection, newSelection) -> {
             if (newSelection != null) {
-                editSheetButton.setDisable(!"ABIERTA".equals(newSelection.getStatus()));
+                // Enable edit button for 'ABIERTA' or 'CERRADA' sheets
+                editSheetButton.setDisable(!("ABIERTA".equals(newSelection.getStatus()) || "CERRADA".equals(newSelection.getStatus())));
             } else {
                 editSheetButton.setDisable(true);
             }
@@ -83,7 +86,10 @@ public class ManageServiceSheetsController {
             return row;
         });
 
+        // Cargar inicialmente las hojas de servicio (sin anuladas por defecto)
         searchAndLoadServiceSheets(null);
+        // Listener para el CheckBox
+        showAnuladasCheckBox.selectedProperty().addListener((obs, oldVal, newVal) -> onShowAnuladasChanged());
     }
 
     private void searchAndLoadServiceSheets(String searchTerm) {
@@ -103,29 +109,41 @@ public class ManageServiceSheetsController {
                          "JOIN x_clientes c ON hs.cliente_id = c.id " +
                          "LEFT JOIN x_hojas_servicio_equipos hse ON hs.id = hse.hoja_id ";
 
-        String sql;
-        boolean hasSearchTerm = searchTerm != null && !searchTerm.trim().isEmpty();
+        StringBuilder whereClause = new StringBuilder();
+        List<String> params = new ArrayList<>();
 
-        if (hasSearchTerm) {
-            sql = baseSql + "WHERE hs.numero_orden LIKE ? OR c.nombre LIKE ? OR " +
-                          "hse.equipo_serie LIKE ? OR hse.equipo_marca LIKE ? OR hse.equipo_modelo LIKE ? " +
-                          "GROUP BY hs.id, hs.numero_orden, hs.fecha_orden, c.nombre, hs.estado " +
-                          "ORDER BY hs.id DESC";
-        } else {
-            sql = baseSql + "GROUP BY hs.id, hs.numero_orden, hs.fecha_orden, c.nombre, hs.estado " +
-                          "ORDER BY hs.id DESC";
+        // Filtrar por estado "ANULADA" si el checkbox no está marcado
+        if (!showAnuladasCheckBox.isSelected()) {
+            whereClause.append(" WHERE hs.estado != ? ");
+            params.add("ANULADA");
         }
+
+        boolean hasSearchTerm = searchTerm != null && !searchTerm.trim().isEmpty();
+        if (hasSearchTerm) {
+            String searchPattern = "%" + searchTerm.trim() + "%";
+            String searchCondition = " (hs.numero_orden LIKE ? OR c.nombre LIKE ? OR hse.equipo_serie LIKE ? OR hse.equipo_marca LIKE ? OR hse.equipo_modelo LIKE ?) ";
+            
+            if (whereClause.length() == 0) {
+                whereClause.append(" WHERE ").append(searchCondition);
+            } else {
+                whereClause.append(" AND ").append(searchCondition);
+            }
+            params.add(searchPattern);
+            params.add(searchPattern);
+            params.add(searchPattern);
+            params.add(searchPattern);
+            params.add(searchPattern);
+        }
+
+        String sql = baseSql + whereClause.toString() +
+                     "GROUP BY hs.id, hs.numero_orden, hs.fecha_orden, c.nombre, hs.estado " +
+                     "ORDER BY hs.id DESC";
 
         try (Connection conn = DatabaseManager.getInstance().getConnection();
              PreparedStatement pstmt = conn.prepareStatement(sql)) {
 
-            if (hasSearchTerm) {
-                String searchPattern = "%" + searchTerm.trim() + "%";
-                pstmt.setString(1, searchPattern);
-                pstmt.setString(2, searchPattern);
-                pstmt.setString(3, searchPattern);
-                pstmt.setString(4, searchPattern);
-                pstmt.setString(5, searchPattern);
+            for (int i = 0; i < params.size(); i++) {
+                pstmt.setString(i + 1, params.get(i));
             }
 
             ResultSet rs = pstmt.executeQuery();
@@ -149,6 +167,11 @@ public class ManageServiceSheetsController {
 
     @FXML
     protected void onSearchAction() {
+        searchAndLoadServiceSheets(searchField.getText());
+    }
+
+    @FXML
+    protected void onShowAnuladasChanged() {
         searchAndLoadServiceSheets(searchField.getText());
     }
 
@@ -219,13 +242,21 @@ public class ManageServiceSheetsController {
     @FXML
     protected void onEditSheetClicked() {
         ServiceSheetSummary selected = serviceSheetsTable.getSelectionModel().getSelectedItem();
-        if (selected == null || !"ABIERTA".equals(selected.getStatus())) {
-            showAlert(Alert.AlertType.WARNING, "Selección Inválida", "Por favor, seleccione una hoja de servicio con estado 'ABIERTA' para editar.");
+        if (selected == null) {
+            showAlert(Alert.AlertType.WARNING, "Selección Inválida", "Por favor, seleccione una hoja de servicio para editar.");
             return;
         }
 
         fetchAndProcessServiceSheet(selected.getId(), (data) -> {
-            openTecniMusicView(data, true); // true para modo edición
+            if ("ABIERTA".equals(selected.getStatus())) {
+                openTecniMusicView(data, true, null); // true for edit mode, no specific reason
+            } else if ("CERRADA".equals(selected.getStatus())) {
+                // When editing a closed sheet, we are essentially creating a new version.
+                // The tecniMusicController will handle the versioning logic.
+                openTecniMusicView(data, true, "versioning"); // true for edit mode, reason "versioning"
+            } else {
+                showAlert(Alert.AlertType.WARNING, "Estado Inválido", "Solo se pueden editar hojas de servicio 'ABIERTA' o crear una nueva versión de hojas 'CERRADA'.");
+            }
         });
     }
 
@@ -238,11 +269,11 @@ public class ManageServiceSheetsController {
         }
 
         fetchAndProcessServiceSheet(selected.getId(), (data) -> {
-            openTecniMusicView(data, false); // false para modo vista
+            openTecniMusicView(data, false, null); // false para modo vista, sin motivo
         });
     }
 
-    private void openTecniMusicView(HojaServicioData data, boolean isEditMode) {
+    private void openTecniMusicView(HojaServicioData data, boolean isEditMode, String motivoEdicion) {
         try {
             FXMLLoader fxmlLoader = new FXMLLoader(getClass().getResource("tecniMusic-view.fxml"));
             Scene scene = new Scene(fxmlLoader.load());
@@ -250,7 +281,7 @@ public class ManageServiceSheetsController {
 
             tecniMusicController controller = fxmlLoader.getController();
             if (isEditMode) {
-                controller.loadForEditing(data);
+                controller.loadForEditing(data, motivoEdicion);
             } else {
                 controller.loadForViewing(data);
             }

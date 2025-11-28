@@ -33,13 +33,26 @@ public class DatabaseService {
             ensureSettingsTableExists(conn);
 
             // 2. Verificar y añadir columnas individuales para dar soporte a versiones antiguas (migración).
-            // Esto es redundante si las tablas se acaban de crear, pero es crucial para actualizar instalaciones existentes.
             ensureAnticipoColumnExists(conn);
             ensureCostoColumnExistsInEquiposTable(conn);
             ensureEstadoFisicoColumnExists(conn);
             ensureAccesoriosColumnExists(conn);
             ensureEstadoAndInformeTecnicoColumnsExist(conn);
             ensureInformeTecnicoColumnInEquiposTableExists(conn);
+            ensureVersioningColumnsExist(conn);
+        }
+    }
+
+    private void ensureVersioningColumnsExist(Connection conn) throws SQLException {
+        // Columna para id_hoja_anterior
+        String checkIdAnteriorSql = "SELECT COUNT(*) FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'x_hojas_servicio' AND COLUMN_NAME = 'id_hoja_anterior'";
+        try (Statement stmt = conn.createStatement(); ResultSet rs = stmt.executeQuery(checkIdAnteriorSql)) {
+            if (rs.next() && rs.getInt(1) == 0) {
+                String addIdAnteriorSql = "ALTER TABLE x_hojas_servicio ADD COLUMN id_hoja_anterior BIGINT NULL DEFAULT NULL AFTER id";
+                try (Statement alterStmt = conn.createStatement()) {
+                    alterStmt.execute(addIdAnteriorSql);
+                }
+            }
         }
     }
 
@@ -178,7 +191,7 @@ public class DatabaseService {
             if (rs.next() && rs.getInt(1) == 0) {
                 String addInformeSql = "ALTER TABLE x_hojas_servicio ADD COLUMN informe_tecnico TEXT";
                 try (Statement alterStmt = conn.createStatement()) {
-                    alterStmt.execute(addInformeSql);
+                    alterStmt.execute(addInformeSql); // Corregido: Usar addInformeSql
                 }
             }
         }
@@ -459,7 +472,7 @@ public class DatabaseService {
 
             long clienteId = gestionarCliente(conn, idClienteSeleccionado, nombreCliente, telefonoCliente, direccionCliente);
 
-            long hojaId = insertarHojaServicioMaestra(conn, clienteId, fechaOrden, informeDiagnostico, subtotal, anticipo, fechaEntrega, firmaAclaracion, aclaraciones);
+            long hojaId = insertarHojaServicioMaestra(conn, clienteId, fechaOrden, informeDiagnostico, subtotal, anticipo, fechaEntrega, firmaAclaracion, aclaraciones, null);
             String realOrdenNumero = "TM-" + LocalDate.now().getYear() + "-" + hojaId;
             actualizarNumeroDeOrden(conn, hojaId, realOrdenNumero);
 
@@ -488,53 +501,43 @@ public class DatabaseService {
         }
     }
 
-    public void actualizarHojaServicioCompleta(
-        long hojaId, Long idClienteSeleccionado, String nombreCliente, String telefonoCliente, String direccionCliente,
-        List<Equipo> equipos,
-        LocalDate fechaOrden, BigDecimal anticipo, LocalDate fechaEntrega, String aclaraciones) throws SQLException {
+    public String versionarHojaServicio(
+        long idHojaAnterior, Long idCliente, String nombreCliente, String telefonoCliente, String direccionCliente,
+        List<Equipo> equipos, LocalDate fechaOrden, BigDecimal anticipo, LocalDate fechaEntrega, String aclaraciones) throws SQLException {
 
         Connection conn = null;
         try {
             conn = DatabaseManager.getInstance().getConnection();
             conn.setAutoCommit(false);
 
-            long clienteId = gestionarCliente(conn, idClienteSeleccionado, nombreCliente, telefonoCliente, direccionCliente);
-
-            // 1. Actualizar la hoja de servicio maestra
-            String sqlUpdateHoja = "UPDATE x_hojas_servicio SET cliente_id = ?, fecha_orden = ?, anticipo = ?, fecha_entrega = ?, aclaraciones = ? WHERE id = ?";
-            try (PreparedStatement pstmt = conn.prepareStatement(sqlUpdateHoja)) {
-                pstmt.setLong(1, clienteId);
-                pstmt.setDate(2, fechaOrden != null ? Date.valueOf(fechaOrden) : null);
-                if (anticipo != null) pstmt.setBigDecimal(3, anticipo); else pstmt.setNull(3, Types.DECIMAL);
-                pstmt.setDate(4, fechaEntrega != null ? Date.valueOf(fechaEntrega) : null);
-                pstmt.setString(5, aclaraciones);
-                pstmt.setLong(6, hojaId);
+            // 1. Anular la hoja de servicio original
+            String sqlAnular = "UPDATE x_hojas_servicio SET estado = 'ANULADA' WHERE id = ?";
+            try (PreparedStatement pstmt = conn.prepareStatement(sqlAnular)) {
+                pstmt.setLong(1, idHojaAnterior);
                 pstmt.executeUpdate();
             }
 
-            // 2. Borrar los equipos antiguos asociados a esta hoja
-            String sqlDeleteEquipos = "DELETE FROM x_hojas_servicio_equipos WHERE hoja_id = ?";
-            try (PreparedStatement pstmt = conn.prepareStatement(sqlDeleteEquipos)) {
-                pstmt.setLong(1, hojaId);
-                pstmt.executeUpdate();
-            }
+            // Obtener información de revisión para la hoja que se está revisando
+            RevisionInfo revInfo = getRevisionInfo(conn, idHojaAnterior);
 
-            // 3. Insertar los nuevos equipos (la lista actualizada)
+            // 2. Crear la nueva hoja de servicio (la versión corregida)
+            long clienteId = gestionarCliente(conn, idCliente, nombreCliente, telefonoCliente, direccionCliente);
+            long nuevaHojaId = insertarHojaServicioMaestra(conn, clienteId, fechaOrden, "", BigDecimal.ZERO, anticipo, fechaEntrega, "", aclaraciones, idHojaAnterior);
+
+            // 3. Generar el nuevo número de orden con sufijo de revisión
+            String nuevoNumeroOrden = revInfo.baseOrderNumber + "-REV" + revInfo.nextRevisionNumber;
+            actualizarNumeroDeOrden(conn, nuevaHojaId, nuevoNumeroOrden);
+
+            // 4. Insertar los equipos en la nueva hoja
             if (equipos != null) {
                 for (Equipo equipo : equipos) {
-                    Long assetId = gestionarAsset(conn,
-                            equipo.getSerie() == null ? "" : equipo.getSerie(),
-                            equipo.getMarca() == null ? "" : equipo.getMarca(),
-                            equipo.getModelo() == null ? "" : equipo.getModelo(),
-                            equipo.getTipo() == null ? "" : equipo.getTipo(),
-                            nombreCliente);
-
-                    insertarEquipoEnHoja(conn, hojaId, assetId,
-                            equipo.getSerie(), equipo.getTipo(), equipo.getMarca(), equipo.getModelo(), equipo.getFalla(), null, equipo.getEstadoFisico(), equipo.getAccesorios());
+                    Long assetId = gestionarAsset(conn, equipo.getSerie(), equipo.getMarca(), equipo.getModelo(), equipo.getTipo(), nombreCliente);
+                    insertarEquipoEnHoja(conn, nuevaHojaId, assetId, equipo.getSerie(), equipo.getTipo(), equipo.getMarca(), equipo.getModelo(), equipo.getFalla(), null, equipo.getEstadoFisico(), equipo.getAccesorios());
                 }
             }
 
             conn.commit();
+            return nuevoNumeroOrden;
 
         } catch (SQLException e) {
             if (conn != null) try { conn.rollback(); } catch (SQLException ex) { System.err.println("Error during rollback: " + ex.getMessage()); }
@@ -544,8 +547,72 @@ public class DatabaseService {
         }
     }
 
-    private long insertarHojaServicioMaestra(Connection conn, long clienteId, LocalDate fechaOrden, String informeDiagnostico, BigDecimal subtotal, BigDecimal anticipo, LocalDate fechaEntrega, String firmaAclaracion, String aclaraciones) throws SQLException {
-        String sql = "INSERT INTO x_hojas_servicio (fecha_orden, cliente_id, asset_id, equipo_serie, equipo_tipo, equipo_marca, equipo_modelo, falla_reportada, informe_costos, total_costos, anticipo, fecha_entrega, firma_aclaracion, aclaraciones, estado) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'ABIERTA')";
+    // Clase interna para encapsular la información de revisión
+    private static class RevisionInfo {
+        String baseOrderNumber; // Ej. "TM-2023-100"
+        int nextRevisionNumber; // Ej. 1 para la primera revisión, 2 para la segunda, etc.
+
+        RevisionInfo(String baseOrderNumber, int nextRevisionNumber) {
+            this.baseOrderNumber = baseOrderNumber;
+            this.nextRevisionNumber = nextRevisionNumber;
+        }
+    }
+
+    /**
+     * Rastrea la cadena de revisiones para encontrar el número de orden original
+     * y determina el siguiente número de revisión.
+     *
+     * @param conn La conexión a la base de datos.
+     * @param idHojaBeingRevised El ID de la hoja de servicio que se está revisando.
+     * @return Un objeto RevisionInfo con el número de orden base y el siguiente número de revisión.
+     * @throws SQLException Si ocurre un error de base de datos.
+     */
+    private RevisionInfo getRevisionInfo(Connection conn, long idHojaBeingRevised) throws SQLException {
+        String originalOrderNumber = null;
+        long currentHojaId = idHojaBeingRevised;
+
+        // Encontrar el numero_orden original (el primero en la cadena de revisión)
+        // Este bucle rastreará el id_hoja_anterior hasta encontrar el ancestro más antiguo.
+        while (true) {
+            String sql = "SELECT numero_orden, id_hoja_anterior FROM x_hojas_servicio WHERE id = ?";
+            try (PreparedStatement pstmt = conn.prepareStatement(sql)) {
+                pstmt.setLong(1, currentHojaId);
+                ResultSet rs = pstmt.executeQuery();
+                if (!rs.next()) {
+                    throw new SQLException("Hoja de servicio con ID " + currentHojaId + " no encontrada.");
+                }
+                originalOrderNumber = rs.getString("numero_orden");
+                long previousId = rs.getLong("id_hoja_anterior");
+                if (rs.wasNull() || previousId == 0) { // Si id_hoja_anterior es NULL o 0, esta es la raíz
+                    break;
+                }
+                currentHojaId = previousId;
+            }
+        }
+
+        // El originalOrderNumber ahora contiene el numero_orden de la primera hoja en la cadena.
+        // Este número podría ser una revisión en sí mismo (ej. "TM-2023-100-REV1").
+        // Necesitamos la parte "base" de este, sin ningún sufijo "-REV".
+        String baseOrderNumberWithoutRev = originalOrderNumber.split("-REV")[0];
+
+        // Contar cuántas revisiones (incluyendo las existentes) existen para este número de orden base.
+        // Buscamos todas las hojas cuyo numero_orden comienza con baseOrderNumberWithoutRev y contiene "-REV".
+        String sqlCountRevisions = "SELECT COUNT(*) FROM x_hojas_servicio WHERE numero_orden LIKE ? AND numero_orden LIKE '%-REV%'";
+        try (PreparedStatement pstmt = conn.prepareStatement(sqlCountRevisions)) {
+            pstmt.setString(1, baseOrderNumberWithoutRev + "%");
+            ResultSet rs = pstmt.executeQuery();
+            if (rs.next()) {
+                // El +1 es para la nueva revisión que estamos a punto de crear.
+                return new RevisionInfo(baseOrderNumberWithoutRev, rs.getInt(1) + 1);
+            }
+        }
+        // Si no se encontraron revisiones existentes, significa que baseOrderNumberWithoutRev es el primero.
+        // Por lo tanto, la siguiente revisión será REV1.
+        return new RevisionInfo(baseOrderNumberWithoutRev, 1);
+    }
+
+    private long insertarHojaServicioMaestra(Connection conn, long clienteId, LocalDate fechaOrden, String informeDiagnostico, BigDecimal subtotal, BigDecimal anticipo, LocalDate fechaEntrega, String firmaAclaracion, String aclaraciones, Long idHojaAnterior) throws SQLException {
+        String sql = "INSERT INTO x_hojas_servicio (fecha_orden, cliente_id, asset_id, equipo_serie, equipo_tipo, equipo_marca, equipo_modelo, falla_reportada, informe_costos, total_costos, anticipo, fecha_entrega, firma_aclaracion, aclaraciones, estado, id_hoja_anterior) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'ABIERTA', ?)";
         try (PreparedStatement pstmt = conn.prepareStatement(sql, Statement.RETURN_GENERATED_KEYS)) {
             pstmt.setDate(1, fechaOrden != null ? Date.valueOf(fechaOrden) : null);
             pstmt.setLong(2, clienteId);
@@ -561,6 +628,7 @@ public class DatabaseService {
             pstmt.setDate(12, fechaEntrega != null ? Date.valueOf(fechaEntrega) : null);
             pstmt.setString(13, firmaAclaracion);
             pstmt.setString(14, aclaraciones);
+            if (idHojaAnterior != null) pstmt.setLong(15, idHojaAnterior); else pstmt.setNull(15, Types.BIGINT);
 
             pstmt.executeUpdate();
             ResultSet rs = pstmt.getGeneratedKeys();
