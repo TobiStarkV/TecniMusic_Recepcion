@@ -34,6 +34,8 @@ public class SettingsController {
     @FXML
     private StyleClassedTextArea pdfFooterField;
     @FXML
+    private Spinner<Integer> pdfFooterSizeSpinner;
+    @FXML
     private TextField localNombreField;
     @FXML
     private TextField localDireccionField;
@@ -42,6 +44,10 @@ public class SettingsController {
 
     @FXML
     public void initialize() {
+        // Configurar el Spinner
+        SpinnerValueFactory<Integer> valueFactory = new SpinnerValueFactory.IntegerSpinnerValueFactory(4, 12, 6);
+        pdfFooterSizeSpinner.setValueFactory(valueFactory);
+
         loadSettings();
 
         Platform.runLater(() -> {
@@ -70,6 +76,9 @@ public class SettingsController {
         try {
             DatabaseService dbService = DatabaseService.getInstance();
             pdfFooterField.replaceText(dbService.getSetting("pdf.footer", ""));
+            int footerSize = Integer.parseInt(dbService.getSetting("pdf.footer.fontsize", "6"));
+            pdfFooterSizeSpinner.getValueFactory().setValue(footerSize);
+            
             localNombreField.setText(dbService.getSetting("local.nombre", "TecniMusic"));
             localDireccionField.setText(dbService.getSetting("local.direccion", "Dirección no configurada"));
             localTelefonoField.setText(dbService.getSetting("local.telefono", "Teléfono no configurado"));
@@ -79,6 +88,9 @@ public class SettingsController {
             showAlert(Alert.AlertType.WARNING, "Sin Conexión", "No se pudo conectar a la base de datos para cargar la configuración del local y PDF. Estos campos están deshabilitados.");
             // Deshabilitar campos si la carga falló
             setLocalPdfFieldsDisabled(true);
+        } catch (NumberFormatException e) {
+            showAlert(Alert.AlertType.WARNING, "Configuración Corrupta", "El tamaño de la fuente del pie de página no es un número válido. Se usará el valor por defecto.");
+            pdfFooterSizeSpinner.getValueFactory().setValue(6);
         }
     }
 
@@ -108,6 +120,7 @@ public class SettingsController {
                 // La conexión ya era buena, así que procedemos a guardar los cambios.
                 DatabaseService dbService = DatabaseService.getInstance();
                 dbService.saveSetting("pdf.footer", pdfFooterField.getText());
+                dbService.saveSetting("pdf.footer.fontsize", pdfFooterSizeSpinner.getValue().toString());
                 dbService.saveSetting("local.nombre", localNombreField.getText());
                 dbService.saveSetting("local.direccion", localDireccionField.getText());
                 dbService.saveSetting("local.telefono", localTelefonoField.getText());
@@ -128,6 +141,7 @@ public class SettingsController {
 
     private void setLocalPdfFieldsDisabled(boolean disabled) {
         pdfFooterField.setDisable(disabled);
+        pdfFooterSizeSpinner.setDisable(disabled);
         localNombreField.setDisable(disabled);
         localDireccionField.setDisable(disabled);
         localTelefonoField.setDisable(disabled);

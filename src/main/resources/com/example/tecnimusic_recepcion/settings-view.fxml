@@ -7,6 +7,7 @@
 <?import javafx.scene.control.PasswordField?>
 <?import javafx.scene.control.ScrollPane?>
 <?import javafx.scene.control.Separator?>
+<?import javafx.scene.control.Spinner?>
 <?import org.fxmisc.richtext.StyleClassedTextArea?>
 <?import javafx.scene.control.TextField?>
 <?import javafx.scene.layout.BorderPane?>
@@ -96,10 +97,13 @@
                                     </columnConstraints>
                                     <rowConstraints>
                                         <RowConstraints minHeight="10.0" prefHeight="80.0" vgrow="SOMETIMES" />
+                                        <RowConstraints minHeight="10.0" prefHeight="30.0" vgrow="SOMETIMES" />
                                     </rowConstraints>
                                     <children>
                                         <Label text="Pie de Página:" styleClass="form-label" />
                                         <StyleClassedTextArea fx:id="pdfFooterField" prefHeight="80.0" wrapText="true" GridPane.columnIndex="1" styleClass="falla-reportada-text-area" />
+                                        <Label text="Tamaño de Letra (Pie):" styleClass="form-label" GridPane.rowIndex="1" />
+                                        <Spinner fx:id="pdfFooterSizeSpinner" editable="true" prefWidth="80.0" GridPane.columnIndex="1" GridPane.rowIndex="1" />
                                     </children>
                                 </GridPane>
                             </children>

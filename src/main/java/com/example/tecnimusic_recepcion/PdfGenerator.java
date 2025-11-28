@@ -36,6 +36,7 @@ public class PdfGenerator {
     private String localDireccion;
     private String localTelefono;
     private String pdfFooter;
+    private int pdfFooterFontSize;
     private static final Locale SPANISH_MEXICO_LOCALE = new Locale("es", "MX");
 
     public PdfGenerator() {
@@ -45,9 +46,12 @@ public class PdfGenerator {
             this.localDireccion = db.getSetting("local.direccion", "Dirección no configurada");
             this.localTelefono = db.getSetting("local.telefono", "Teléfono no configurado");
             this.pdfFooter = db.getSetting("pdf.footer", "");
+            this.pdfFooterFontSize = Integer.parseInt(db.getSetting("pdf.footer.fontsize", "6"));
         } catch (SQLException e) {
             mostrarAlerta(Alert.AlertType.ERROR, "Error de Configuración", "No se pudieron cargar las configuraciones desde la base de datos para generar el PDF.");
             e.printStackTrace();
+        } catch (NumberFormatException e) {
+            this.pdfFooterFontSize = 6; // Valor por defecto si la configuración está corrupta
         }
     }
 
@@ -123,7 +127,7 @@ public class PdfGenerator {
         // El pie de página con las aclaraciones se muestra en todos los PDFs.
         Rectangle footerTextRect = new Rectangle(margin, 30, pageSize.getWidth() - (margin * 2), 40);
         try (Canvas footerCanvas = new Canvas(pdfCanvas, footerTextRect)) {
-            footerCanvas.add(new Paragraph(pdfFooter).setFontSize(6).setItalic().setTextAlignment(TextAlignment.CENTER));
+            footerCanvas.add(new Paragraph(pdfFooter).setFontSize(pdfFooterFontSize).setItalic().setTextAlignment(TextAlignment.CENTER));
         }
     }
 
