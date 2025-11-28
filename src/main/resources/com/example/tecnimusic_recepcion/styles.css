@@ -733,3 +733,42 @@
 .spinner .decrement-arrow {
     -fx-shape: "M 0 2 L 4 -2 L -4 -2 Z"; /* Triángulo invertido */
 }
+/* ======================================================= */
+/* === Estilos para CheckBox                           === */
+/* ======================================================= */
+
+.check-box {
+    -fx-text-fill: #E0E0E0; /* Color de texto para el label del checkbox */
+    -fx-font-size: 14px;
+}
+
+.check-box .box {
+    -fx-background-color: #1E2A3A; /* Fondo del cuadro del checkbox */
+    -fx-border-color: #303E4D; /* Borde del cuadro */
+    -fx-border-width: 1px;
+    -fx-border-radius: 3px;
+    -fx-background-radius: 3px;
+}
+
+.check-box:selected .box {
+    -fx-background-color: #A11A1A; /* Fondo rojo cuando está seleccionado */
+    -fx-border-color: #A11A1A;
+}
+
+.check-box .mark {
+    -fx-background-color: white; /* Color del checkmark */
+    -fx-opacity: 0; /* Ocultar el checkmark por defecto */
+}
+
+.check-box:selected .mark {
+    -fx-opacity: 1; /* Mostrar el checkmark cuando está seleccionado */
+}
+
+.check-box:hover .box {
+    -fx-border-color: #BC2323; /* Borde rojo más claro al pasar el ratón */
+}
+
+.check-box:selected:hover .box {
+    -fx-background-color: #BC2323; /* Fondo rojo más claro cuando seleccionado y hover */
+    -fx-border-color: #BC2323;
+}
