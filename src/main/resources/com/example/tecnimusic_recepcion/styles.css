@@ -680,3 +680,56 @@
 .transparent-pane {
     -fx-background-color: transparent;
 }
+
+/* ======================================================= */
+/* === Estilos para Spinner                            === */
+/* ======================================================= */
+
+.spinner {
+    -fx-background-color: #1E2A3A;
+    -fx-border-color: #303E4D;
+    -fx-border-width: 1;
+    -fx-border-radius: 5;
+    -fx-background-radius: 5;
+}
+
+.spinner:focused {
+    -fx-border-color: #D32F2F;
+}
+
+.spinner .text-field {
+    -fx-background-color: transparent;
+    -fx-border-width: 0;
+    -fx-text-fill: #E0E0E0;
+}
+
+.spinner .increment-arrow-button,
+.spinner .decrement-arrow-button {
+    -fx-background-color: linear-gradient(#A11A1A, #8A0E0E);
+    -fx-background-radius: 0 5 5 0; /* Redondeado a la derecha */
+    -fx-padding: 4 8;
+}
+
+.spinner .decrement-arrow-button {
+    -fx-background-radius: 5 0 0 5; /* Redondeado a la izquierda */
+}
+
+.spinner .increment-arrow-button:hover,
+.spinner .decrement-arrow-button:hover {
+    -fx-background-color: linear-gradient(#BC2323, #A11A1A);
+}
+
+.spinner .increment-arrow-button:pressed,
+.spinner .decrement-arrow-button:pressed {
+    -fx-background-color: linear-gradient(#7F0B0B, #520505);
+}
+
+.spinner .increment-arrow,
+.spinner .decrement-arrow {
+    -fx-background-color: white;
+    -fx-shape: "M 0 -2 L 4 2 L -4 2 Z"; /* Triángulo para la flecha */
+}
+
+.spinner .decrement-arrow {
+    -fx-shape: "M 0 2 L 4 -2 L -4 -2 Z"; /* Triángulo invertido */
+}
