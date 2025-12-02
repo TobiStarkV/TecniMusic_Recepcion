@@ -139,8 +139,7 @@
                                  <children>
                                     <Button fx:id="addEquipoButton" mnemonicParsing="false" text="Añadir Equipo" />
                                     <Button fx:id="removeEquipoButton" mnemonicParsing="false" text="Quitar Equipo" />
-                                    <Button fx:id="saveEquipoButton" mnemonicParsing="false" onAction="#onSaveEquipo" text="Guardar Equipo" visible="false" managed="false" />
-                                    <Button fx:id="updateEquipoButton" mnemonicParsing="false" text="Actualizar Equipo" visible="false" managed="false" />
+                                    <Button fx:id="updateEquipoButton" mnemonicParsing="false" onAction="#onUpdateEquipo" text="Aplicar Cambios al Equipo" visible="false" managed="false" />
                                  </children>
                               </HBox>
 

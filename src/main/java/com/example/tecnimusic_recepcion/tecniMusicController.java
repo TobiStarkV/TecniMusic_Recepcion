@@ -65,7 +65,7 @@ public class tecniMusicController {
     // Nuevos campos para múltiples equipos
     @FXML private TableView<Equipo> equiposTable;
     @FXML private TableColumn<Equipo, String> colTipo, colMarca, colModelo, colSerie, colFalla, colCosto, colEstadoFisico, colAccesorios, colInforme;
-    @FXML private Button addEquipoButton, removeEquipoButton, updateEquipoButton, saveEquipoButton;
+    @FXML private Button addEquipoButton, removeEquipoButton, updateEquipoButton;
     @FXML private HBox equipoActionBox, subtotalBox, totalBox;
     @FXML private VBox cierreBox;
     @FXML private GridPane costoGridPane;
@@ -353,14 +353,14 @@ public class tecniMusicController {
     }
 
     @FXML
-    private void onSaveEquipo() {
+    protected void onUpdateEquipo() {
         Equipo selectedEquipo = equiposTable.getSelectionModel().getSelectedItem();
         if (selectedEquipo == null) {
-            showAlert(Alert.AlertType.WARNING, "Seleccionar Equipo", "Por favor, seleccione un equipo de la tabla para guardar los cambios.");
+            showAlert(Alert.AlertType.WARNING, "Seleccionar Equipo", "Por favor, seleccione un equipo de la tabla para actualizar.");
             return;
         }
 
-        // Actualizar el objeto Equipo en la lista observable
+        // Actualizar todos los campos del objeto Equipo en la lista observable
         selectedEquipo.setTipo(equipoTipoField.getText());
         selectedEquipo.setMarca(equipoCompaniaField.getText());
         selectedEquipo.setModelo(equipoModeloField.getText());
@@ -368,26 +368,6 @@ public class tecniMusicController {
         selectedEquipo.setFalla(equipoFallaArea.getText());
         selectedEquipo.setEstadoFisico(equipoEstadoFisicoArea.getText());
         selectedEquipo.setAccesorios(String.join(", ", accesoriosList));
-
-        // Refrescar la tabla para mostrar los cambios
-        equiposTable.refresh();
-
-        // Guardar el cambio en la base de datos
-        try {
-            DatabaseService.getInstance().actualizarEquipo(selectedEquipo, currentHojaServicioData.getClienteNombre());
-            showAlert(Alert.AlertType.INFORMATION, "Equipo Actualizado", "Los cambios en el equipo han sido guardados en la base de datos.");
-        } catch (SQLException e) {
-            showAlert(Alert.AlertType.ERROR, "Error de Base de Datos", "No se pudo guardar el cambio en el equipo. Error: " + e.getMessage());
-            e.printStackTrace();
-        }
-    }
-
-    private void onUpdateEquipo() {
-        Equipo selectedEquipo = equiposTable.getSelectionModel().getSelectedItem();
-        if (selectedEquipo == null) {
-            showAlert(Alert.AlertType.WARNING, "Seleccionar Equipo", "Por favor, seleccione un equipo de la tabla para actualizar.");
-            return;
-        }
 
         String costoStr = equipoCostoField.getText();
         BigDecimal nuevoCosto = null;
@@ -400,12 +380,12 @@ public class tecniMusicController {
                 return;
             }
         }
-
         selectedEquipo.setCosto(nuevoCosto);
         selectedEquipo.setInformeTecnico(equipoInformeTecnicoArea.getText());
         
         equiposTable.refresh();
         actualizarCostosTotales();
+        showAlert(Alert.AlertType.INFORMATION, "Equipo Actualizado", "Los cambios en el equipo se han aplicado en la tabla. Pulse 'Guardar Cambios en Cierre' para hacerlos permanentes.");
     }
 
 
@@ -456,12 +436,12 @@ public class tecniMusicController {
             aclaracionesArea.clear();
             anticipoField.clear();
             
-            saveEquipoButton.setVisible(true);
-            saveEquipoButton.setManaged(true);
+            updateEquipoButton.setVisible(true);
+            updateEquipoButton.setManaged(true);
         } else {
             guardarButton.setText("Guardar Cambios");
-            saveEquipoButton.setVisible(true);
-            saveEquipoButton.setManaged(true);
+            updateEquipoButton.setVisible(true);
+            updateEquipoButton.setManaged(true);
         }
 
         limpiarButton.setVisible(false);
@@ -474,8 +454,6 @@ public class tecniMusicController {
         totalBox.setManaged(false);
         colCosto.setVisible(false);
         colInforme.setVisible(false);
-        updateEquipoButton.setVisible(false);
-        updateEquipoButton.setManaged(false);
         cierreButton.setVisible(false);
         cierreButton.setManaged(false);
     }
@@ -484,20 +462,24 @@ public class tecniMusicController {
         this.isViewOnlyMode = true;
         this.currentHojaServicioData = data;
         populateFormWithData(data);
-
-        setNodesDisabled(true, clienteNombreField, clienteDireccionField, clienteTelefonoField, equipoSerieField, equipoTipoField, equipoCompaniaField, equipoModeloField, anticipoField, ordenFechaPicker, equipoFallaArea, equipoEstadoFisicoArea, aclaracionesArea, accesoriosButton);
-
+    
+        // Por defecto, deshabilitar casi todo
+        setNodesDisabled(true, clienteNombreField, clienteDireccionField, clienteTelefonoField, 
+                         equipoSerieField, equipoTipoField, equipoCompaniaField, equipoModeloField, 
+                         ordenFechaPicker, equipoFallaArea, equipoEstadoFisicoArea, accesoriosButton,
+                         addEquipoButton, removeEquipoButton);
+    
         guardarButton.setVisible(false);
         guardarButton.setManaged(false);
         limpiarButton.setVisible(false);
         limpiarButton.setManaged(false);
         salirButton.setText("Cerrar Vista");
-
+    
         printReceptionButton.setVisible(true);
         printReceptionButton.setManaged(true);
         printClosureButton.setVisible(true);
         printClosureButton.setManaged(true);
-
+    
         cierreBox.setVisible(true);
         cierreBox.setManaged(true);
         subtotalBox.setVisible(true);
@@ -506,25 +488,29 @@ public class tecniMusicController {
         totalBox.setManaged(true);
         colCosto.setVisible(true);
         colInforme.setVisible(true);
-        addEquipoButton.setVisible(false);
-        addEquipoButton.setManaged(false);
-        removeEquipoButton.setVisible(false);
-        removeEquipoButton.setManaged(false);
-        updateEquipoButton.setVisible(true);
-        updateEquipoButton.setManaged(true);
         cierreButton.setVisible(true);
         cierreButton.setManaged(true);
-
+    
         if ("CERRADA".equals(data.getEstado())) {
-            setNodesDisabled(false, updateEquipoButton, equipoCostoField, equipoInformeTecnicoArea); // Habilitar edición de cierre
-            cierreButton.setText("Guardar Cambios en Cierre");
+            // Habilitar campos para edición de cierre
+            setNodesDisabled(false, updateEquipoButton, equipoCostoField, equipoInformeTecnicoArea, 
+                             entregaFechaPicker, anticipoField, aclaracionesArea,
+                             equipoSerieField, equipoTipoField, equipoCompaniaField, equipoModeloField,
+                             equipoFallaArea, equipoEstadoFisicoArea, accesoriosButton);
+            
+            updateEquipoButton.setVisible(true);
+            updateEquipoButton.setManaged(true);
+            
+            cierreButton.setText("Crear Revisión de Cierre"); // Changed text
             printClosureButton.setDisable(false);
-        } else {
+        } else { // ABIERTA
             setNodesDisabled(false, cierreButton, updateEquipoButton, equipoCostoField, equipoInformeTecnicoArea, entregaFechaPicker);
             if (entregaFechaPicker.getValue() == null) {
                 entregaFechaPicker.setValue(LocalDate.now());
             }
             printClosureButton.setDisable(true);
+            updateEquipoButton.setVisible(false);
+            updateEquipoButton.setManaged(false);
         }
     }
 
@@ -644,28 +630,52 @@ public class tecniMusicController {
     @FXML
     protected void onCierreClicked() {
         if ("CERRADA".equals(currentHojaServicioData.getEstado())) {
-            // Si la hoja ya está cerrada, solo guardamos los cambios en el informe y costos
-            if (!showConfirmationDialog("Guardar Cambios", "¿Está seguro de que desea guardar los cambios en esta hoja de servicio cerrada?")) {
+            // Logic for revising a CLOSED sheet
+            if (!showConfirmationDialog("Confirmar Revisión de Cierre", "¿Está seguro de que desea crear una nueva revisión para esta hoja de servicio cerrada? La hoja original será ANULADA y se generará una nueva con los cambios.")) {
                 return;
             }
             try {
-                long hojaId = currentHojaServicioData.getId();
-                BigDecimal totalCostos = parseCurrency(subtotalLabel.getText());
+                BigDecimal anticipo = parseCurrency(anticipoField.getText());
+                BigDecimal totalCostos = parseCurrency(subtotalLabel.getText()); // Get total costs from UI
 
-                DatabaseService.getInstance().actualizarCierreHojaServicio(hojaId, new ArrayList<>(equiposObservable), totalCostos);
+                String nuevoNumeroOrden = DatabaseService.getInstance().revisarHojaServicioCerrada(
+                    currentHojaServicioData.getId(),
+                    currentHojaServicioData.getClienteId(),
+                    clienteNombreField.getText(),
+                    clienteTelefonoField.getText(),
+                    clienteDireccionField.getText(),
+                    new ArrayList<>(equiposObservable),
+                    ordenFechaPicker.getValue(),
+                    anticipo,
+                    entregaFechaPicker.getValue(),
+                    aclaracionesArea.getText()
+                );
 
-                showAlert(Alert.AlertType.INFORMATION, "Cambios Guardados", "Los cambios en la hoja de servicio cerrada han sido guardados.");
+                // Update currentHojaServicioData with new revision details for PDF generation
+                currentHojaServicioData.setId(null); // Indicate it's a new entry, ID will be set by DB
+                currentHojaServicioData.setNumeroOrden(nuevoNumeroOrden);
+                currentHojaServicioData.setFechaOrden(ordenFechaPicker.getValue());
+                currentHojaServicioData.setAnticipo(anticipo);
+                currentHojaServicioData.setFechaEntrega(entregaFechaPicker.getValue());
+                currentHojaServicioData.setAclaraciones(aclaracionesArea.getText());
+                currentHojaServicioData.setEquipos(new ArrayList<>(equiposObservable));
+                currentHojaServicioData.setTotalCostos(totalCostos); // Set total costs for PDF
+
+                String pdfPath = new PdfGenerator().generatePdf(currentHojaServicioData, false);
+
+                showAlert(Alert.AlertType.INFORMATION, "Revisión Creada", "Se ha creado una nueva revisión (" + nuevoNumeroOrden + ") para la hoja de servicio cerrada. La hoja original ha sido anulada.");
+                performPrint(pdfPath);
                 
                 Stage stage = (Stage) cierreButton.getScene().getWindow();
                 stage.close();
 
             } catch (Exception e) {
-                showAlert(Alert.AlertType.ERROR, "Error al Guardar Cambios", "Ocurrió un error: " + e.getMessage());
+                showAlert(Alert.AlertType.ERROR, "Error al Crear Revisión", "Ocurrió un error al crear la revisión de la hoja de servicio cerrada: " + e.getMessage());
                 e.printStackTrace();
             }
 
         } else {
-            // Si la hoja está abierta, procedemos con el cierre normal
+            // Original logic for closing an OPEN sheet
             if (!showConfirmationDialog("Confirmar Cierre", "¿Está seguro de que desea cerrar esta hoja de servicio? Una vez cerrada, no podrá ser modificada.")) {
                 return;
             }

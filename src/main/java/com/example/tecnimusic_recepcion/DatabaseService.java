@@ -472,7 +472,7 @@ public class DatabaseService {
 
             long clienteId = gestionarCliente(conn, idClienteSeleccionado, nombreCliente, telefonoCliente, direccionCliente);
 
-            long hojaId = insertarHojaServicioMaestra(conn, clienteId, fechaOrden, informeDiagnostico, subtotal, anticipo, fechaEntrega, firmaAclaracion, aclaraciones, null);
+            long hojaId = insertarHojaServicioMaestra(conn, clienteId, fechaOrden, informeDiagnostico, subtotal, anticipo, fechaEntrega, firmaAclaracion, aclaraciones, null, "ABIERTA");
             String realOrdenNumero = "TM-" + LocalDate.now().getYear() + "-" + hojaId;
             actualizarNumeroDeOrden(conn, hojaId, realOrdenNumero);
 
@@ -486,7 +486,7 @@ public class DatabaseService {
                             nombreCliente);
 
                     insertarEquipoEnHoja(conn, hojaId, assetId,
-                            equipo.getSerie(), equipo.getTipo(), equipo.getMarca(), equipo.getModelo(), equipo.getFalla(), null, equipo.getEstadoFisico(), equipo.getAccesorios());
+                            equipo.getSerie(), equipo.getTipo(), equipo.getMarca(), equipo.getModelo(), equipo.getFalla(), null, equipo.getEstadoFisico(), equipo.getAccesorios(), null);
                 }
             }
 
@@ -522,7 +522,7 @@ public class DatabaseService {
 
             // 2. Crear la nueva hoja de servicio (la versión corregida)
             long clienteId = gestionarCliente(conn, idCliente, nombreCliente, telefonoCliente, direccionCliente);
-            long nuevaHojaId = insertarHojaServicioMaestra(conn, clienteId, fechaOrden, "", BigDecimal.ZERO, anticipo, fechaEntrega, "", aclaraciones, idHojaAnterior);
+            long nuevaHojaId = insertarHojaServicioMaestra(conn, clienteId, fechaOrden, "", BigDecimal.ZERO, anticipo, fechaEntrega, "", aclaraciones, idHojaAnterior, "ABIERTA");
 
             // 3. Generar el nuevo número de orden con sufijo de revisión
             String nuevoNumeroOrden = revInfo.baseOrderNumber + "-REV" + revInfo.nextRevisionNumber;
@@ -532,7 +532,7 @@ public class DatabaseService {
             if (equipos != null) {
                 for (Equipo equipo : equipos) {
                     Long assetId = gestionarAsset(conn, equipo.getSerie(), equipo.getMarca(), equipo.getModelo(), equipo.getTipo(), nombreCliente);
-                    insertarEquipoEnHoja(conn, nuevaHojaId, assetId, equipo.getSerie(), equipo.getTipo(), equipo.getMarca(), equipo.getModelo(), equipo.getFalla(), null, equipo.getEstadoFisico(), equipo.getAccesorios());
+                    insertarEquipoEnHoja(conn, nuevaHojaId, assetId, equipo.getSerie(), equipo.getTipo(), equipo.getMarca(), equipo.getModelo(), equipo.getFalla(), null, equipo.getEstadoFisico(), equipo.getAccesorios(), null);
                 }
             }
 
@@ -605,7 +605,7 @@ public class DatabaseService {
                         idsEquiposEnBD.remove(equipo.getId());
                     } else {
                         // Es un equipo nuevo, insertarlo
-                        insertarEquipoEnHoja(conn, hojaId, assetId, equipo.getSerie(), equipo.getTipo(), equipo.getMarca(), equipo.getModelo(), equipo.getFalla(), null, equipo.getEstadoFisico(), equipo.getAccesorios());
+                        insertarEquipoEnHoja(conn, hojaId, assetId, equipo.getSerie(), equipo.getTipo(), equipo.getMarca(), equipo.getModelo(), equipo.getFalla(), null, equipo.getEstadoFisico(), equipo.getAccesorios(), null);
                     }
                 }
                 pstmtUpdate.executeBatch();
@@ -647,7 +647,7 @@ public class DatabaseService {
 
             String sql = "UPDATE x_hojas_servicio_equipos SET " +
                          "equipo_tipo = ?, equipo_marca = ?, equipo_modelo = ?, equipo_serie = ?, " +
-                         "falla_reportada = ?, estado_fisico = ?, accesorios = ?, asset_id = ?, updated_at = NOW() " +
+                         "falla_reportada = ?, estado_fisico = ?, accesorios = ?, asset_id = ?, updated_at = NOW(), informe_tecnico = ? " +
                          "WHERE id = ?";
 
             try (PreparedStatement pstmt = conn.prepareStatement(sql)) {
@@ -663,7 +663,8 @@ public class DatabaseService {
                 } else {
                     pstmt.setNull(8, Types.BIGINT);
                 }
-                pstmt.setLong(9, equipo.getId());
+                pstmt.setString(9, equipo.getInformeTecnico());
+                pstmt.setLong(10, equipo.getId());
 
                 pstmt.executeUpdate();
             }
@@ -742,8 +743,8 @@ public class DatabaseService {
         return new RevisionInfo(baseOrderNumberWithoutRev, 1);
     }
 
-    private long insertarHojaServicioMaestra(Connection conn, long clienteId, LocalDate fechaOrden, String informeDiagnostico, BigDecimal subtotal, BigDecimal anticipo, LocalDate fechaEntrega, String firmaAclaracion, String aclaraciones, Long idHojaAnterior) throws SQLException {
-        String sql = "INSERT INTO x_hojas_servicio (fecha_orden, cliente_id, asset_id, equipo_serie, equipo_tipo, equipo_marca, equipo_modelo, falla_reportada, informe_costos, total_costos, anticipo, fecha_entrega, firma_aclaracion, aclaraciones, estado, id_hoja_anterior) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'ABIERTA', ?)";
+    private long insertarHojaServicioMaestra(Connection conn, long clienteId, LocalDate fechaOrden, String informeDiagnostico, BigDecimal subtotal, BigDecimal anticipo, LocalDate fechaEntrega, String firmaAclaracion, String aclaraciones, Long idHojaAnterior, String estado) throws SQLException {
+        String sql = "INSERT INTO x_hojas_servicio (fecha_orden, cliente_id, asset_id, equipo_serie, equipo_tipo, equipo_marca, equipo_modelo, falla_reportada, informe_costos, total_costos, anticipo, fecha_entrega, firma_aclaracion, aclaraciones, estado, id_hoja_anterior) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
         try (PreparedStatement pstmt = conn.prepareStatement(sql, Statement.RETURN_GENERATED_KEYS)) {
             pstmt.setDate(1, fechaOrden != null ? Date.valueOf(fechaOrden) : null);
             pstmt.setLong(2, clienteId);
@@ -759,7 +760,8 @@ public class DatabaseService {
             pstmt.setDate(12, fechaEntrega != null ? Date.valueOf(fechaEntrega) : null);
             pstmt.setString(13, firmaAclaracion);
             pstmt.setString(14, aclaraciones);
-            if (idHojaAnterior != null) pstmt.setLong(15, idHojaAnterior); else pstmt.setNull(15, Types.BIGINT);
+            pstmt.setString(15, estado); // New parameter for state
+            if (idHojaAnterior != null) pstmt.setLong(16, idHojaAnterior); else pstmt.setNull(16, Types.BIGINT);
 
             pstmt.executeUpdate();
             ResultSet rs = pstmt.getGeneratedKeys();
@@ -768,8 +770,8 @@ public class DatabaseService {
         throw new SQLException("No se pudo crear la hoja de servicio maestra.");
     }
 
-    private void insertarEquipoEnHoja(Connection conn, long hojaId, Long assetId, String serie, String tipo, String marca, String modelo, String falla, BigDecimal costo, String estadoFisico, String accesorios) throws SQLException {
-        String sql = "INSERT INTO x_hojas_servicio_equipos (hoja_id, asset_id, equipo_serie, equipo_tipo, equipo_marca, equipo_modelo, falla_reportada, costo, estado_fisico, accesorios) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
+    private void insertarEquipoEnHoja(Connection conn, long hojaId, Long assetId, String serie, String tipo, String marca, String modelo, String falla, BigDecimal costo, String estadoFisico, String accesorios, String informeTecnico) throws SQLException {
+        String sql = "INSERT INTO x_hojas_servicio_equipos (hoja_id, asset_id, equipo_serie, equipo_tipo, equipo_marca, equipo_modelo, falla_reportada, costo, estado_fisico, accesorios, informe_tecnico) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
         try (PreparedStatement pstmt = conn.prepareStatement(sql)) {
             pstmt.setLong(1, hojaId);
             if (assetId != null) pstmt.setLong(2, assetId); else pstmt.setNull(2, Types.BIGINT);
@@ -781,6 +783,7 @@ public class DatabaseService {
             if (costo != null) pstmt.setBigDecimal(8, costo); else pstmt.setNull(8, Types.DECIMAL);
             pstmt.setString(9, estadoFisico);
             pstmt.setString(10, accesorios);
+            pstmt.setString(11, informeTecnico); // New parameter
             pstmt.executeUpdate();
         }
     }
@@ -848,41 +851,113 @@ public class DatabaseService {
         }
     }
 
-    public void actualizarCierreHojaServicio(long hojaId, List<Equipo> equipos, BigDecimal totalCostos) throws SQLException {
+    // This method will be replaced by the new revision logic for closed sheets
+    // public void actualizarCierreHojaServicio(long hojaId, List<Equipo> equipos, BigDecimal totalCostos, BigDecimal anticipo, LocalDate fechaEntrega, String aclaraciones) throws SQLException {
+    //     Connection conn = null;
+    //     try {
+    //         conn = DatabaseManager.getInstance().getConnection();
+    //         conn.setAutoCommit(false);
+
+    //         // 1. Actualizar la hoja de servicio principal
+    //         String sqlHoja = "UPDATE x_hojas_servicio SET total_costos = ?, anticipo = ?, fecha_entrega = ?, aclaraciones = ? WHERE id = ?";
+    //         try (PreparedStatement pstmt = conn.prepareStatement(sqlHoja)) {
+    //             pstmt.setBigDecimal(1, totalCostos);
+    //             pstmt.setBigDecimal(2, anticipo);
+    //             pstmt.setDate(3, fechaEntrega != null ? Date.valueOf(fechaEntrega) : null);
+    //             pstmt.setString(4, aclaraciones);
+    //             pstmt.setLong(5, hojaId);
+    //             pstmt.executeUpdate();
+    //         }
+
+    //         // 2. Actualizar los equipos individuales (costo e informe técnico)
+    //         String sqlEquipo = "UPDATE x_hojas_servicio_equipos SET costo = ?, informe_tecnico = ? WHERE id = ?";
+    //         try (PreparedStatement pstmt = conn.prepareStatement(sqlEquipo)) {
+    //             for (Equipo equipo : equipos) {
+    //                 if (equipo.getId() != null) {
+    //                     pstmt.setBigDecimal(1, equipo.getCosto());
+    //                     pstmt.setString(2, equipo.getInformeTecnico());
+    //                     pstmt.setLong(3, equipo.getId());
+    //                     pstmt.addBatch();
+    //                 }
+    //             }
+    //             pstmt.executeBatch();
+    //         }
+
+    //         conn.commit();
+
+    //     } catch (SQLException e) {
+    //         if (conn != null) try { conn.rollback(); } catch (SQLException ex) { ex.printStackTrace(); }
+    //         throw e;
+    //     } finally {
+    //         if (conn != null) try { conn.close(); } catch (SQLException e) { e.printStackTrace(); }
+    //     }
+    // }
+
+    /**
+     * Creates a new revision for a previously closed service sheet.
+     * The original sheet will be marked as 'ANULADA' and a new sheet
+     * with updated details and a revision number will be created.
+     *
+     * @param idHojaAnterior The ID of the original closed service sheet to be revised.
+     * @param idCliente The ID of the client.
+     * @param nombreCliente The name of the client.
+     * @param telefonoCliente The phone number of the client.
+     * @param direccionCliente The address of the client.
+     * @param equipos The list of updated equipment for the new revision.
+     * @param fechaOrden The order date for the new revision.
+     * @param anticipo The advance payment for the new revision.
+     * @param fechaEntrega The delivery date for the new revision.
+     * @param aclaraciones Additional remarks for the new revision.
+     * @return The new order number of the created revision.
+     * @throws SQLException If a database access error occurs.
+     */
+    public String revisarHojaServicioCerrada(
+        long idHojaAnterior, Long idCliente, String nombreCliente, String telefonoCliente, String direccionCliente,
+        List<Equipo> equipos, LocalDate fechaOrden, BigDecimal anticipo, LocalDate fechaEntrega, String aclaraciones) throws SQLException {
+
         Connection conn = null;
         try {
             conn = DatabaseManager.getInstance().getConnection();
             conn.setAutoCommit(false);
 
-            // 1. Actualizar la hoja de servicio principal (solo el total de costos)
-            String sqlHoja = "UPDATE x_hojas_servicio SET total_costos = ? WHERE id = ?";
-            try (PreparedStatement pstmt = conn.prepareStatement(sqlHoja)) {
-                pstmt.setBigDecimal(1, totalCostos);
-                pstmt.setLong(2, hojaId);
+            // 1. Anular la hoja de servicio original (marcar como ANULADA)
+            String sqlAnular = "UPDATE x_hojas_servicio SET estado = 'ANULADA' WHERE id = ?";
+            try (PreparedStatement pstmt = conn.prepareStatement(sqlAnular)) {
+                pstmt.setLong(1, idHojaAnterior);
                 pstmt.executeUpdate();
             }
 
-            // 2. Actualizar los equipos individuales (costo e informe técnico)
-            String sqlEquipo = "UPDATE x_hojas_servicio_equipos SET costo = ?, informe_tecnico = ? WHERE id = ?";
-            try (PreparedStatement pstmt = conn.prepareStatement(sqlEquipo)) {
-                for (Equipo equipo : equipos) {
-                    if (equipo.getId() != null) {
-                        pstmt.setBigDecimal(1, equipo.getCosto());
-                        pstmt.setString(2, equipo.getInformeTecnico());
-                        pstmt.setLong(3, equipo.getId());
-                        pstmt.addBatch();
-                    }
-                }
-                pstmt.executeBatch();
-            }
+            // 2. Obtener información de revisión para la hoja que se está revisando
+            RevisionInfo revInfo = getRevisionInfo(conn, idHojaAnterior);
 
+            // 3. Crear la nueva hoja de servicio (la versión corregida)
+            // For a revision of a CLOSED sheet, the new sheet should also be CLOSED.
+            long nuevaHojaId = insertarHojaServicioMaestra(conn, idCliente, fechaOrden, "", BigDecimal.ZERO, anticipo, fechaEntrega, "", aclaraciones, idHojaAnterior, "CERRADA");
+
+            // 4. Generar el nuevo número de orden con sufijo de revisión
+            String nuevoNumeroOrden = revInfo.baseOrderNumber + "-REV" + revInfo.nextRevisionNumber;
+            actualizarNumeroDeOrden(conn, nuevaHojaId, nuevoNumeroOrden);
+
+            // 5. Insertar los equipos en la nueva hoja
+            if (equipos != null) {
+                for (Equipo equipo : equipos) {
+                    // gestionarAsset handles reactivating deleted assets and linking.
+                    Long assetId = gestionarAsset(conn, equipo.getSerie(), equipo.getMarca(), equipo.getModelo(), equipo.getTipo(), nombreCliente);
+                    
+                    // When creating a revision of a closed sheet, the equipment already has costs and informe_tecnico.
+                    // These should be carried over to the new revision.
+                    insertarEquipoEnHoja(conn, nuevaHojaId, assetId, equipo.getSerie(), equipo.getTipo(), equipo.getMarca(), equipo.getModelo(), equipo.getFalla(), equipo.getCosto(), equipo.getEstadoFisico(), equipo.getAccesorios(), equipo.getInformeTecnico());
+                }
+            }
+            
             conn.commit();
+            return nuevoNumeroOrden;
 
         } catch (SQLException e) {
-            if (conn != null) try { conn.rollback(); } catch (SQLException ex) { ex.printStackTrace(); }
+            if (conn != null) try { conn.rollback(); } catch (SQLException ex) { System.err.println("Error during rollback: " + ex.getMessage()); }
             throw e;
         } finally {
-            if (conn != null) try { conn.close(); } catch (SQLException e) { e.printStackTrace(); }
+            if (conn != null) try { conn.close(); } catch (SQLException e) { System.err.println("Error al cerrar la conexión: " + e.getMessage()); }
         }
     }
 
