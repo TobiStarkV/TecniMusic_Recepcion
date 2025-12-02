@@ -251,8 +251,8 @@ public class ManageServiceSheetsController {
 
         fetchAndProcessServiceSheet(selected.getId(), (data) -> {
             if ("ABIERTA".equals(selected.getStatus())) {
-                // Para hojas ABIERTAS, abrir en modo de edición de recepción
-                openTecniMusicView(data, true, null); 
+                // Forzar el modo de versionado para hojas abiertas
+                openTecniMusicView(data, true, "versioning"); 
             } else if ("CERRADA".equals(selected.getStatus())) {
                 // Para hojas CERRADAS, abrir en modo de vista, que permite editar detalles de cierre
                 openTecniMusicView(data, false, null);

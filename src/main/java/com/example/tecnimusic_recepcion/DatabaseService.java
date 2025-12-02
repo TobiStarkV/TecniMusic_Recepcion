@@ -547,6 +547,137 @@ public class DatabaseService {
         }
     }
 
+    public void actualizarHojaServicioAbierta(
+            long hojaId,
+            LocalDate fechaOrden,
+            BigDecimal anticipo,
+            LocalDate fechaEntrega,
+            String aclaraciones,
+            List<Equipo> equipos,
+            String nombreCliente // Needed for gestionarAsset
+    ) throws SQLException {
+
+        Connection conn = null;
+        try {
+            conn = DatabaseManager.getInstance().getConnection();
+            conn.setAutoCommit(false);
+
+            // 1. Actualizar la hoja de servicio maestra
+            String sqlUpdateHoja = "UPDATE x_hojas_servicio SET fecha_orden = ?, anticipo = ?, fecha_entrega = ?, aclaraciones = ? WHERE id = ?";
+            try (PreparedStatement pstmt = conn.prepareStatement(sqlUpdateHoja)) {
+                pstmt.setDate(1, fechaOrden != null ? Date.valueOf(fechaOrden) : null);
+                pstmt.setBigDecimal(2, anticipo);
+                pstmt.setDate(3, fechaEntrega != null ? Date.valueOf(fechaEntrega) : null);
+                pstmt.setString(4, aclaraciones);
+                pstmt.setLong(5, hojaId);
+                pstmt.executeUpdate();
+            }
+
+            // 2. Sincronizar equipos
+            List<Long> idsEquiposEnBD = new ArrayList<>();
+            String sqlSelectEquipos = "SELECT id FROM x_hojas_servicio_equipos WHERE hoja_id = ?";
+            try (PreparedStatement pstmt = conn.prepareStatement(sqlSelectEquipos)) {
+                pstmt.setLong(1, hojaId);
+                ResultSet rs = pstmt.executeQuery();
+                while (rs.next()) {
+                    idsEquiposEnBD.add(rs.getLong("id"));
+                }
+            }
+
+            String sqlUpdateEquipo = "UPDATE x_hojas_servicio_equipos SET equipo_tipo = ?, equipo_marca = ?, equipo_modelo = ?, equipo_serie = ?, falla_reportada = ?, estado_fisico = ?, accesorios = ?, asset_id = ? WHERE id = ?";
+            try (PreparedStatement pstmtUpdate = conn.prepareStatement(sqlUpdateEquipo)) {
+                for (Equipo equipo : equipos) {
+                    Long assetId = gestionarAsset(conn, equipo.getSerie(), equipo.getMarca(), equipo.getModelo(), equipo.getTipo(), nombreCliente);
+
+                    if (equipo.getId() != null && idsEquiposEnBD.contains(equipo.getId())) {
+                        // Es un equipo existente, actualizarlo
+                        pstmtUpdate.setString(1, equipo.getTipo());
+                        pstmtUpdate.setString(2, equipo.getMarca());
+                        pstmtUpdate.setString(3, equipo.getModelo());
+                        pstmtUpdate.setString(4, equipo.getSerie());
+                        pstmtUpdate.setString(5, equipo.getFalla());
+                        pstmtUpdate.setString(6, equipo.getEstadoFisico());
+                        pstmtUpdate.setString(7, equipo.getAccesorios());
+                        if (assetId != null) pstmtUpdate.setLong(8, assetId); else pstmtUpdate.setNull(8, Types.BIGINT);
+                        pstmtUpdate.setLong(9, equipo.getId());
+                        pstmtUpdate.addBatch();
+                        
+                        idsEquiposEnBD.remove(equipo.getId());
+                    } else {
+                        // Es un equipo nuevo, insertarlo
+                        insertarEquipoEnHoja(conn, hojaId, assetId, equipo.getSerie(), equipo.getTipo(), equipo.getMarca(), equipo.getModelo(), equipo.getFalla(), null, equipo.getEstadoFisico(), equipo.getAccesorios());
+                    }
+                }
+                pstmtUpdate.executeBatch();
+            }
+
+            // 3. Eliminar los equipos que ya no están en la lista
+            if (!idsEquiposEnBD.isEmpty()) {
+                String sqlDeleteEquipo = "DELETE FROM x_hojas_servicio_equipos WHERE id = ?";
+                try (PreparedStatement pstmtDelete = conn.prepareStatement(sqlDeleteEquipo)) {
+                    for (Long idParaEliminar : idsEquiposEnBD) {
+                        pstmtDelete.setLong(1, idParaEliminar);
+                        pstmtDelete.addBatch();
+                    }
+                    pstmtDelete.executeBatch();
+                }
+            }
+
+            conn.commit();
+
+        } catch (SQLException e) {
+            if (conn != null) try { conn.rollback(); } catch (SQLException ex) { System.err.println("Error during rollback: " + ex.getMessage()); }
+            throw e;
+        } finally {
+            if (conn != null) try { conn.close(); } catch (SQLException e) { System.err.println("Error al cerrar la conexión: " + e.getMessage()); }
+        }
+    }
+
+    public void actualizarEquipo(Equipo equipo, String nombreCliente) throws SQLException {
+        if (equipo == null || equipo.getId() == null) {
+            throw new SQLException("El equipo a actualizar es inválido o no tiene ID.");
+        }
+
+        Connection conn = null;
+        try {
+            conn = DatabaseManager.getInstance().getConnection();
+            conn.setAutoCommit(false);
+
+            Long assetId = gestionarAsset(conn, equipo.getSerie(), equipo.getMarca(), equipo.getModelo(), equipo.getTipo(), nombreCliente);
+
+            String sql = "UPDATE x_hojas_servicio_equipos SET " +
+                         "equipo_tipo = ?, equipo_marca = ?, equipo_modelo = ?, equipo_serie = ?, " +
+                         "falla_reportada = ?, estado_fisico = ?, accesorios = ?, asset_id = ?, updated_at = NOW() " +
+                         "WHERE id = ?";
+
+            try (PreparedStatement pstmt = conn.prepareStatement(sql)) {
+                pstmt.setString(1, equipo.getTipo());
+                pstmt.setString(2, equipo.getMarca());
+                pstmt.setString(3, equipo.getModelo());
+                pstmt.setString(4, equipo.getSerie());
+                pstmt.setString(5, equipo.getFalla());
+                pstmt.setString(6, equipo.getEstadoFisico());
+                pstmt.setString(7, equipo.getAccesorios());
+                if (assetId != null) {
+                    pstmt.setLong(8, assetId);
+                } else {
+                    pstmt.setNull(8, Types.BIGINT);
+                }
+                pstmt.setLong(9, equipo.getId());
+
+                pstmt.executeUpdate();
+            }
+
+            conn.commit();
+
+        } catch (SQLException e) {
+            if (conn != null) try { conn.rollback(); } catch (SQLException ex) { System.err.println("Error during rollback: " + ex.getMessage()); }
+            throw e;
+        } finally {
+            if (conn != null) try { conn.close(); } catch (SQLException e) { System.err.println("Error al cerrar la conexión: " + e.getMessage()); }
+        }
+    }
+
     // Clase interna para encapsular la información de revisión
     private static class RevisionInfo {
         String baseOrderNumber; // Ej. "TM-2023-100"

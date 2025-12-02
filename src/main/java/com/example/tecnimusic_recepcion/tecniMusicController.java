@@ -65,7 +65,7 @@ public class tecniMusicController {
     // Nuevos campos para múltiples equipos
     @FXML private TableView<Equipo> equiposTable;
     @FXML private TableColumn<Equipo, String> colTipo, colMarca, colModelo, colSerie, colFalla, colCosto, colEstadoFisico, colAccesorios, colInforme;
-    @FXML private Button addEquipoButton, removeEquipoButton, updateEquipoButton;
+    @FXML private Button addEquipoButton, removeEquipoButton, updateEquipoButton, saveEquipoButton;
     @FXML private HBox equipoActionBox, subtotalBox, totalBox;
     @FXML private VBox cierreBox;
     @FXML private GridPane costoGridPane;
@@ -352,6 +352,36 @@ public class tecniMusicController {
         equiposObservable.remove(seleccionado);
     }
 
+    @FXML
+    private void onSaveEquipo() {
+        Equipo selectedEquipo = equiposTable.getSelectionModel().getSelectedItem();
+        if (selectedEquipo == null) {
+            showAlert(Alert.AlertType.WARNING, "Seleccionar Equipo", "Por favor, seleccione un equipo de la tabla para guardar los cambios.");
+            return;
+        }
+
+        // Actualizar el objeto Equipo en la lista observable
+        selectedEquipo.setTipo(equipoTipoField.getText());
+        selectedEquipo.setMarca(equipoCompaniaField.getText());
+        selectedEquipo.setModelo(equipoModeloField.getText());
+        selectedEquipo.setSerie(equipoSerieField.getText());
+        selectedEquipo.setFalla(equipoFallaArea.getText());
+        selectedEquipo.setEstadoFisico(equipoEstadoFisicoArea.getText());
+        selectedEquipo.setAccesorios(String.join(", ", accesoriosList));
+
+        // Refrescar la tabla para mostrar los cambios
+        equiposTable.refresh();
+
+        // Guardar el cambio en la base de datos
+        try {
+            DatabaseService.getInstance().actualizarEquipo(selectedEquipo, currentHojaServicioData.getClienteNombre());
+            showAlert(Alert.AlertType.INFORMATION, "Equipo Actualizado", "Los cambios en el equipo han sido guardados en la base de datos.");
+        } catch (SQLException e) {
+            showAlert(Alert.AlertType.ERROR, "Error de Base de Datos", "No se pudo guardar el cambio en el equipo. Error: " + e.getMessage());
+            e.printStackTrace();
+        }
+    }
+
     private void onUpdateEquipo() {
         Equipo selectedEquipo = equiposTable.getSelectionModel().getSelectedItem();
         if (selectedEquipo == null) {
@@ -407,27 +437,33 @@ public class tecniMusicController {
         this.currentHojaServicioData = data;
         populateFormWithData(data);
 
+        setNodesDisabled(true, clienteNombreField, clienteDireccionField, clienteTelefonoField);
+
         if ("versioning".equals(motivo)) {
             this.isVersioningMode = true;
             guardarButton.setText("Crear Nueva Versión");
-            ordenNumeroField.setText("Nueva Versión de " + data.getNumeroOrden()); // Placeholder
-            // Limpiar campos específicos para la nueva versión
+            ordenNumeroField.setText("Nueva Versión de " + data.getNumeroOrden());
+            
             equipoCostoField.clear();
             equipoInformeTecnicoArea.clear();
             equiposObservable.forEach(equipo -> {
                 equipo.setCosto(null);
                 equipo.setInformeTecnico(null);
             });
-            equiposTable.refresh(); // Refrescar la tabla para reflejar los cambios
-            actualizarCostosTotales(); // Recalcular totales
-            entregaFechaPicker.setValue(null); // Limpiar fecha de entrega
-            aclaracionesArea.clear(); // Limpiar aclaraciones
-            anticipoField.clear(); // Limpiar anticipo
+            equiposTable.refresh();
+            actualizarCostosTotales();
+            entregaFechaPicker.setValue(null);
+            aclaracionesArea.clear();
+            anticipoField.clear();
+            
+            saveEquipoButton.setVisible(true);
+            saveEquipoButton.setManaged(true);
         } else {
             guardarButton.setText("Guardar Cambios");
+            saveEquipoButton.setVisible(true);
+            saveEquipoButton.setManaged(true);
         }
 
-        // Configurar la UI para el modo de edición/versionado
         limpiarButton.setVisible(false);
         limpiarButton.setManaged(false);
         cierreBox.setVisible(false);
@@ -542,17 +578,43 @@ public class tecniMusicController {
     }
 
     private void handleUpdate() {
-        String confirmationMessage;
         if (isVersioningMode) {
-            confirmationMessage = "¿Está seguro de que desea crear una nueva versión de la hoja de servicio " + currentHojaServicioData.getNumeroOrden() + "? La hoja original será ANULADA.";
+            handleVersioningUpdate();
         } else {
-            confirmationMessage = "¿Está seguro de que desea guardar los cambios en la hoja de servicio " + currentHojaServicioData.getNumeroOrden() + "?";
+            handleSimpleUpdate();
         }
+    }
 
-        if (!showConfirmationDialog("Confirmar Actualización", confirmationMessage)) {
+    private void handleSimpleUpdate() {
+        if (!showConfirmationDialog("Confirmar Actualización", "¿Está seguro de que desea guardar los cambios en la hoja de servicio " + currentHojaServicioData.getNumeroOrden() + "?")) {
             return;
         }
 
+        try {
+            BigDecimal anticipo = parseCurrency(anticipoField.getText());
+            DatabaseService.getInstance().actualizarHojaServicioAbierta(
+                currentHojaServicioData.getId(),
+                ordenFechaPicker.getValue(),
+                anticipo,
+                entregaFechaPicker.getValue(),
+                aclaracionesArea.getText(),
+                new ArrayList<>(equiposObservable),
+                currentHojaServicioData.getClienteNombre()
+            );
+            mostrarExitoYSalir("Hoja de servicio " + currentHojaServicioData.getNumeroOrden() + " actualizada con éxito.");
+
+        } catch (SQLException e) {
+            showAlert(Alert.AlertType.ERROR, "Error de Base de Datos", "No se pudo actualizar la hoja de servicio. Error: " + e.getMessage());
+            e.printStackTrace();
+        } catch (ParseException e) {
+            showAlert(Alert.AlertType.ERROR, "Error de Formato", "No se pudo procesar un valor monetario. Error: " + e.getMessage());
+        }
+    }
+
+    private void handleVersioningUpdate() {
+        if (!showConfirmationDialog("Confirmar Nueva Versión", "¿Está seguro de que desea crear una nueva versión de la hoja de servicio " + currentHojaServicioData.getNumeroOrden() + "? La hoja original será ANULADA.")) {
+            return;
+        }
         try {
             BigDecimal anticipo = parseCurrency(anticipoField.getText());
             
@@ -572,7 +634,7 @@ public class tecniMusicController {
             mostrarExitoYSalir("Hoja de servicio " + currentHojaServicioData.getNumeroOrden() + " anulada.\nNueva hoja creada: " + nuevoNumeroOrden);
 
         } catch (SQLException e) {
-            showAlert(Alert.AlertType.ERROR, "Error de Base de Datos", "No se pudo actualizar la hoja de servicio. Error: " + e.getMessage());
+            showAlert(Alert.AlertType.ERROR, "Error de Base de Datos", "No se pudo crear la nueva versión de la hoja de servicio. Error: " + e.getMessage());
             e.printStackTrace();
         } catch (ParseException e) {
             showAlert(Alert.AlertType.ERROR, "Error de Formato", "No se pudo procesar un valor monetario. Error: " + e.getMessage());

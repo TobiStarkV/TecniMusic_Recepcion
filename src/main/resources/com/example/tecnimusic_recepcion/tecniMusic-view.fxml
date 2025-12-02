@@ -134,11 +134,12 @@
                                  </children>
                               </VBox>
 
-                              <!-- Botones para añadir/quitar equipos -->
+                              <!-- Botones para añadir/quitar/guardar equipos -->
                               <HBox fx:id="equipoActionBox" spacing="10.0" alignment="CENTER_RIGHT">
                                  <children>
                                     <Button fx:id="addEquipoButton" mnemonicParsing="false" text="Añadir Equipo" />
                                     <Button fx:id="removeEquipoButton" mnemonicParsing="false" text="Quitar Equipo" />
+                                    <Button fx:id="saveEquipoButton" mnemonicParsing="false" onAction="#onSaveEquipo" text="Guardar Equipo" visible="false" managed="false" />
                                     <Button fx:id="updateEquipoButton" mnemonicParsing="false" text="Actualizar Equipo" visible="false" managed="false" />
                                  </children>
                               </HBox>
