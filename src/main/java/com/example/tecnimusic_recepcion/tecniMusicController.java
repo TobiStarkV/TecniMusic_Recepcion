@@ -480,8 +480,8 @@ public class tecniMusicController {
         cierreButton.setManaged(true);
 
         if ("CERRADA".equals(data.getEstado())) {
-            setNodesDisabled(true, cierreButton, updateEquipoButton, equipoCostoField, equipoInformeTecnicoArea, entregaFechaPicker);
-            cierreButton.setText("Hoja Cerrada");
+            setNodesDisabled(false, updateEquipoButton, equipoCostoField, equipoInformeTecnicoArea); // Habilitar edición de cierre
+            cierreButton.setText("Guardar Cambios en Cierre");
             printClosureButton.setDisable(false);
         } else {
             setNodesDisabled(false, cierreButton, updateEquipoButton, equipoCostoField, equipoInformeTecnicoArea, entregaFechaPicker);
@@ -581,39 +581,58 @@ public class tecniMusicController {
 
     @FXML
     protected void onCierreClicked() {
-        if (!"ABIERTA".equals(currentHojaServicioData.getEstado())) {
-            showAlert(Alert.AlertType.WARNING, "Estado Inválido", "Solo se pueden cerrar hojas de servicio con estado 'ABIERTA'.");
-            return;
-        }
+        if ("CERRADA".equals(currentHojaServicioData.getEstado())) {
+            // Si la hoja ya está cerrada, solo guardamos los cambios en el informe y costos
+            if (!showConfirmationDialog("Guardar Cambios", "¿Está seguro de que desea guardar los cambios en esta hoja de servicio cerrada?")) {
+                return;
+            }
+            try {
+                long hojaId = currentHojaServicioData.getId();
+                BigDecimal totalCostos = parseCurrency(subtotalLabel.getText());
 
-        if (!showConfirmationDialog("Confirmar Cierre", "¿Está seguro de que desea cerrar esta hoja de servicio? Una vez cerrada, no podrá ser modificada.")) {
-            return;
-        }
+                DatabaseService.getInstance().actualizarCierreHojaServicio(hojaId, new ArrayList<>(equiposObservable), totalCostos);
 
-        try {
-            long hojaId = currentHojaServicioData.getId(); // Usar el ID de la hoja actual
-            BigDecimal totalCostos = parseCurrency(subtotalLabel.getText());
-            LocalDate fechaEntrega = entregaFechaPicker.getValue();
+                showAlert(Alert.AlertType.INFORMATION, "Cambios Guardados", "Los cambios en la hoja de servicio cerrada han sido guardados.");
+                
+                Stage stage = (Stage) cierreButton.getScene().getWindow();
+                stage.close();
 
-            DatabaseService.getInstance().cerrarHojaServicio(hojaId, "", new ArrayList<>(equiposObservable), totalCostos, fechaEntrega);
+            } catch (Exception e) {
+                showAlert(Alert.AlertType.ERROR, "Error al Guardar Cambios", "Ocurrió un error: " + e.getMessage());
+                e.printStackTrace();
+            }
 
-            currentHojaServicioData.setEstado("CERRADA");
-            currentHojaServicioData.setEquipos(new ArrayList<>(equiposObservable));
-            currentHojaServicioData.setTotalCostos(totalCostos);
-            currentHojaServicioData.setFechaEntrega(fechaEntrega);
+        } else {
+            // Si la hoja está abierta, procedemos con el cierre normal
+            if (!showConfirmationDialog("Confirmar Cierre", "¿Está seguro de que desea cerrar esta hoja de servicio? Una vez cerrada, no podrá ser modificada.")) {
+                return;
+            }
 
-            String pdfPath = new PdfGenerator().generatePdf(currentHojaServicioData, false);
+            try {
+                long hojaId = currentHojaServicioData.getId();
+                BigDecimal totalCostos = parseCurrency(subtotalLabel.getText());
+                LocalDate fechaEntrega = entregaFechaPicker.getValue();
 
-            showAlert(Alert.AlertType.INFORMATION, "Hoja Cerrada", "La hoja de servicio ha sido cerrada y el PDF de cierre ha sido generado.");
+                DatabaseService.getInstance().cerrarHojaServicio(hojaId, "", new ArrayList<>(equiposObservable), totalCostos, fechaEntrega);
 
-            performPrint(pdfPath);
-            
-            Stage stage = (Stage) cierreButton.getScene().getWindow();
-            stage.close();
+                currentHojaServicioData.setEstado("CERRADA");
+                currentHojaServicioData.setEquipos(new ArrayList<>(equiposObservable));
+                currentHojaServicioData.setTotalCostos(totalCostos);
+                currentHojaServicioData.setFechaEntrega(fechaEntrega);
 
-        } catch (Exception e) {
-            showAlert(Alert.AlertType.ERROR, "Error al Cerrar Hoja", "Ocurrió un error: " + e.getMessage());
-            e.printStackTrace();
+                String pdfPath = new PdfGenerator().generatePdf(currentHojaServicioData, false);
+
+                showAlert(Alert.AlertType.INFORMATION, "Hoja Cerrada", "La hoja de servicio ha sido cerrada y el PDF de cierre ha sido generado.");
+
+                performPrint(pdfPath);
+                
+                Stage stage = (Stage) cierreButton.getScene().getWindow();
+                stage.close();
+
+            } catch (Exception e) {
+                showAlert(Alert.AlertType.ERROR, "Error al Cerrar Hoja", "Ocurrió un error: " + e.getMessage());
+                e.printStackTrace();
+            }
         }
     }
 

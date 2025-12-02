@@ -10,9 +10,10 @@ import javafx.scene.control.Button;
 import javafx.scene.control.Label;
 import javafx.scene.control.TableColumn;
 import javafx.scene.control.TableView;
-import javafx.scene.control.cell.PropertyValueFactory;
 import javafx.scene.control.Alert;
 import javafx.scene.control.TableRow;
+import javafx.scene.control.CheckBox; // Importar CheckBox
+import javafx.scene.control.cell.PropertyValueFactory; // Importación agregada
 import javafx.scene.image.Image;
 import javafx.scene.input.MouseButton;
 import javafx.stage.Stage;
@@ -24,6 +25,8 @@ import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.time.LocalDate;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.function.Consumer;
 
 public class ClientServiceSheetsController {
@@ -42,6 +45,8 @@ public class ClientServiceSheetsController {
     private TableColumn<ServiceSheetSummary, String> statusColumn;
     @FXML
     private Button closeButton;
+    @FXML
+    private CheckBox showAnuladasCheckBox; // Nuevo: CheckBox para mostrar/ocultar anuladas
 
     private final ObservableList<ServiceSheetSummary> serviceSheetList = FXCollections.observableArrayList();
     private int currentClientId; // Guardar el ID del cliente actual
@@ -63,12 +68,17 @@ public class ClientServiceSheetsController {
             });
             return row;
         });
+
+        // Asegurarse de que el CheckBox esté desmarcado al inicio
+        showAnuladasCheckBox.setSelected(false);
+        // Listener para el CheckBox
+        showAnuladasCheckBox.selectedProperty().addListener((obs, oldVal, newVal) -> onShowAnuladasChanged());
     }
 
     public void setClient(Client client) {
         this.currentClientId = client.getId(); // Guardar el ID
         clientNameLabel.setText("Hojas de Servicio para: " + client.getName());
-        loadServiceSheets(this.currentClientId);
+        loadServiceSheets(this.currentClientId); // Cargar hojas inicialmente (sin anuladas)
     }
 
     private void loadServiceSheets(int clientId) {
@@ -77,14 +87,29 @@ public class ClientServiceSheetsController {
                      "GROUP_CONCAT(DISTINCT CONCAT_WS(' ', hse.equipo_tipo, hse.equipo_marca, hse.equipo_modelo) SEPARATOR '; ') as equipment_summary " +
                      "FROM x_hojas_servicio hs " +
                      "LEFT JOIN x_hojas_servicio_equipos hse ON hs.id = hse.hoja_id " +
-                     "WHERE hs.cliente_id = ? " +
-                     "GROUP BY hs.id, hs.numero_orden, hs.fecha_orden, hs.estado " +
-                     "ORDER BY hs.id DESC";
+                     "WHERE hs.cliente_id = ? ";
+
+        StringBuilder whereClause = new StringBuilder();
+        List<Object> params = new ArrayList<>();
+        params.add(clientId); // El primer parámetro es siempre el clientId
+
+        // Filtrar por estado "ANULADA" si el checkbox no está marcado
+        if (!showAnuladasCheckBox.isSelected()) {
+            whereClause.append(" AND hs.estado != ? ");
+            params.add("ANULADA");
+        }
+
+        sql += whereClause.toString() +
+               "GROUP BY hs.id, hs.numero_orden, hs.fecha_orden, hs.estado " +
+               "ORDER BY hs.id DESC";
 
         try (Connection conn = DatabaseManager.getInstance().getConnection();
              PreparedStatement pstmt = conn.prepareStatement(sql)) {
 
-            pstmt.setInt(1, clientId);
+            for (int i = 0; i < params.size(); i++) {
+                pstmt.setObject(i + 1, params.get(i));
+            }
+
             ResultSet rs = pstmt.executeQuery();
 
             while (rs.next()) {
@@ -106,6 +131,11 @@ public class ClientServiceSheetsController {
             showAlert(Alert.AlertType.ERROR, "Error de Base de Datos", "No se pudieron cargar las hojas de servicio del cliente.");
             e.printStackTrace();
         }
+    }
+
+    @FXML
+    private void onShowAnuladasChanged() {
+        loadServiceSheets(currentClientId); // Recargar las hojas de servicio con el filtro actualizado
     }
 
     @FXML

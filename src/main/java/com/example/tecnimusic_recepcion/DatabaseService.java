@@ -191,7 +191,7 @@ public class DatabaseService {
             if (rs.next() && rs.getInt(1) == 0) {
                 String addInformeSql = "ALTER TABLE x_hojas_servicio ADD COLUMN informe_tecnico TEXT";
                 try (Statement alterStmt = conn.createStatement()) {
-                    alterStmt.execute(addInformeSql); // Corregido: Usar addInformeSql
+                    alterStmt.execute(addInformeSql);
                 }
             }
         }
@@ -705,6 +705,44 @@ public class DatabaseService {
             try (PreparedStatement pstmt = conn.prepareStatement(sqlArchivarAsset)) {
                 pstmt.setLong(1, hojaId);
                 pstmt.executeUpdate();
+            }
+
+            conn.commit();
+
+        } catch (SQLException e) {
+            if (conn != null) try { conn.rollback(); } catch (SQLException ex) { ex.printStackTrace(); }
+            throw e;
+        } finally {
+            if (conn != null) try { conn.close(); } catch (SQLException e) { e.printStackTrace(); }
+        }
+    }
+
+    public void actualizarCierreHojaServicio(long hojaId, List<Equipo> equipos, BigDecimal totalCostos) throws SQLException {
+        Connection conn = null;
+        try {
+            conn = DatabaseManager.getInstance().getConnection();
+            conn.setAutoCommit(false);
+
+            // 1. Actualizar la hoja de servicio principal (solo el total de costos)
+            String sqlHoja = "UPDATE x_hojas_servicio SET total_costos = ? WHERE id = ?";
+            try (PreparedStatement pstmt = conn.prepareStatement(sqlHoja)) {
+                pstmt.setBigDecimal(1, totalCostos);
+                pstmt.setLong(2, hojaId);
+                pstmt.executeUpdate();
+            }
+
+            // 2. Actualizar los equipos individuales (costo e informe técnico)
+            String sqlEquipo = "UPDATE x_hojas_servicio_equipos SET costo = ?, informe_tecnico = ? WHERE id = ?";
+            try (PreparedStatement pstmt = conn.prepareStatement(sqlEquipo)) {
+                for (Equipo equipo : equipos) {
+                    if (equipo.getId() != null) {
+                        pstmt.setBigDecimal(1, equipo.getCosto());
+                        pstmt.setString(2, equipo.getInformeTecnico());
+                        pstmt.setLong(3, equipo.getId());
+                        pstmt.addBatch();
+                    }
+                }
+                pstmt.executeBatch();
             }
 
             conn.commit();

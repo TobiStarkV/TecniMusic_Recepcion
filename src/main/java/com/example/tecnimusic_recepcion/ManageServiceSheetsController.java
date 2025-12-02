@@ -86,6 +86,8 @@ public class ManageServiceSheetsController {
             return row;
         });
 
+        // Asegurarse de que el CheckBox esté desmarcado al inicio
+        showAnuladasCheckBox.setSelected(false); 
         // Cargar inicialmente las hojas de servicio (sin anuladas por defecto)
         searchAndLoadServiceSheets(null);
         // Listener para el CheckBox
@@ -249,13 +251,13 @@ public class ManageServiceSheetsController {
 
         fetchAndProcessServiceSheet(selected.getId(), (data) -> {
             if ("ABIERTA".equals(selected.getStatus())) {
-                openTecniMusicView(data, true, null); // true for edit mode, no specific reason
+                // Para hojas ABIERTAS, abrir en modo de edición de recepción
+                openTecniMusicView(data, true, null); 
             } else if ("CERRADA".equals(selected.getStatus())) {
-                // When editing a closed sheet, we are essentially creating a new version.
-                // The tecniMusicController will handle the versioning logic.
-                openTecniMusicView(data, true, "versioning"); // true for edit mode, reason "versioning"
+                // Para hojas CERRADAS, abrir en modo de vista, que permite editar detalles de cierre
+                openTecniMusicView(data, false, null);
             } else {
-                showAlert(Alert.AlertType.WARNING, "Estado Inválido", "Solo se pueden editar hojas de servicio 'ABIERTA' o crear una nueva versión de hojas 'CERRADA'.");
+                showAlert(Alert.AlertType.WARNING, "Estado Inválido", "No se puede editar una hoja con estado '" + selected.getStatus() + "'.");
             }
         });
     }

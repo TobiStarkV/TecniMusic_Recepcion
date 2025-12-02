@@ -102,7 +102,7 @@
                                     <children>
                                         <Label text="Pie de Página:" styleClass="form-label" />
                                         <StyleClassedTextArea fx:id="pdfFooterField" prefHeight="80.0" wrapText="true" GridPane.columnIndex="1" styleClass="falla-reportada-text-area" />
-                                        <Label text="Tamaño de Letra (Pie):" styleClass="form-label" GridPane.rowIndex="1" />
+                                        <Label text="Tamaño de Letra:" styleClass="form-label" GridPane.rowIndex="1" />
                                         <Spinner fx:id="pdfFooterSizeSpinner" editable="true" prefWidth="80.0" GridPane.columnIndex="1" GridPane.rowIndex="1" />
                                     </children>
                                 </GridPane>

@@ -10,17 +10,23 @@
 <!-- Archivo: `src/main/resources/com/example/tecnimusic_recepcion/...` (tu FXML actual) -->
 <?import javafx.scene.layout.HBox?>
 <?import javafx.scene.text.Font?>
+<?import javafx.scene.control.CheckBox?>
 
 <BorderPane prefHeight="400.0" prefWidth="700.0" xmlns="http://javafx.com/javafx/22" xmlns:fx="http://javafx.com/fxml/1" fx:controller="com.example.tecnimusic_recepcion.ClientServiceSheetsController" stylesheets="@styles.css">
     <top>
-        <Label fx:id="clientNameLabel" text="Hojas de Servicio para: [Nombre del Cliente]" BorderPane.alignment="CENTER">
-            <font>
-                <Font name="System Bold" size="14.0" />
-            </font>
+        <HBox alignment="CENTER_LEFT" spacing="10.0" BorderPane.alignment="CENTER">
             <padding>
                 <Insets bottom="10.0" left="10.0" right="10.0" top="10.0" />
             </padding>
-        </Label>
+            <children>
+                <Label fx:id="clientNameLabel" text="Hojas de Servicio para: [Nombre del Cliente]">
+                    <font>
+                        <Font name="System Bold" size="14.0" />
+                    </font>
+                </Label>
+                <CheckBox fx:id="showAnuladasCheckBox" text="Mostrar Anuladas" onAction="#onShowAnuladasChanged" HBox.hgrow="ALWAYS" /> <!-- Nuevo CheckBox -->
+            </children>
+        </HBox>
     </top>
     <center>
         <TableView fx:id="serviceSheetsTable" prefHeight="200.0" prefWidth="200.0">
