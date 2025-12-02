@@ -37,6 +37,7 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
+import java.util.Comparator;
 import java.util.List;
 import java.util.Locale;
 import java.util.Optional;
@@ -245,9 +246,14 @@ public class tecniMusicController {
     }
 
     private static org.fxmisc.richtext.model.StyleSpans<Collection<String>> computeHighlighting(String text, List<RuleMatch> matches) {
+        // Sort matches by start position to prevent StyleSpan length error
+        matches.sort(Comparator.comparingInt(RuleMatch::getFromPos));
         int lastKwEnd = 0;
         org.fxmisc.richtext.model.StyleSpansBuilder<Collection<String>> spansBuilder = new org.fxmisc.richtext.model.StyleSpansBuilder<>();
         for (RuleMatch match : matches) {
+            if (match.getFromPos() < lastKwEnd) {
+                continue;
+            }
             spansBuilder.add(Collections.emptyList(), match.getFromPos() - lastKwEnd);
             spansBuilder.add(Collections.singleton("spell-error"), match.getToPos() - match.getFromPos());
             lastKwEnd = match.getToPos();
@@ -846,34 +852,29 @@ public class tecniMusicController {
     }
 
     private void setupCurrencyField(TextField textField) {
-        textField.textProperty().addListener((observable, oldValue, newValue) -> {
-            if (newValue == null || newValue.equals(oldValue)) return;
-
-            String digits = newValue.replaceAll("[^\\d]", "");
-            if (digits.isEmpty()) {
-                if (!newValue.isEmpty()) Platform.runLater(textField::clear);
-                return;
-            }
-
-            try {
-                BigDecimal value = new BigDecimal(digits).movePointLeft(2);
-                NumberFormat currencyFormat = NumberFormat.getCurrencyInstance(SPANISH_MEXICO_LOCALE);
-                String formatted = currencyFormat.format(value);
-
-                Platform.runLater(() -> {
-                    textField.setText(formatted);
-                    textField.positionCaret(formatted.length());
-                });
-
-            } catch (NumberFormatException e) {
-                Platform.runLater(() -> textField.setText(oldValue));
-            }
-        });
-
         textField.focusedProperty().addListener((observable, wasFocused, isNowFocused) -> {
-            if (!isNowFocused) {
-                if (textField.getText() == null || textField.getText().trim().isEmpty()) {
+            if (!isNowFocused) { // When focus is lost
+                String text = textField.getText();
+                if (text == null || text.trim().isEmpty()) {
                     textField.setText(NumberFormat.getCurrencyInstance(SPANISH_MEXICO_LOCALE).format(0));
+                    return;
+                }
+
+                // Get only the digits from the input
+                String digits = text.replaceAll("[^\\d]", "");
+                if (digits.isEmpty()) {
+                    textField.setText(NumberFormat.getCurrencyInstance(SPANISH_MEXICO_LOCALE).format(0));
+                } else {
+                    try {
+                        // Assume the digits represent cents and convert
+                        BigDecimal value = new BigDecimal(digits).movePointLeft(2);
+                        String formatted = NumberFormat.getCurrencyInstance(SPANISH_MEXICO_LOCALE).format(value);
+                        textField.setText(formatted);
+                    } catch (NumberFormatException nfe) {
+                        // This should be rare if we only have digits, but for safety:
+                        showAlert(Alert.AlertType.ERROR, "Formato de Moneda Inválido", "El valor '" + text + "' no se pudo convertir a moneda.");
+                        textField.setText(NumberFormat.getCurrencyInstance(SPANISH_MEXICO_LOCALE).format(0));
+                    }
                 }
             }
         });
