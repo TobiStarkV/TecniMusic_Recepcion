@@ -510,13 +510,20 @@ public class tecniMusicController {
             cierreButton.setText("Crear Revisión de Cierre"); // Changed text
             printClosureButton.setDisable(false);
         } else { // ABIERTA
-            setNodesDisabled(false, cierreButton, updateEquipoButton, equipoCostoField, equipoInformeTecnicoArea, entregaFechaPicker);
+            // Habilitar campos para añadir costo/informe y cerrar la hoja
+            setNodesDisabled(false, cierreButton, equipoCostoField, equipoInformeTecnicoArea, entregaFechaPicker, updateEquipoButton);
+            
             if (entregaFechaPicker.getValue() == null) {
                 entregaFechaPicker.setValue(LocalDate.now());
             }
+            
+            // No se puede imprimir cierre de una hoja abierta
             printClosureButton.setDisable(true);
-            updateEquipoButton.setVisible(false);
-            updateEquipoButton.setManaged(false);
+            
+            // Hacer visible el botón de actualizar equipo
+            updateEquipoButton.setVisible(true);
+            updateEquipoButton.setManaged(true);
+            updateEquipoButton.setText("Actualizar Costo/Informe");
         }
     }
 
@@ -852,29 +859,47 @@ public class tecniMusicController {
     }
 
     private void setupCurrencyField(TextField textField) {
-        textField.focusedProperty().addListener((observable, wasFocused, isNowFocused) -> {
-            if (!isNowFocused) { // When focus is lost
-                String text = textField.getText();
-                if (text == null || text.trim().isEmpty()) {
-                    textField.setText(NumberFormat.getCurrencyInstance(SPANISH_MEXICO_LOCALE).format(0));
-                    return;
-                }
+        final String FORMATTING_FLAG = "isFormatting";
 
-                // Get only the digits from the input
-                String digits = text.replaceAll("[^\\d]", "");
-                if (digits.isEmpty()) {
-                    textField.setText(NumberFormat.getCurrencyInstance(SPANISH_MEXICO_LOCALE).format(0));
-                } else {
-                    try {
-                        // Assume the digits represent cents and convert
-                        BigDecimal value = new BigDecimal(digits).movePointLeft(2);
-                        String formatted = NumberFormat.getCurrencyInstance(SPANISH_MEXICO_LOCALE).format(value);
-                        textField.setText(formatted);
-                    } catch (NumberFormatException nfe) {
-                        // This should be rare if we only have digits, but for safety:
-                        showAlert(Alert.AlertType.ERROR, "Formato de Moneda Inválido", "El valor '" + text + "' no se pudo convertir a moneda.");
-                        textField.setText(NumberFormat.getCurrencyInstance(SPANISH_MEXICO_LOCALE).format(0));
-                    }
+        textField.textProperty().addListener((obs, oldValue, newValue) -> {
+            if (textField.getProperties().get(FORMATTING_FLAG) == Boolean.TRUE) {
+                return;
+            }
+    
+            textField.getProperties().put(FORMATTING_FLAG, true);
+    
+            if (newValue == null) {
+                textField.getProperties().put(FORMATTING_FLAG, false);
+                return;
+            }
+    
+            String digits = newValue.replaceAll("[^\\d]", "");
+            if (digits.isEmpty()) {
+                textField.setText("");
+            } else {
+                try {
+                    BigDecimal value = new BigDecimal(digits).movePointLeft(2);
+                    NumberFormat currencyFormat = NumberFormat.getCurrencyInstance(SPANISH_MEXICO_LOCALE);
+                    String formatted = currencyFormat.format(value);
+                    
+                    textField.setText(formatted);
+                    textField.positionCaret(formatted.length());
+                } catch (NumberFormatException e) {
+                    textField.setText(oldValue);
+                }
+            }
+            
+            textField.getProperties().put(FORMATTING_FLAG, false);
+        });
+    
+        textField.focusedProperty().addListener((obs, wasFocused, isNowFocused) -> {
+            if (!isNowFocused) {
+                try {
+                    BigDecimal value = parseCurrency(textField.getText());
+                    String formatted = NumberFormat.getCurrencyInstance(SPANISH_MEXICO_LOCALE).format(value);
+                    textField.setText(formatted);
+                } catch (ParseException e) {
+                    textField.setText(NumberFormat.getCurrencyInstance(SPANISH_MEXICO_LOCALE).format(BigDecimal.ZERO));
                 }
             }
         });
